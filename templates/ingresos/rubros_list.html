@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Rubros de Ingreso{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Rubros de Ingreso</li>{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="bi bi-list-nested"></i> Rubros de Ingreso - Vigencia {{ vigencia }}</h4>
+    <div>
+        <form method="post" action="{% url 'calcular_todos' %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success btn-sm">
+                <i class="bi bi-play-circle"></i> Calcular Todos
+            </button>
+        </form>
+        <a href="{% url 'rubro_crear' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus"></i> Agregar Rubro</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0" style="font-size:.85rem;">
+                <thead class="table-light">
+                    <tr>
+                        <th>Código</th>
+                        <th>Descripción</th>
+                        <th>Fuente</th>
+                        <th class="text-center">Método</th>
+                        <th class="text-end">Recaudo Anterior</th>
+                        <th class="text-end">Apropiación</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in rubros %}
+                    <tr class="{% if r.es_titulo %}titulo-rubro{% endif %}">
+                        <td>{{ r.codigo }}</td>
+                        <td>
+                            {% if r.nivel > 0 %}
+                                <span style="padding-left:{{ r.nivel|add:r.nivel }}0px;"></span>
+                            {% endif %}
+                            {% if r.es_titulo %}<strong>{{ r.descripcion }}</strong>{% else %}{{ r.descripcion }}{% endif %}
+                        </td>
+                        <td>{{ r.nombre_fuente }}</td>
+                        <td class="text-center">
+                            {% if not r.es_titulo %}
+                            <span class="badge badge-metodo
+                                {% if r.metodo_calculo == 'IPC' %}bg-info
+                                {% elif r.metodo_calculo == 'ICN' %}bg-success
+                                {% elif r.metodo_calculo == 'POAI' %}bg-warning text-dark
+                                {% elif r.metodo_calculo == 'MAN' %}bg-secondary
+                                {% else %}bg-primary{% endif %}">
+                                {{ r.get_metodo_calculo_display }}
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            {% if not r.es_titulo and r.recaudo_vigencia_anterior %}
+                            ${{ r.recaudo_vigencia_anterior|floatformat:0|intcomma }}
+                            {% endif %}
+                        </td>
+                        <td class="text-end fw-bold">
+                            {% if r.valor_apropiacion %}${{ r.valor_apropiacion|floatformat:0|intcomma }}{% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'rubro_editar' r.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                            <a href="{% url 'rubro_eliminar' r.pk %}" class="btn btn-sm btn-outline-danger"
+                               onclick="return confirm('¿Eliminar?')"><i class="bi bi-trash"></i></a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-dark">
+                    <tr>
+                        <td colspan="5" class="text-end fw-bold">TOTAL PRESUPUESTO DE INGRESOS:</td>
+                        <td class="text-end fw-bold">${{ total|floatformat:0|intcomma }}</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

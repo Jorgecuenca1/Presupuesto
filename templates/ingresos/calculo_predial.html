@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Cálculo Predial{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Cálculo Predial</li>{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="bi bi-calculator"></i> Cálculo Impuesto Predial Unificado</h4>
+    <form method="post" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-success">
+            <i class="bi bi-play-circle"></i> Ejecutar Cálculo
+        </button>
+    </form>
+</div>
+
+{% if params %}
+<div class="alert alert-light border">
+    <strong>UVT {{ params.vigencia }}:</strong> ${{ params.valor_uvt|floatformat:0|intcomma }}
+</div>
+{% endif %}
+
+<!-- PREDIAL URBANO VIGENCIA ACTUAL -->
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <i class="bi bi-building"></i> Predial Urbano - Vigencia Actual
+        <span class="float-end fw-bold">${{ total_urbano|floatformat:0|intcomma }}</span>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Categoría</th>
+                    <th>Rango</th>
+                    <th class="text-center">Predios</th>
+                    <th class="text-end">Total Avalúo</th>
+                    <th class="text-center">Tarifa</th>
+                    <th class="text-end">Recaudo Potencial</th>
+                    <th class="text-center">% Cultura</th>
+                    <th class="text-end">Proyección</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in resumen_urbano %}
+                <tr>
+                    <td>{{ r.categoria }}</td>
+                    <td>{{ r.descripcion_rango }}</td>
+                    <td class="text-center">{{ r.cantidad_predios }}</td>
+                    <td class="text-end">${{ r.total_avaluo|floatformat:0|intcomma }}</td>
+                    <td class="text-center">{{ r.tarifa_por_mil }}‰</td>
+                    <td class="text-end">${{ r.recaudo_potencial|floatformat:0|intcomma }}</td>
+                    <td class="text-center">{{ r.cultura_pago }}%</td>
+                    <td class="text-end fw-bold">${{ r.proyeccion|floatformat:0|intcomma }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="8" class="text-center text-muted py-3">Sin cálculos. Importe contribuyentes y ejecute el cálculo.</td></tr>
+                {% endfor %}
+            </tbody>
+            {% if resumen_urbano %}
+            <tfoot class="table-primary">
+                <tr>
+                    <td colspan="7" class="text-end fw-bold">TOTAL PREDIAL URBANO VIG. ACTUAL:</td>
+                    <td class="text-end fw-bold">${{ total_urbano|floatformat:0|intcomma }}</td>
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+</div>
+
+<!-- PREDIAL URBANO VIGENCIAS ANTERIORES -->
+<div class="card mb-4">
+    <div class="card-header bg-info text-white">
+        <i class="bi bi-clock-history"></i> Predial Urbano - Vigencias Anteriores
+        <span class="float-end fw-bold">${{ total_urb_ant|floatformat:0|intcomma }}</span>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Vigencia</th>
+                    <th class="text-end">Valor Cartera</th>
+                    <th class="text-center">% Base</th>
+                    <th class="text-center">% Urbano</th>
+                    <th class="text-end">Proyección</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in detalle_urb_ant %}
+                <tr>
+                    <td>{{ d.vigencia }}</td>
+                    <td class="text-end">${{ d.valor_cartera|floatformat:0|intcomma }}</td>
+                    <td class="text-center">{{ d.pct_base }}%</td>
+                    <td class="text-center">{{ d.pct_tipo }}%</td>
+                    <td class="text-end fw-bold">${{ d.proyeccion|floatformat:0|intcomma }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-center text-muted py-3">Agregue datos de cartera</td></tr>
+                {% endfor %}
+            </tbody>
+            {% if detalle_urb_ant %}
+            <tfoot class="table-info">
+                <tr>
+                    <td colspan="4" class="text-end fw-bold">TOTAL:</td>
+                    <td class="text-end fw-bold">${{ total_urb_ant|floatformat:0|intcomma }}</td>
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+</div>
+
+<!-- PREDIAL RURAL VIGENCIA ACTUAL -->
+<div class="card mb-4">
+    <div class="card-header bg-success text-white">
+        <i class="bi bi-tree"></i> Predial Rural - Vigencia Actual
+        <span class="float-end fw-bold">${{ total_rural|floatformat:0|intcomma }}</span>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Categoría</th>
+                    <th>Rango</th>
+                    <th class="text-center">Predios</th>
+                    <th class="text-end">Total Avalúo</th>
+                    <th class="text-center">Tarifa</th>
+                    <th class="text-end">Recaudo Potencial</th>
+                    <th class="text-center">% Cultura</th>
+                    <th class="text-end">Proyección</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in resumen_rural %}
+                <tr>
+                    <td>{{ r.categoria }}</td>
+                    <td>{{ r.descripcion_rango }}</td>
+                    <td class="text-center">{{ r.cantidad_predios }}</td>
+                    <td class="text-end">${{ r.total_avaluo|floatformat:0|intcomma }}</td>
+                    <td class="text-center">{{ r.tarifa_por_mil }}‰</td>
+                    <td class="text-end">${{ r.recaudo_potencial|floatformat:0|intcomma }}</td>
+                    <td class="text-center">{{ r.cultura_pago }}%</td>
+                    <td class="text-end fw-bold">${{ r.proyeccion|floatformat:0|intcomma }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="8" class="text-center text-muted py-3">Sin cálculos</td></tr>
+                {% endfor %}
+            </tbody>
+            {% if resumen_rural %}
+            <tfoot class="table-success">
+                <tr>
+                    <td colspan="7" class="text-end fw-bold">TOTAL PREDIAL RURAL VIG. ACTUAL:</td>
+                    <td class="text-end fw-bold">${{ total_rural|floatformat:0|intcomma }}</td>
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+</div>
+
+<!-- PREDIAL RURAL VIGENCIAS ANTERIORES -->
+<div class="card mb-4">
+    <div class="card-header bg-secondary text-white">
+        <i class="bi bi-clock-history"></i> Predial Rural - Vigencias Anteriores
+        <span class="float-end fw-bold">${{ total_rur_ant|floatformat:0|intcomma }}</span>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Vigencia</th>
+                    <th class="text-end">Valor Cartera</th>
+                    <th class="text-center">% Base</th>
+                    <th class="text-center">% Rural</th>
+                    <th class="text-end">Proyección</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in detalle_rur_ant %}
+                <tr>
+                    <td>{{ d.vigencia }}</td>
+                    <td class="text-end">${{ d.valor_cartera|floatformat:0|intcomma }}</td>
+                    <td class="text-center">{{ d.pct_base }}%</td>
+                    <td class="text-center">{{ d.pct_tipo }}%</td>
+                    <td class="text-end fw-bold">${{ d.proyeccion|floatformat:0|intcomma }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-center text-muted py-3">Agregue datos de cartera</td></tr>
+                {% endfor %}
+            </tbody>
+            {% if detalle_rur_ant %}
+            <tfoot class="table-secondary">
+                <tr>
+                    <td colspan="4" class="text-end fw-bold">TOTAL:</td>
+                    <td class="text-end fw-bold">${{ total_rur_ant|floatformat:0|intcomma }}</td>
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+</div>
+
+<!-- TOTAL PREDIAL UNIFICADO -->
+<div class="card border-dark mb-4">
+    <div class="card-body bg-dark text-white text-center">
+        <h5>TOTAL PREDIAL UNIFICADO</h5>
+        <h2>${{ total_predial|floatformat:0|intcomma }}</h2>
+    </div>
+</div>
+
+<!-- GESTIÓN CARTERA VIGENCIAS ANTERIORES -->
+<div class="card">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-folder"></i> Gestión Cartera Vigencias Anteriores</span>
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalCartera">
+            <i class="bi bi-plus"></i> Agregar Cartera
+        </button>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Vig. Cálculo</th>
+                    <th>Vig. Cartera</th>
+                    <th class="text-end">Valor Cartera</th>
+                    <th class="text-center">% Base</th>
+                    <th class="text-center">% Urbano</th>
+                    <th class="text-center">% Rural</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in carteras %}
+                <tr>
+                    <td>{{ c.vigencia_calculo }}</td>
+                    <td>{{ c.vigencia_cartera }}</td>
+                    <td class="text-end">${{ c.valor_cartera|floatformat:0|intcomma }}</td>
+                    <td class="text-center">{{ c.porcentaje_base }}%</td>
+                    <td class="text-center">{{ c.porcentaje_urbano }}%</td>
+                    <td class="text-center">{{ c.porcentaje_rural }}%</td>
+                    <td>
+                        <a href="{% url 'cartera_eliminar' c.pk %}" class="btn btn-sm btn-outline-danger"
+                           onclick="return confirm('¿Eliminar?')"><i class="bi bi-trash"></i></a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Cartera -->
+<div class="modal fade" id="modalCartera" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'cartera_guardar' %}">
+                {% csrf_token %}
+                <div class="modal-header"><h5 class="modal-title">Agregar Cartera Vigencia Anterior</h5></div>
+                <div class="modal-body">
+                    {% for field in form_cartera %}
+                    <div class="mb-2">
+                        <label class="form-label">{{ field.label }}</label>
+                        {{ field }}
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Parámetros del Sistema{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Parámetros</li>{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-white">
+                <i class="bi bi-gear"></i> Parámetros del Sistema - Vigencia Fiscal
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Vigencia Fiscal</label>
+                            {{ form.vigencia }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Valor UVT ($)</label>
+                            {{ form.valor_uvt }}
+                            <small class="text-muted">2026: $52.374</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Tasa IPC</label>
+                            {{ form.tasa_ipc }}
+                            <small class="text-muted">Ej: 0.051 = 5.1%</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Tasa Crecimiento ICN</label>
+                            {{ form.tasa_icn }}
+                            <small class="text-muted">Ej: 0.08 = 8%</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Tasa PIB Nominal</label>
+                            {{ form.tasa_pib_nominal }}
+                            <small class="text-muted">Ej: 0.062 = 6.2%</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">POAI Total Inversión</label>
+                            {{ form.poai_total_inversion }}
+                            <small class="text-muted">Sin Educación, Vivienda, Salud</small>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                {{ form.activo }}
+                                <label class="form-check-label">Vigencia activa</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Guardar</button>
+                        <a href="{% url 'dashboard' %}" class="btn btn-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

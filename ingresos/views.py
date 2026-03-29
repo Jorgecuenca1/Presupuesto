@@ -1,0 +1,442 @@
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.db.models import Sum
+from django.http import HttpResponse
+from decimal import Decimal
+import openpyxl
+
+from core.models import ParametrosSistema
+from .models import (
+    TarifaPredial, CulturaPago, ContribuyentePredial, CarteraVigenciaAnterior,
+    TarifaICA, ContribuyenteICA, RubroIngreso, ResumenCalculo,
+    CategoriaPredial, ActividadICA,
+)
+from .forms import (
+    TarifaPredialForm, CulturaPagoForm, ContribuyentePredialForm,
+    ImportarExcelForm, CarteraForm, TarifaICAForm, ContribuyenteICAForm,
+    RubroIngresoForm,
+)
+from .utils import (
+    calcular_predial, calcular_predial_vigencias_anteriores,
+    calcular_ica, calcular_todos_ingresos,
+)
+
+
+def _vigencia():
+    p = ParametrosSistema.objects.filter(activo=True).first()
+    return p.vigencia if p else 2026
+
+
+# ─── TARIFAS PREDIAL ──────────────────────────────────────────────
+@login_required
+def tarifas_predial(request):
+    vigencia = _vigencia()
+    tarifas = TarifaPredial.objects.filter(vigencia=vigencia)
+    culturas = CulturaPago.objects.filter(vigencia=vigencia)
+    form_tarifa = TarifaPredialForm(initial={'vigencia': vigencia})
+    form_cultura = CulturaPagoForm(initial={'vigencia': vigencia})
+    return render(request, 'ingresos/tarifas_predial.html', {
+        'tarifas': tarifas, 'culturas': culturas,
+        'form_tarifa': form_tarifa, 'form_cultura': form_cultura,
+        'vigencia': vigencia,
+    })
+
+
+@login_required
+def tarifa_predial_guardar(request):
+    if request.method == 'POST':
+        pk = request.POST.get('pk')
+        instance = get_object_or_404(TarifaPredial, pk=pk) if pk else None
+        form = TarifaPredialForm(request.POST, instance=instance)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Tarifa guardada')
+    return redirect('tarifas_predial')
+
+
+@login_required
+def tarifa_predial_eliminar(request, pk):
+    get_object_or_404(TarifaPredial, pk=pk).delete()
+    messages.success(request, 'Tarifa eliminada')
+    return redirect('tarifas_predial')
+
+
+@login_required
+def cultura_pago_guardar(request):
+    if request.method == 'POST':
+        pk = request.POST.get('pk')
+        instance = get_object_or_404(CulturaPago, pk=pk) if pk else None
+        form = CulturaPagoForm(request.POST, instance=instance)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Cultura de pago guardada')
+    return redirect('tarifas_predial')
+
+
+# ─── CONTRIBUYENTES PREDIAL ───────────────────────────────────────
+@login_required
+def contribuyentes_predial(request):
+    vigencia = _vigencia()
+    contribuyentes = ContribuyentePredial.objects.filter(vigencia=vigencia)
+    total = contribuyentes.count()
+    total_avaluo = contribuyentes.aggregate(t=Sum('avaluo_catastral'))['t'] or 0
+    return render(request, 'ingresos/contribuyentes_predial.html', {
+        'contribuyentes': contribuyentes[:200],
+        'total': total, 'total_avaluo': total_avaluo,
+        'vigencia': vigencia,
+    })
+
+
+@login_required
+def contribuyente_predial_crear(request):
+    vigencia = _vigencia()
+    if request.method == 'POST':
+        form = ContribuyentePredialForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Contribuyente agregado')
+            return redirect('contribuyentes_predial')
+    else:
+        form = ContribuyentePredialForm(initial={'vigencia': vigencia})
+    return render(request, 'ingresos/contribuyente_predial_form.html', {'form': form})
+
+
+@login_required
+def contribuyente_predial_eliminar(request, pk):
+    get_object_or_404(ContribuyentePredial, pk=pk).delete()
+    messages.success(request, 'Contribuyente eliminado')
+    return redirect('contribuyentes_predial')
+
+
+@login_required
+def importar_predial(request):
+    if request.method == 'POST':
+        form = ImportarExcelForm(request.POST, request.FILES)
+        if form.is_valid():
+            archivo = request.FILES['archivo']
+            vigencia = _vigencia()
+            try:
+                wb = openpyxl.load_workbook(archivo)
+                ws = wb.active
+                count = 0
+                cat_map = {v.lower(): k for k, v in CategoriaPredial.choices}
+                for row in ws.iter_rows(min_row=2, values_only=True):
+                    if not row or len(row) < 5:
+                        continue
+                    direccion = str(row[0] or '').strip()
+                    nombre = str(row[1] or '').strip()
+                    propietario = str(row[2] or '').strip()
+                    try:
+                        avaluo = Decimal(str(row[3]).replace(',', '').replace('$', '').strip())
+                    except (ValueError, TypeError):
+                        continue
+                    cat_raw = str(row[4] or '').strip()
+                    cedula_cat = str(row[5]).strip() if len(row) > 5 and row[5] else ''
+                    categoria = cat_map.get(cat_raw.lower(), cat_raw.upper()[:4])
+                    if categoria not in dict(CategoriaPredial.choices):
+                        categoria = 'UV'
+                    ContribuyentePredial.objects.create(
+                        vigencia=vigencia, direccion=direccion, nombre_predio=nombre,
+                        propietario=propietario, avaluo_catastral=avaluo,
+                        categoria=categoria, cedula_catastral=cedula_cat,
+                    )
+                    count += 1
+                messages.success(request, f'{count} contribuyentes importados')
+                return redirect('contribuyentes_predial')
+            except Exception as e:
+                messages.error(request, f'Error al importar: {e}')
+    else:
+        form = ImportarExcelForm()
+    return render(request, 'ingresos/importar_contribuyentes.html', {
+        'form': form, 'tipo': 'Predial',
+        'columnas': ['Dirección', 'Nombre Predio', 'Propietario', 'Avalúo Catastral', 'Categoría', 'Cédula Catastral (opcional)'],
+        'categorias': CategoriaPredial.choices,
+    })
+
+
+# ─── CÁLCULO PREDIAL ──────────────────────────────────────────────
+@login_required
+def calculo_predial(request):
+    vigencia = _vigencia()
+    params = ParametrosSistema.objects.filter(vigencia=vigencia).first()
+    if request.method == 'POST':
+        calcular_predial(vigencia, 'urbano')
+        calcular_predial(vigencia, 'rural')
+        messages.success(request, 'Cálculo predial ejecutado correctamente')
+        return redirect('calculo_predial')
+
+    resumen_urbano = ResumenCalculo.objects.filter(vigencia=vigencia, tipo='predial_urbano')
+    resumen_rural = ResumenCalculo.objects.filter(vigencia=vigencia, tipo='predial_rural')
+    total_urbano = resumen_urbano.aggregate(t=Sum('proyeccion'))['t'] or 0
+    total_rural = resumen_rural.aggregate(t=Sum('proyeccion'))['t'] or 0
+
+    total_urb_ant, detalle_urb_ant = calcular_predial_vigencias_anteriores(vigencia, 'urbano')
+    total_rur_ant, detalle_rur_ant = calcular_predial_vigencias_anteriores(vigencia, 'rural')
+
+    carteras = CarteraVigenciaAnterior.objects.filter(vigencia_calculo=vigencia)
+    form_cartera = CarteraForm(initial={'vigencia_calculo': vigencia})
+
+    return render(request, 'ingresos/calculo_predial.html', {
+        'params': params,
+        'resumen_urbano': resumen_urbano, 'total_urbano': total_urbano,
+        'resumen_rural': resumen_rural, 'total_rural': total_rural,
+        'total_urb_ant': total_urb_ant, 'detalle_urb_ant': detalle_urb_ant,
+        'total_rur_ant': total_rur_ant, 'detalle_rur_ant': detalle_rur_ant,
+        'carteras': carteras, 'form_cartera': form_cartera,
+        'total_predial': total_urbano + total_rural + total_urb_ant + total_rur_ant,
+    })
+
+
+@login_required
+def cartera_guardar(request):
+    if request.method == 'POST':
+        pk = request.POST.get('pk')
+        instance = get_object_or_404(CarteraVigenciaAnterior, pk=pk) if pk else None
+        form = CarteraForm(request.POST, instance=instance)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Cartera guardada')
+    return redirect('calculo_predial')
+
+
+@login_required
+def cartera_eliminar(request, pk):
+    get_object_or_404(CarteraVigenciaAnterior, pk=pk).delete()
+    messages.success(request, 'Cartera eliminada')
+    return redirect('calculo_predial')
+
+
+# ─── TARIFAS ICA ──────────────────────────────────────────────────
+@login_required
+def tarifas_ica(request):
+    vigencia = _vigencia()
+    tarifas = TarifaICA.objects.filter(vigencia=vigencia)
+    form = TarifaICAForm(initial={'vigencia': vigencia})
+    return render(request, 'ingresos/tarifas_ica.html', {
+        'tarifas': tarifas, 'form': form, 'vigencia': vigencia,
+    })
+
+
+@login_required
+def tarifa_ica_guardar(request):
+    if request.method == 'POST':
+        pk = request.POST.get('pk')
+        instance = get_object_or_404(TarifaICA, pk=pk) if pk else None
+        form = TarifaICAForm(request.POST, instance=instance)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Tarifa ICA guardada')
+    return redirect('tarifas_ica')
+
+
+@login_required
+def tarifa_ica_eliminar(request, pk):
+    get_object_or_404(TarifaICA, pk=pk).delete()
+    messages.success(request, 'Tarifa eliminada')
+    return redirect('tarifas_ica')
+
+
+# ─── CONTRIBUYENTES ICA ───────────────────────────────────────────
+@login_required
+def contribuyentes_ica(request):
+    vigencia = _vigencia()
+    contribuyentes = ContribuyenteICA.objects.filter(vigencia=vigencia)
+    total = contribuyentes.count()
+    total_ingresos = contribuyentes.aggregate(t=Sum('ingresos_brutos'))['t'] or 0
+    return render(request, 'ingresos/contribuyentes_ica.html', {
+        'contribuyentes': contribuyentes[:200],
+        'total': total, 'total_ingresos': total_ingresos,
+        'vigencia': vigencia,
+    })
+
+
+@login_required
+def contribuyente_ica_crear(request):
+    vigencia = _vigencia()
+    if request.method == 'POST':
+        form = ContribuyenteICAForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Contribuyente ICA agregado')
+            return redirect('contribuyentes_ica')
+    else:
+        form = ContribuyenteICAForm(initial={'vigencia': vigencia})
+    return render(request, 'ingresos/contribuyente_ica_form.html', {'form': form})
+
+
+@login_required
+def contribuyente_ica_eliminar(request, pk):
+    get_object_or_404(ContribuyenteICA, pk=pk).delete()
+    messages.success(request, 'Contribuyente eliminado')
+    return redirect('contribuyentes_ica')
+
+
+@login_required
+def importar_ica(request):
+    if request.method == 'POST':
+        form = ImportarExcelForm(request.POST, request.FILES)
+        if form.is_valid():
+            archivo = request.FILES['archivo']
+            vigencia = _vigencia()
+            try:
+                wb = openpyxl.load_workbook(archivo)
+                ws = wb.active
+                count = 0
+                act_map = {v.lower(): k for k, v in ActividadICA.choices}
+                for row in ws.iter_rows(min_row=2, values_only=True):
+                    if not row or len(row) < 4:
+                        continue
+                    nombre = str(row[0] or '').strip()
+                    nit = str(row[1] or '').strip()
+                    act_raw = str(row[2] or '').strip()
+                    try:
+                        ingresos = Decimal(str(row[3]).replace(',', '').replace('$', '').strip())
+                    except (ValueError, TypeError):
+                        continue
+                    actividad = act_map.get(act_raw.lower(), act_raw[:3])
+                    if actividad not in dict(ActividadICA.choices):
+                        actividad = '204'
+                    ContribuyenteICA.objects.create(
+                        vigencia=vigencia, nombre=nombre, nit=nit,
+                        actividad=actividad, ingresos_brutos=ingresos,
+                    )
+                    count += 1
+                messages.success(request, f'{count} contribuyentes ICA importados')
+                return redirect('contribuyentes_ica')
+            except Exception as e:
+                messages.error(request, f'Error al importar: {e}')
+    else:
+        form = ImportarExcelForm()
+    return render(request, 'ingresos/importar_contribuyentes.html', {
+        'form': form, 'tipo': 'Industria y Comercio',
+        'columnas': ['Nombre/Razón Social', 'NIT', 'Código Actividad (101/201/202/203/204/301/302/401)', 'Ingresos Brutos ($)'],
+        'categorias': ActividadICA.choices,
+    })
+
+
+# ─── CÁLCULO ICA ──────────────────────────────────────────────────
+@login_required
+def calculo_ica(request):
+    vigencia = _vigencia()
+    params = ParametrosSistema.objects.filter(vigencia=vigencia).first()
+    if request.method == 'POST':
+        calcular_ica(vigencia)
+        messages.success(request, 'Cálculo ICA ejecutado correctamente')
+        return redirect('calculo_ica')
+
+    resumen = ResumenCalculo.objects.filter(vigencia=vigencia, tipo='ica')
+    total_ica = resumen.aggregate(t=Sum('proyeccion'))['t'] or 0
+    avisos_tableros = total_ica * Decimal('0.15')
+
+    contribuyentes = ContribuyenteICA.objects.filter(vigencia=vigencia).order_by('actividad')
+
+    return render(request, 'ingresos/calculo_ica.html', {
+        'params': params,
+        'resumen': resumen,
+        'total_ica': total_ica,
+        'avisos_tableros': avisos_tableros,
+        'contribuyentes': contribuyentes,
+    })
+
+
+# ─── RUBROS DE INGRESO ────────────────────────────────────────────
+@login_required
+def rubros_list(request):
+    vigencia = _vigencia()
+    rubros = RubroIngreso.objects.filter(vigencia=vigencia)
+    total = rubros.filter(es_titulo=False).aggregate(t=Sum('valor_apropiacion'))['t'] or 0
+    return render(request, 'ingresos/rubros_list.html', {
+        'rubros': rubros, 'vigencia': vigencia, 'total': total,
+    })
+
+
+@login_required
+def rubro_crear(request):
+    vigencia = _vigencia()
+    if request.method == 'POST':
+        form = RubroIngresoForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Rubro creado')
+            return redirect('rubros_list')
+    else:
+        form = RubroIngresoForm(initial={'vigencia': vigencia})
+    return render(request, 'ingresos/rubro_form.html', {'form': form, 'titulo': 'Crear Rubro'})
+
+
+@login_required
+def rubro_editar(request, pk):
+    rubro = get_object_or_404(RubroIngreso, pk=pk)
+    if request.method == 'POST':
+        form = RubroIngresoForm(request.POST, instance=rubro)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Rubro actualizado')
+            return redirect('rubros_list')
+    else:
+        form = RubroIngresoForm(instance=rubro)
+    return render(request, 'ingresos/rubro_form.html', {'form': form, 'titulo': 'Editar Rubro'})
+
+
+@login_required
+def rubro_eliminar(request, pk):
+    get_object_or_404(RubroIngreso, pk=pk).delete()
+    messages.success(request, 'Rubro eliminado')
+    return redirect('rubros_list')
+
+
+# ─── CALCULAR TODOS ───────────────────────────────────────────────
+@login_required
+def calcular_todos(request):
+    vigencia = _vigencia()
+    if request.method == 'POST':
+        calcular_todos_ingresos(vigencia)
+        messages.success(request, 'Todos los ingresos fueron calculados correctamente')
+    return redirect('reporte_ingresos')
+
+
+# ─── REPORTE ──────────────────────────────────────────────────────
+@login_required
+def reporte_ingresos(request):
+    vigencia = _vigencia()
+    params = ParametrosSistema.objects.filter(vigencia=vigencia).first()
+    rubros = RubroIngreso.objects.filter(vigencia=vigencia)
+    total = rubros.filter(nivel=0, es_titulo=True).aggregate(t=Sum('valor_apropiacion'))['t']
+    if not total:
+        total = rubros.filter(es_titulo=False).aggregate(t=Sum('valor_apropiacion'))['t'] or 0
+    return render(request, 'ingresos/reporte_ingresos.html', {
+        'rubros': rubros, 'vigencia': vigencia, 'params': params, 'total': total,
+    })
+
+
+@login_required
+def exportar_reporte_excel(request):
+    vigencia = _vigencia()
+    rubros = RubroIngreso.objects.filter(vigencia=vigencia)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = 'Anexo 1 Detalle Ingresos'
+    ws.append(['MUNICIPIO DE PUERTO LÓPEZ'])
+    ws.append(['PRESUPUESTO DE INGRESOS Y RECURSOS DE CAPITAL'])
+    ws.append([f'VIGENCIA FISCAL {vigencia}'])
+    ws.append([])
+    ws.append(['CÓDIGO', 'FUENTE', 'DESCRIPCIÓN', 'APROPIACIÓN', 'OBSERVACIONES'])
+
+    for rubro in rubros:
+        indent = '  ' * rubro.nivel
+        ws.append([
+            rubro.codigo,
+            rubro.codigo_fuente,
+            indent + rubro.descripcion,
+            float(rubro.valor_apropiacion),
+            rubro.observaciones,
+        ])
+
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename=Anexo1_Ingresos_{vigencia}.xlsx'
+    wb.save(response)
+    return response

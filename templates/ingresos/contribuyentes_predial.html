@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Contribuyentes Predial{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Contribuyentes Predial</li>{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="bi bi-people"></i> Contribuyentes Predial - Vigencia {{ vigencia }}</h4>
+    <div>
+        <a href="{% url 'importar_predial' %}" class="btn btn-success btn-sm"><i class="bi bi-upload"></i> Importar Excel</a>
+        <a href="{% url 'contribuyente_predial_crear' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus"></i> Agregar</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="card stat-card blue p-3">
+            <div class="stat-label">Total Contribuyentes</div>
+            <div class="stat-value">{{ total|intcomma }}</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card green p-3">
+            <div class="stat-label">Total Avalúo Catastral</div>
+            <div class="stat-value">${{ total_avaluo|floatformat:0|intcomma }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-sm mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Propietario</th>
+                        <th>Nombre Predio</th>
+                        <th>Dirección</th>
+                        <th>Categoría</th>
+                        <th class="text-end">Avalúo Catastral</th>
+                        <th class="text-end">Tarifa</th>
+                        <th class="text-end">Impuesto</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in contribuyentes %}
+                    <tr>
+                        <td>{{ c.propietario }}</td>
+                        <td>{{ c.nombre_predio }}</td>
+                        <td>{{ c.direccion }}</td>
+                        <td><span class="badge bg-secondary">{{ c.get_categoria_display }}</span></td>
+                        <td class="text-end">${{ c.avaluo_catastral|floatformat:0|intcomma }}</td>
+                        <td class="text-end">{{ c.tarifa_aplicada|default:"-" }}‰</td>
+                        <td class="text-end">${{ c.impuesto_calculado|floatformat:0|intcomma|default:"-" }}</td>
+                        <td>
+                            <a href="{% url 'contribuyente_predial_eliminar' c.pk %}" class="btn btn-sm btn-outline-danger"
+                               onclick="return confirm('¿Eliminar?')"><i class="bi bi-trash"></i></a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="8" class="text-center text-muted py-4">No hay contribuyentes. Importe una base de datos o agregue manualmente.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% if total > 200 %}
+<p class="text-muted mt-2">Mostrando primeros 200 de {{ total|intcomma }} registros</p>
+{% endif %}
+{% endblock %}

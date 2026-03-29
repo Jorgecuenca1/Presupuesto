@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Importar {{ tipo }}{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Importar {{ tipo }}</li>{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-white">
+                <i class="bi bi-upload"></i> Importar Base de Datos - {{ tipo }}
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h6><i class="bi bi-info-circle"></i> Formato del archivo Excel</h6>
+                    <p class="mb-1">El archivo debe tener las siguientes columnas en la primera hoja (fila 1 = encabezados):</p>
+                    <ol class="mb-2">
+                        {% for col in columnas %}
+                        <li><strong>{{ col }}</strong></li>
+                        {% endfor %}
+                    </ol>
+                    <p class="mb-1"><strong>Códigos de categoría válidos:</strong></p>
+                    <div class="row">
+                        {% for code, label in categorias %}
+                        <div class="col-md-6"><code>{{ code }}</code> = {{ label }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Seleccionar archivo Excel</label>
+                        {{ form.archivo }}
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-upload"></i> Importar
+                    </button>
+                    <a href="{% url 'dashboard' %}" class="btn btn-secondary">Cancelar</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

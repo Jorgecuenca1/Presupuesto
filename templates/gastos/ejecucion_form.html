@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Editar Ejecución{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'ejecucion_gastos' %}">Ejecución</a></li>
+<li class="breadcrumb-item active">{{ rubro.codigo }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card">
+            <div class="card-header bg-white">
+                <i class="bi bi-pencil"></i> Ejecución - {{ rubro.codigo }} - {{ rubro.descripcion }}
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Presupuesto Aprobado ($)</label>
+                            {{ form.presupuesto_aprobado }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Adiciones ($)</label>
+                            {{ form.adiciones }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Reducciones ($)</label>
+                            {{ form.reducciones }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Traslado Crédito ($)</label>
+                            {{ form.traslado_credito }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Traslado Contra Crédito ($)</label>
+                            {{ form.traslado_contra_credito }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Aplazamientos ($)</label>
+                            {{ form.aplazamientos }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Desaplazamientos ($)</label>
+                            {{ form.desaplazamientos }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">CDP ($)</label>
+                            {{ form.cdp }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Compromisos ($)</label>
+                            {{ form.compromisos }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Ordenado ($)</label>
+                            {{ form.ordenado }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Pagado ($)</label>
+                            {{ form.pagado }}
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Guardar</button>
+                        <a href="{% url 'ejecucion_gastos' %}" class="btn btn-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

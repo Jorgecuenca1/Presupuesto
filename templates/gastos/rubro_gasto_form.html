@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'rubros_gasto_list' %}">Rubros de Gasto</a></li>
+<li class="breadcrumb-item active">{{ titulo }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card">
+            <div class="card-header bg-white"><i class="bi bi-pencil"></i> {{ titulo }}</div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Vigencia</label>
+                            {{ form.vigencia }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Código Presupuestal</label>
+                            {{ form.codigo }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Descripción</label>
+                            {{ form.descripcion }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Sección</label>
+                            {{ form.seccion }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Fuente</label>
+                            {{ form.fuente }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Cód. Fuente</label>
+                            {{ form.codigo_fuente }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Nombre Fuente</label>
+                            {{ form.nombre_fuente }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Tipo de Gasto</label>
+                            {{ form.tipo_gasto }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Rubro Padre</label>
+                            {{ form.parent }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Apropiación ($)</label>
+                            {{ form.valor_apropiacion }}
+                        </div>
+                        <div class="col-md-3">
+                            <div class="row">
+                                <div class="col-6">
+                                    <label class="form-label">Orden</label>
+                                    {{ form.orden }}
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">Nivel</label>
+                                    {{ form.nivel }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-check mt-4">
+                                {{ form.es_titulo }}
+                                <label class="form-check-label">Es título/subtotal</label>
+                            </div>
+                        </div>
+                        <div class="col-md-10">
+                            <label class="form-label">Observaciones</label>
+                            {{ form.observaciones }}
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Guardar</button>
+                        <a href="{% url 'rubros_gasto_list' %}" class="btn btn-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

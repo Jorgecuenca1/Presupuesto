@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Fuentes de Financiación{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Fuentes de Financiación</li>{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="bi bi-wallet2"></i> Fuentes de Financiación - {{ vigencia }}</h4>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body p-0">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Código</th>
+                            <th>Nombre</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for f in fuentes %}
+                        <tr>
+                            <td>{{ f.codigo }}</td>
+                            <td>{{ f.nombre }}</td>
+                            <td>
+                                <a href="{% url 'fuente_eliminar' f.pk %}" class="btn btn-sm btn-outline-danger"
+                                   onclick="return confirm('¿Eliminar?')"><i class="bi bi-trash"></i></a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="3" class="text-center text-muted py-3">No hay fuentes registradas</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-white"><i class="bi bi-plus"></i> Agregar Fuente</div>
+            <div class="card-body">
+                <form method="post" action="{% url 'fuente_guardar' %}">
+                    {% csrf_token %}
+                    <div class="mb-2">
+                        <label class="form-label">Vigencia</label>
+                        {{ form.vigencia }}
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Código</label>
+                        {{ form.codigo }}
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Nombre</label>
+                        {{ form.nombre }}
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-save"></i> Guardar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

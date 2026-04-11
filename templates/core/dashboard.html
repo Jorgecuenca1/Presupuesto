@@ -6,9 +6,22 @@
 {% block vigencia_display %}{{ params.vigencia|default:"2026" }}{% endblock %}
 
 {% block content %}
-<h4 class="mb-4">Dashboard - Presupuesto de Ingresos {{ params.vigencia|default:"2026" }}</h4>
+<h4 class="mb-4">Dashboard - Elaboración Presupuesto {{ params.vigencia|default:"2026" }}</h4>
 
+<!-- Resumen general -->
 <div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card green p-3">
+            <div class="stat-label">Total Ingresos</div>
+            <div class="stat-value">${{ total_ingresos|floatformat:0|intcomma }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card orange p-3">
+            <div class="stat-label">Total Gastos</div>
+            <div class="stat-value">${{ total_gastos|floatformat:0|intcomma }}</div>
+        </div>
+    </div>
     <div class="col-md-3">
         <div class="card stat-card blue p-3">
             <div class="stat-label">Contribuyentes Predial</div>
@@ -16,21 +29,38 @@
         </div>
     </div>
     <div class="col-md-3">
+        <div class="card stat-card purple p-3">
+            <div class="stat-label">UVT {{ params.vigencia|default:"2026" }}</div>
+            <div class="stat-value">${{ params.valor_uvt|floatformat:0|intcomma|default:"0" }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Gastos por tipo + Indicador Ley 617 -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card blue p-3">
+            <div class="stat-label">Funcionamiento</div>
+            <div class="stat-value">${{ total_funcionamiento|floatformat:0|intcomma }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
         <div class="card stat-card green p-3">
-            <div class="stat-label">Contribuyentes ICA</div>
-            <div class="stat-value">{{ total_contribuyentes_ica|intcomma }}</div>
+            <div class="stat-label">Inversión</div>
+            <div class="stat-value">${{ total_inversion|floatformat:0|intcomma }}</div>
         </div>
     </div>
     <div class="col-md-3">
         <div class="card stat-card orange p-3">
-            <div class="stat-label">Total Ingresos</div>
-            <div class="stat-value">${{ total_ingresos|floatformat:0|intcomma }}</div>
+            <div class="stat-label">Servicio de Deuda</div>
+            <div class="stat-value">${{ total_deuda|floatformat:0|intcomma }}</div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card stat-card purple p-3">
-            <div class="stat-label">UVT {{ params.vigencia|default:"2026" }}</div>
-            <div class="stat-value">${{ params.valor_uvt|floatformat:0|intcomma|default:"52.374" }}</div>
+        <div class="card stat-card {% if indicador_617 <= 80 %}green{% else %}orange{% endif %} p-3">
+            <div class="stat-label">Indicador Ley 617</div>
+            <div class="stat-value">{{ indicador_617 }}%</div>
+            <small class="text-muted">GF/ICLD Totales</small>
         </div>
     </div>
 </div>
@@ -38,31 +68,56 @@
 <div class="row g-3">
     <div class="col-md-6">
         <div class="card">
-            <div class="card-header bg-white"><i class="bi bi-lightning"></i> Acciones Rápidas</div>
+            <div class="card-header bg-white"><i class="bi bi-lightning"></i> Acciones Rápidas - Ingresos</div>
             <div class="card-body">
                 <div class="d-grid gap-2">
+                    <a href="{% url 'cifras_historicas_ingresos' %}" class="btn btn-outline-primary text-start">
+                        <i class="bi bi-clock-history"></i> Cifras Históricas Ingresos
+                    </a>
                     <a href="{% url 'parametros' %}" class="btn btn-outline-primary text-start">
-                        <i class="bi bi-gear"></i> Configurar Parámetros del Sistema
-                    </a>
-                    <a href="{% url 'importar_predial' %}" class="btn btn-outline-primary text-start">
-                        <i class="bi bi-upload"></i> Importar Base de Datos Predial
-                    </a>
-                    <a href="{% url 'importar_ica' %}" class="btn btn-outline-primary text-start">
-                        <i class="bi bi-upload"></i> Importar Base de Datos ICA
+                        <i class="bi bi-gear"></i> Parámetros del Sistema
                     </a>
                     <a href="{% url 'calculo_predial' %}" class="btn btn-outline-success text-start">
-                        <i class="bi bi-calculator"></i> Ejecutar Cálculo Predial
+                        <i class="bi bi-calculator"></i> Cálculo Predial
                     </a>
                     <a href="{% url 'calculo_ica' %}" class="btn btn-outline-success text-start">
-                        <i class="bi bi-calculator"></i> Ejecutar Cálculo ICA
+                        <i class="bi bi-calculator"></i> Cálculo ICA
                     </a>
                     <a href="{% url 'reporte_ingresos' %}" class="btn btn-outline-dark text-start">
-                        <i class="bi bi-file-earmark-text"></i> Ver Reporte Anexo 1
+                        <i class="bi bi-file-earmark-text"></i> Reporte Anexo 1 (Ingresos)
                     </a>
                 </div>
             </div>
         </div>
     </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-white"><i class="bi bi-lightning"></i> Acciones Rápidas - Gastos</div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'cifras_historicas_gastos' %}" class="btn btn-outline-primary text-start">
+                        <i class="bi bi-clock-history"></i> Cifras Históricas Gastos
+                    </a>
+                    <a href="{% url 'costo_personal_list' %}" class="btn btn-outline-primary text-start">
+                        <i class="bi bi-people"></i> Costo de Personal
+                    </a>
+                    <a href="{% url 'servicio_deuda_list' %}" class="btn btn-outline-primary text-start">
+                        <i class="bi bi-bank"></i> Servicio de Deuda
+                    </a>
+                    <a href="{% url 'reporte_gastos' %}" class="btn btn-outline-dark text-start">
+                        <i class="bi bi-file-earmark-text"></i> Reporte Anexo 2 (Gastos)
+                    </a>
+                    <a href="{% url 'reporte_techos_inversion' %}" class="btn btn-outline-dark text-start">
+                        <i class="bi bi-bar-chart-steps"></i> Techos de Inversión / FAEP
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Parámetros vigentes -->
+<div class="row g-3 mt-3">
     <div class="col-md-6">
         <div class="card">
             <div class="card-header bg-white"><i class="bi bi-info-circle"></i> Parámetros Vigentes</div>
@@ -71,10 +126,14 @@
                 <table class="table table-sm">
                     <tr><td>Vigencia Fiscal</td><td class="text-end fw-bold">{{ params.vigencia }}</td></tr>
                     <tr><td>Valor UVT</td><td class="text-end">${{ params.valor_uvt|floatformat:0|intcomma }}</td></tr>
+                    <tr><td>Valor SMLMV</td><td class="text-end">${{ params.valor_smlmv|floatformat:0|intcomma }}</td></tr>
                     <tr><td>Tasa IPC</td><td class="text-end">{{ params.tasa_ipc|floatformat:2 }}%</td></tr>
                     <tr><td>Tasa ICN</td><td class="text-end">{{ params.tasa_icn|floatformat:2 }}%</td></tr>
-                    <tr><td>Tasa PIB Nominal</td><td class="text-end">{{ params.tasa_pib_nominal|floatformat:2 }}%</td></tr>
+                    <tr><td>TCPA Ingresos</td><td class="text-end">{{ params.tcpa_ingresos|floatformat:4 }}%</td></tr>
+                    <tr><td>TCPA Gastos</td><td class="text-end">{{ params.tcpa_gastos|floatformat:4 }}%</td></tr>
                     <tr><td>POAI Total Inversión</td><td class="text-end">${{ params.poai_total_inversion|floatformat:0|intcomma }}</td></tr>
+                    <tr><td>Categoría Municipio</td><td class="text-end">{{ params.categoria_municipio }}</td></tr>
+                    <tr><td>% Promedio Pagos/Aprob.</td><td class="text-end">{{ params.pct_promedio_pagos|floatformat:2 }}%</td></tr>
                 </table>
                 {% else %}
                 <div class="alert alert-warning mb-0">
@@ -85,25 +144,26 @@
             </div>
         </div>
     </div>
-</div>
-
-{% if rubros_por_metodo %}
-<div class="card mt-3">
-    <div class="card-header bg-white"><i class="bi bi-bar-chart"></i> Ingresos por Método de Cálculo</div>
-    <div class="card-body">
-        <table class="table table-sm">
-            <thead><tr><th>Método</th><th class="text-end">Rubros</th><th class="text-end">Total Apropiación</th></tr></thead>
-            <tbody>
-            {% for r in rubros_por_metodo %}
-            <tr>
-                <td>{{ r.metodo_calculo }}</td>
-                <td class="text-end">{{ r.cantidad }}</td>
-                <td class="text-end">${{ r.total|floatformat:0|intcomma }}</td>
-            </tr>
-            {% endfor %}
-            </tbody>
-        </table>
+    <div class="col-md-6">
+        {% if rubros_por_metodo %}
+        <div class="card">
+            <div class="card-header bg-white"><i class="bi bi-bar-chart"></i> Ingresos por Método de Cálculo</div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <thead><tr><th>Método</th><th class="text-end">Rubros</th><th class="text-end">Total</th></tr></thead>
+                    <tbody>
+                    {% for r in rubros_por_metodo %}
+                    <tr>
+                        <td>{{ r.metodo_calculo }}</td>
+                        <td class="text-end">{{ r.cantidad }}</td>
+                        <td class="text-end">${{ r.total|floatformat:0|intcomma }}</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
-{% endif %}
 {% endblock %}

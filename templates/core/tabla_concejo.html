@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Tabla Concejo y Personería{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Tabla Concejo / Personería</li>
+{% endblock %}
+
+{% block content %}
+<h4 class="mb-4">Tabla de Cálculo Concejo y Personería (Ley 617/2000)</h4>
+
+{% if tabla_actual and params %}
+<div class="alert alert-info">
+    <strong>Municipio Categoría {{ params.categoria_municipio }}:</strong>
+    Honorarios Concejo = <strong>${{ honorarios|floatformat:0|intcomma }}</strong>
+    ({{ tabla_actual.honorario_concejal_smlmv }} SMLMV x {{ tabla_actual.sesiones_ordinarias }} ord + {{ tabla_actual.sesiones_extraordinarias }} ext x {{ tabla_actual.num_concejales }} concejales)
+</div>
+{% endif %}
+
+<!-- Tabla existente -->
+{% if tablas %}
+<div class="card mb-4">
+    <div class="card-header bg-white"><i class="bi bi-building"></i> Tablas por Categoría</div>
+    <div class="card-body table-responsive">
+        <table class="table table-sm table-hover">
+            <thead>
+                <tr>
+                    <th>Categoría</th>
+                    <th class="text-end">Honorario (SMLMV)</th>
+                    <th class="text-end">Ses. Ord.</th>
+                    <th class="text-end">Ses. Ext.</th>
+                    <th class="text-end">Concejales</th>
+                    <th class="text-end">Límite Concejo (% ICLD)</th>
+                    <th class="text-end">Límite Personería (% ICLD)</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in tablas %}
+                <tr {% if params and t.categoria == params.categoria_municipio %}class="table-warning fw-bold"{% endif %}>
+                    <td>{{ t.get_categoria_display }}</td>
+                    <td class="text-end">{{ t.honorario_concejal_smlmv }}</td>
+                    <td class="text-end">{{ t.sesiones_ordinarias }}</td>
+                    <td class="text-end">{{ t.sesiones_extraordinarias }}</td>
+                    <td class="text-end">{{ t.num_concejales }}</td>
+                    <td class="text-end">{{ t.limite_concejo_pct_icld }}%</td>
+                    <td class="text-end">{{ t.limite_personeria_pct_icld }}%</td>
+                    <td>
+                        <a href="{% url 'tabla_concejo_eliminar' t.pk %}" class="btn btn-sm btn-outline-danger"
+                           onclick="return confirm('Eliminar?')"><i class="bi bi-trash"></i></a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Formulario -->
+<div class="card">
+    <div class="card-header bg-white"><i class="bi bi-plus-circle"></i> Agregar/Editar Categoría</div>
+    <div class="card-body">
+        <form method="post" action="{% url 'tabla_concejo_guardar' %}">
+            {% csrf_token %}
+            <div class="row g-2">
+                <div class="col-md-2">
+                    <label class="form-label">Categoría</label>
+                    {{ form.categoria }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Honorario (SMLMV)</label>
+                    {{ form.honorario_concejal_smlmv }}
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">Ses. Ord.</label>
+                    {{ form.sesiones_ordinarias }}
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">Ses. Ext.</label>
+                    {{ form.sesiones_extraordinarias }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Concejales</label>
+                    {{ form.num_concejales }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Límite Concejo (%)</label>
+                    {{ form.limite_concejo_pct_icld }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Límite Personería (%)</label>
+                    {{ form.limite_personeria_pct_icld }}
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm mt-2"><i class="bi bi-save"></i> Guardar</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

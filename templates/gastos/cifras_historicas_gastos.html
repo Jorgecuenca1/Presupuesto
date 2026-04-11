@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Cifras Históricas Gastos{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item">Gastos</li>
+<li class="breadcrumb-item active">Cifras Históricas</li>
+{% endblock %}
+{% block vigencia_display %}{{ vigencia }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4>Cifras Históricas Gastos CUIPO</h4>
+    <div>
+        <a href="{% url 'importar_cifras_historicas_gastos' %}" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-upload"></i> Importar Excel
+        </a>
+        <form method="post" action="{% url 'calcular_tcpa_gastos' %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-calculator"></i> Calcular TCPA</button>
+        </form>
+    </div>
+</div>
+
+<!-- Resumen -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card blue p-3">
+            <div class="stat-label">TCPA Gastos (4 años)</div>
+            <div class="stat-value">{{ tcpa|floatformat:4 }}%</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card green p-3">
+            <div class="stat-label">% Promedio Pagos/Apropiación</div>
+            <div class="stat-value">{{ pct_promedio|floatformat:2 }}%</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card orange p-3">
+            <div class="stat-label">Honorarios Concejo</div>
+            <div class="stat-value">${{ honorarios_concejo|floatformat:0|intcomma }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card purple p-3">
+            <div class="stat-label">Límite Personería</div>
+            <div class="stat-value">${{ limite_personeria|floatformat:0|intcomma }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Totales por año y tipo -->
+{% if anios %}
+<div class="card mb-4">
+    <div class="card-header bg-white"><i class="bi bi-bar-chart"></i> Resumen por Año y Tipo de Gasto</div>
+    <div class="card-body table-responsive">
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Concepto</th>
+                    {% for anio in anios %}<th class="text-end">{{ anio }}</th>{% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Funcionamiento</td>
+                    {% for anio in anios %}
+                    <td class="text-end">{% for k, v in totales_fun_por_anio.items %}{% if k == anio %}${{ v|floatformat:0|intcomma }}{% endif %}{% endfor %}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td>Inversión</td>
+                    {% for anio in anios %}
+                    <td class="text-end">{% for k, v in totales_inv_por_anio.items %}{% if k == anio %}${{ v|floatformat:0|intcomma }}{% endif %}{% endfor %}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td>Servicio de Deuda</td>
+                    {% for anio in anios %}
+                    <td class="text-end">{% for k, v in totales_deu_por_anio.items %}{% if k == anio %}${{ v|floatformat:0|intcomma }}{% endif %}{% endfor %}</td>
+                    {% endfor %}
+                </tr>
+                <tr class="fw-bold table-light">
+                    <td>TOTAL GASTOS</td>
+                    {% for anio in anios %}
+                    <td class="text-end">{% for k, v in totales_por_anio.items %}{% if k == anio %}${{ v|floatformat:0|intcomma }}{% endif %}{% endfor %}</td>
+                    {% endfor %}
+                </tr>
+                <tr class="text-info">
+                    <td>% Pagos / Apropiación</td>
+                    {% for anio in anios %}
+                    <td class="text-end">{% for k, v in pct_pagos_por_anio.items %}{% if k == anio %}{{ v|floatformat:2 }}%{% endif %}{% endfor %}</td>
+                    {% endfor %}
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Tabla Concejo / Personería -->
+<div class="card mb-4">
+    <div class="card-header bg-white"><i class="bi bi-building"></i> Tabla Concejo y Personería (Ley 617/2000)</div>
+    <div class="card-body">
+        {% if tabla_actual %}
+        <div class="alert alert-info">
+            <strong>Categoría del Municipio:</strong> {{ tabla_actual.get_categoria_display }} |
+            <strong>Concejales:</strong> {{ tabla_actual.num_concejales }} |
+            <strong>Sesiones:</strong> {{ tabla_actual.sesiones_ordinarias }} ord. + {{ tabla_actual.sesiones_extraordinarias }} ext. |
+            <strong>Honorario/sesión:</strong> {{ tabla_actual.honorario_concejal_smlmv }} SMLMV
+        </div>
+        <table class="table table-sm">
+            <tr><td>Honorarios totales Concejo</td><td class="text-end fw-bold">${{ honorarios_concejo|floatformat:0|intcomma }}</td></tr>
+            <tr><td>Límite presupuestal Concejo ({{ tabla_actual.limite_concejo_pct_icld }}% ICLD)</td><td class="text-end fw-bold">${{ limite_concejo|floatformat:0|intcomma }}</td></tr>
+            <tr><td>Límite presupuestal Personería ({{ tabla_actual.limite_personeria_pct_icld }}% ICLD)</td><td class="text-end fw-bold">${{ limite_personeria|floatformat:0|intcomma }}</td></tr>
+        </table>
+        {% else %}
+        <div class="alert alert-warning">
+            No hay tabla de Concejo/Personería configurada para la categoría del municipio.
+            <a href="{% url 'tabla_concejo_personeria' %}">Configurar tabla</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Formulario agregar cifra -->
+<div class="card">
+    <div class="card-header bg-white"><i class="bi bi-plus-circle"></i> Agregar Cifra Histórica</div>
+    <div class="card-body">
+        <form method="post" action="{% url 'cifra_historica_gasto_guardar' %}">
+            {% csrf_token %}
+            <div class="row g-2">
+                <div class="col-md-2">
+                    <label class="form-label">Vig. Cálculo</label>
+                    {{ form.vigencia_calculo }}
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">Año</label>
+                    {{ form.anio }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Código</label>
+                    {{ form.codigo_rubro }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Descripción</label>
+                    {{ form.descripcion }}
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">Tipo</label>
+                    {{ form.tipo_gasto }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Apropiación</label>
+                    {{ form.valor_apropiacion }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Pagos</label>
+                    {{ form.valor_pagos }}
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm mt-2"><i class="bi bi-save"></i> Guardar</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

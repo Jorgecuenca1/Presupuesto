@@ -10,12 +10,12 @@ from core.models import ParametrosSistema
 from .models import (
     TarifaPredial, CulturaPago, ContribuyentePredial, CarteraVigenciaAnterior,
     TarifaICA, ContribuyenteICA, RubroIngreso, ResumenCalculo,
-    CategoriaPredial, ActividadICA,
+    CategoriaPredial, ActividadICA, CifraHistoricaIngreso,
 )
 from .forms import (
     TarifaPredialForm, CulturaPagoForm, ContribuyentePredialForm,
     ImportarExcelForm, CarteraForm, TarifaICAForm, ContribuyenteICAForm,
-    RubroIngresoForm,
+    RubroIngresoForm, CifraHistoricaIngresoForm,
 )
 from .utils import (
     calcular_predial, calcular_predial_vigencias_anteriores,
@@ -440,3 +440,199 @@ def exportar_reporte_excel(request):
     response['Content-Disposition'] = f'attachment; filename=Anexo1_Ingresos_{vigencia}.xlsx'
     wb.save(response)
     return response
+
+
+# ─── CIFRAS HISTÓRICAS INGRESOS ──────────────────────────────────
+def _calcular_tcpa(valores_por_anio):
+    """Calcula la Tasa Compuesta Promedio Anual.
+    TCPA = (Vn/V0)^(1/n) - 1
+    valores_por_anio: dict {año: valor_total}
+    """
+    if len(valores_por_anio) < 2:
+        return Decimal('0')
+    anios = sorted(valores_por_anio.keys())
+    v0 = valores_por_anio[anios[0]]
+    vn = valores_por_anio[anios[-1]]
+    n = len(anios) - 1
+    if v0 <= 0 or vn <= 0:
+        return Decimal('0')
+    ratio = float(vn) / float(v0)
+    tcpa = ratio ** (1.0 / n) - 1.0
+    return Decimal(str(round(tcpa, 6)))
+
+
+@login_required
+def cifras_historicas_ingresos(request):
+    vigencia = _vigencia()
+    cifras = CifraHistoricaIngreso.objects.filter(vigencia_calculo=vigencia)
+    anios = sorted(set(cifras.values_list('anio', flat=True)))
+
+    # Totales por año
+    totales_por_anio = {}
+    icld_por_anio = {}
+    icld_sin_sgp_por_anio = {}
+    icld_total_por_anio = {}
+    for anio in anios:
+        cifras_anio = cifras.filter(anio=anio)
+        totales_por_anio[anio] = cifras_anio.aggregate(t=Sum('valor_recaudo'))['t'] or Decimal('0')
+        icld_por_anio[anio] = cifras_anio.filter(es_icld=True).aggregate(t=Sum('valor_recaudo'))['t'] or Decimal('0')
+        sgp_libre = cifras_anio.filter(es_sgp_libre=True).aggregate(t=Sum('valor_recaudo'))['t'] or Decimal('0')
+        icld_sin_sgp_por_anio[anio] = icld_por_anio[anio]
+        icld_total_por_anio[anio] = icld_por_anio[anio] + sgp_libre
+
+    tcpa = _calcular_tcpa(totales_por_anio)
+    tcpa_icld = _calcular_tcpa(icld_por_anio)
+
+    # ICLD netos sin SGP (último año) para cálculo 1% Ley 99/93
+    ultimo_anio = anios[-1] if anios else vigencia - 1
+    icld_netos_sin_sgp = icld_sin_sgp_por_anio.get(ultimo_anio, Decimal('0'))
+    valor_medio_ambiente = icld_netos_sin_sgp * Decimal('0.01')  # 1% Ley 99/93
+
+    # ICLD totales con SGP libre (último año) para indicador Ley 617
+    icld_totales = icld_total_por_anio.get(ultimo_anio, Decimal('0'))
+
+    # Rubros únicos para tabla cruzada
+    rubros_unicos = list(cifras.values('codigo_rubro', 'descripcion', 'es_icld', 'es_sgp', 'es_sgp_libre')
+                         .distinct().order_by('codigo_rubro'))
+    for rubro in rubros_unicos:
+        rubro['valores'] = {}
+        for anio in anios:
+            cifra = cifras.filter(anio=anio, codigo_rubro=rubro['codigo_rubro']).first()
+            rubro['valores'][anio] = cifra.valor_recaudo if cifra else Decimal('0')
+
+    form = CifraHistoricaIngresoForm(initial={'vigencia_calculo': vigencia})
+
+    return render(request, 'ingresos/cifras_historicas.html', {
+        'cifras': cifras,
+        'anios': anios,
+        'rubros_unicos': rubros_unicos,
+        'totales_por_anio': totales_por_anio,
+        'icld_por_anio': icld_por_anio,
+        'icld_sin_sgp_por_anio': icld_sin_sgp_por_anio,
+        'icld_total_por_anio': icld_total_por_anio,
+        'tcpa': tcpa,
+        'tcpa_icld': tcpa_icld,
+        'icld_netos_sin_sgp': icld_netos_sin_sgp,
+        'valor_medio_ambiente': valor_medio_ambiente,
+        'icld_totales': icld_totales,
+        'vigencia': vigencia,
+        'form': form,
+    })
+
+
+@login_required
+def cifra_historica_ingreso_guardar(request):
+    if request.method == 'POST':
+        pk = request.POST.get('pk')
+        instance = get_object_or_404(CifraHistoricaIngreso, pk=pk) if pk else None
+        form = CifraHistoricaIngresoForm(request.POST, instance=instance)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Cifra histórica guardada')
+    return redirect('cifras_historicas_ingresos')
+
+
+@login_required
+def cifra_historica_ingreso_eliminar(request, pk):
+    get_object_or_404(CifraHistoricaIngreso, pk=pk).delete()
+    messages.success(request, 'Cifra histórica eliminada')
+    return redirect('cifras_historicas_ingresos')
+
+
+@login_required
+def importar_cifras_historicas_ingresos(request):
+    """Importa cifras históricas desde Excel. Columnas: Código, Descripción, 2022, 2023, 2024, 2025"""
+    if request.method == 'POST':
+        form = ImportarExcelForm(request.POST, request.FILES)
+        if form.is_valid():
+            archivo = request.FILES['archivo']
+            vigencia = _vigencia()
+            try:
+                wb = openpyxl.load_workbook(archivo, data_only=True)
+                ws = wb.active
+                # Primera fila = encabezados, detectar años
+                header = [str(c.value or '').strip() for c in ws[1]]
+                anio_cols = {}
+                for idx, h in enumerate(header):
+                    try:
+                        anio = int(h)
+                        if 2020 <= anio <= 2030:
+                            anio_cols[anio] = idx
+                    except ValueError:
+                        pass
+                if not anio_cols:
+                    messages.error(request, 'No se encontraron columnas de años (2022, 2023, etc.)')
+                    return redirect('cifras_historicas_ingresos')
+
+                count = 0
+                for row in ws.iter_rows(min_row=2, values_only=True):
+                    if not row or not row[0]:
+                        continue
+                    codigo = str(row[0]).strip()
+                    descripcion = str(row[1] or '').strip() if len(row) > 1 else ''
+                    es_icld = False
+                    es_sgp = False
+                    es_sgp_libre = False
+                    # Detectar flags si hay columnas adicionales
+                    for idx, h in enumerate(header):
+                        h_upper = h.upper()
+                        if 'ICLD' in h_upper and len(row) > idx:
+                            val = str(row[idx] or '').upper().strip()
+                            es_icld = val in ('SI', 'SÍ', 'S', '1', 'X', 'TRUE')
+                        elif 'SGP LIBRE' in h_upper and len(row) > idx:
+                            val = str(row[idx] or '').upper().strip()
+                            es_sgp_libre = val in ('SI', 'SÍ', 'S', '1', 'X', 'TRUE')
+                        elif 'SGP' in h_upper and 'LIBRE' not in h_upper and len(row) > idx:
+                            val = str(row[idx] or '').upper().strip()
+                            es_sgp = val in ('SI', 'SÍ', 'S', '1', 'X', 'TRUE')
+
+                    for anio, col_idx in anio_cols.items():
+                        if col_idx < len(row) and row[col_idx]:
+                            try:
+                                valor = Decimal(str(row[col_idx]).replace(',', '').replace('$', '').strip())
+                            except Exception:
+                                continue
+                            CifraHistoricaIngreso.objects.update_or_create(
+                                vigencia_calculo=vigencia, anio=anio, codigo_rubro=codigo,
+                                defaults={
+                                    'descripcion': descripcion,
+                                    'valor_recaudo': valor,
+                                    'es_icld': es_icld,
+                                    'es_sgp': es_sgp,
+                                    'es_sgp_libre': es_sgp_libre,
+                                }
+                            )
+                            count += 1
+
+                messages.success(request, f'{count} cifras históricas importadas')
+                return redirect('cifras_historicas_ingresos')
+            except Exception as e:
+                messages.error(request, f'Error al importar: {e}')
+    else:
+        form = ImportarExcelForm()
+    return render(request, 'ingresos/importar_contribuyentes.html', {
+        'form': form, 'tipo': 'Cifras Históricas Ingresos CUIPO',
+        'columnas': ['Código', 'Descripción', '2022', '2023', '2024', '2025', 'ICLD (SI/NO)', 'SGP (SI/NO)', 'SGP Libre (SI/NO)'],
+        'categorias': [],
+    })
+
+
+@login_required
+def calcular_tcpa_ingresos(request):
+    """Calcula TCPA y actualiza parámetros del sistema"""
+    vigencia = _vigencia()
+    cifras = CifraHistoricaIngreso.objects.filter(vigencia_calculo=vigencia)
+    anios = sorted(set(cifras.values_list('anio', flat=True)))
+    totales_por_anio = {}
+    for anio in anios:
+        totales_por_anio[anio] = cifras.filter(anio=anio).aggregate(t=Sum('valor_recaudo'))['t'] or Decimal('0')
+
+    tcpa = _calcular_tcpa(totales_por_anio)
+    params = ParametrosSistema.objects.filter(vigencia=vigencia).first()
+    if params:
+        params.tcpa_ingresos = tcpa
+        params.save(update_fields=['tcpa_ingresos'])
+        messages.success(request, f'TCPA Ingresos calculada: {tcpa * 100:.2f}%')
+    else:
+        messages.error(request, 'No hay parámetros configurados para la vigencia')
+    return redirect('cifras_historicas_ingresos')

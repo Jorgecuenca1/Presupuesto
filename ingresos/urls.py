@@ -45,4 +45,11 @@ urlpatterns = [
     # Reporte
     path('reporte/', views.reporte_ingresos, name='reporte_ingresos'),
     path('reporte/exportar/', views.exportar_reporte_excel, name='exportar_reporte'),
+
+    # Cifras Históricas Ingresos
+    path('cifras-historicas/', views.cifras_historicas_ingresos, name='cifras_historicas_ingresos'),
+    path('cifras-historicas/guardar/', views.cifra_historica_ingreso_guardar, name='cifra_historica_ingreso_guardar'),
+    path('cifras-historicas/<int:pk>/eliminar/', views.cifra_historica_ingreso_eliminar, name='cifra_historica_ingreso_eliminar'),
+    path('cifras-historicas/importar/', views.importar_cifras_historicas_ingresos, name='importar_cifras_historicas_ingresos'),
+    path('cifras-historicas/calcular-tcpa/', views.calcular_tcpa_ingresos, name='calcular_tcpa_ingresos'),
 ]

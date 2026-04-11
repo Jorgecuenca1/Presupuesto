@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-8">
+    <div class="col-md-10">
         <div class="card">
             <div class="card-header bg-white">
                 <i class="bi bi-gear"></i> Parámetros del Sistema - Vigencia Fiscal
@@ -12,45 +12,86 @@
             <div class="card-body">
                 <form method="post">
                     {% csrf_token %}
+                    <h6 class="text-muted mb-3">Datos Generales</h6>
                     <div class="row g-3">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="form-label">Vigencia Fiscal</label>
                             {{ form.vigencia }}
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="form-label">Valor UVT ($)</label>
                             {{ form.valor_uvt }}
                             <small class="text-muted">2026: $52.374</small>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
+                            <label class="form-label">Valor SMLMV ($)</label>
+                            {{ form.valor_smlmv }}
+                            <small class="text-muted">2026: $1.423.500</small>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Categoría Municipio (0-6)</label>
+                            {{ form.categoria_municipio }}
+                            <small class="text-muted">0=Especial, 6=Sexta</small>
+                        </div>
+                    </div>
+
+                    <h6 class="text-muted mb-3 mt-4">Tasas e Indicadores</h6>
+                    <div class="row g-3">
+                        <div class="col-md-3">
                             <label class="form-label">Tasa IPC</label>
                             {{ form.tasa_ipc }}
                             <small class="text-muted">Ej: 0.051 = 5.1%</small>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="form-label">Tasa Crecimiento ICN</label>
                             {{ form.tasa_icn }}
                             <small class="text-muted">Ej: 0.08 = 8%</small>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="form-label">Tasa PIB Nominal</label>
                             {{ form.tasa_pib_nominal }}
                             <small class="text-muted">Ej: 0.062 = 6.2%</small>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="form-label">POAI Total Inversión</label>
                             {{ form.poai_total_inversion }}
                             <small class="text-muted">Sin Educación, Vivienda, Salud</small>
                         </div>
-                        <div class="col-12">
-                            <div class="form-check">
-                                {{ form.activo }}
-                                <label class="form-check-label">Vigencia activa</label>
-                            </div>
+                    </div>
+
+                    <h6 class="text-muted mb-3 mt-4">TCPA (Calculados automáticamente)</h6>
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">TCPA Ingresos</label>
+                            {{ form.tcpa_ingresos }}
+                            <small class="text-muted">Se calcula desde Cifras Históricas</small>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">TCPA Gastos</label>
+                            {{ form.tcpa_gastos }}
+                            <small class="text-muted">Se calcula desde Cifras Históricas</small>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">% Promedio Pagos/Aprob.</label>
+                            {{ form.pct_promedio_pagos }}
+                            <small class="text-muted">Para cálculo estampillas</small>
                         </div>
                     </div>
-                    <div class="mt-4">
-                        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Guardar</button>
+
+                    <div class="mt-3">
+                        <div class="form-check">
+                            {{ form.activo }}
+                            <label class="form-check-label">Vigencia activa</label>
+                        </div>
+                    </div>
+                    <div class="alert alert-info mt-4 mb-0 py-2">
+                        <i class="bi bi-info-circle"></i>
+                        Al guardar, se recalculan automáticamente los rubros de ingresos
+                        (IPC, ICN, POAI, Predial por UVT, ICA por PIB) y los títulos de gastos
+                        para la vigencia indicada.
+                    </div>
+                    <div class="mt-3">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Guardar y recalcular</button>
                         <a href="{% url 'dashboard' %}" class="btn btn-secondary">Cancelar</a>
                     </div>
                 </form>

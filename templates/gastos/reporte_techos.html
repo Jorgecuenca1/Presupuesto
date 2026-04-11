@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Reporte Techos de Inversión{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item">Gastos</li>
+<li class="breadcrumb-item active">Techos de Inversión</li>
+{% endblock %}
+{% block vigencia_display %}{{ vigencia }}{% endblock %}
+
+{% block content %}
+<h4 class="mb-4">Reporte Techos de Inversión por Fuentes - Vigencia {{ vigencia }}</h4>
+
+<!-- Indicador Ley 617 -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card {% if indicador_617 <= 80 %}green{% else %}orange{% endif %} p-3">
+            <div class="stat-label">Indicador Ley 617/2000</div>
+            <div class="stat-value">{{ indicador_617 }}%</div>
+            <small class="text-muted">GF / ICLD Totales</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card blue p-3">
+            <div class="stat-label">Gastos Funcionamiento</div>
+            <div class="stat-value">${{ total_funcionamiento|floatformat:0|intcomma }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card purple p-3">
+            <div class="stat-label">ICLD Totales</div>
+            <div class="stat-value">${{ icld_total_617|floatformat:0|intcomma }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card green p-3">
+            <div class="stat-label">Total Inversión</div>
+            <div class="stat-value">${{ total_inversion|floatformat:0|intcomma }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Techos por fuente -->
+<div class="card mb-4">
+    <div class="card-header bg-white"><i class="bi bi-bar-chart-steps"></i> Techos de Inversión por Fuente de Financiación</div>
+    <div class="card-body">
+        <table class="table table-sm">
+            <thead>
+                <tr><th>Fuente de Financiación</th><th class="text-end">Valor Inversión</th><th class="text-end">% del Total</th></tr>
+            </thead>
+            <tbody>
+                {% for fuente, valor in por_fuente.items %}
+                <tr>
+                    <td>{{ fuente }}</td>
+                    <td class="text-end">${{ valor|floatformat:0|intcomma }}</td>
+                    <td class="text-end">
+                        {% if total_inversion > 0 %}
+                            {% widthratio valor total_inversion 100 %}%
+                        {% else %}0%{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot class="table-light fw-bold">
+                <tr>
+                    <td>TOTAL INVERSIÓN</td>
+                    <td class="text-end">${{ total_inversion|floatformat:0|intcomma }}</td>
+                    <td class="text-end">100%</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+<!-- ICLD para gastos específicos -->
+<div class="card mb-4">
+    <div class="card-header bg-white"><i class="bi bi-cash-stack"></i> ICLD para Gastos Específicos (FAEP)</div>
+    <div class="card-body">
+        <table class="table table-sm">
+            <tr>
+                <td>Total Predial (Vigencia Actual + Anteriores)</td>
+                <td class="text-end">${{ total_predial|floatformat:0|intcomma }}</td>
+            </tr>
+            <tr>
+                <td><strong>10% Predial - FAEP</strong></td>
+                <td class="text-end fw-bold">${{ faep_predial|floatformat:0|intcomma }}</td>
+            </tr>
+            <tr>
+                <td><strong>10% Predial - Vivienda</strong></td>
+                <td class="text-end fw-bold">${{ vivienda_predial|floatformat:0|intcomma }}</td>
+            </tr>
+            <tr>
+                <td>ICLD Recursos Propios</td>
+                <td class="text-end">${{ icld_propios|floatformat:0|intcomma }}</td>
+            </tr>
+            <tr>
+                <td><strong>1% ICLD Propios - Medio Ambiente (Ley 99/93)</strong></td>
+                <td class="text-end fw-bold">${{ medio_ambiente|floatformat:0|intcomma }}</td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+<!-- Vigencias Futuras -->
+{% if vf_ejecucion or vf_aprobadas %}
+<div class="card mb-4">
+    <div class="card-header bg-white"><i class="bi bi-calendar-range"></i> Vigencias Futuras por Fuentes</div>
+    <div class="card-body">
+        {% if vf_ejecucion %}
+        <h6>En Ejecución</h6>
+        <table class="table table-sm mb-3">
+            <thead><tr><th>Año VF</th><th>Descripción</th><th>Fuente</th><th class="text-end">Valor</th></tr></thead>
+            <tbody>
+                {% for item in vf_ejecucion %}
+                <tr>
+                    <td>{{ item.vigencia_futura }}</td>
+                    <td>{{ item.descripcion|truncatechars:60 }}</td>
+                    <td>{{ item.nombre_fuente }}</td>
+                    <td class="text-end">${{ item.valor|floatformat:0|intcomma }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+        {% if vf_aprobadas %}
+        <h6>Aprobadas en la Vigencia</h6>
+        <table class="table table-sm">
+            <thead><tr><th>Año VF</th><th>Descripción</th><th>Fuente</th><th class="text-end">Valor</th></tr></thead>
+            <tbody>
+                {% for item in vf_aprobadas %}
+                <tr>
+                    <td>{{ item.vigencia_futura }}</td>
+                    <td>{{ item.descripcion|truncatechars:60 }}</td>
+                    <td>{{ item.nombre_fuente }}</td>
+                    <td class="text-end">${{ item.valor|floatformat:0|intcomma }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

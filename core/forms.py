@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
-from .models import ParametrosSistema
+from .models import ParametrosSistema, TablaConcejoPersoneria, VigenciaFutura
 
 
 class LoginForm(forms.Form):
@@ -40,5 +40,44 @@ class ParametrosForm(forms.ModelForm):
             'tasa_icn': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001'}),
             'tasa_pib_nominal': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001'}),
             'poai_total_inversion': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'tcpa_ingresos': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001', 'readonly': True}),
+            'tcpa_gastos': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001', 'readonly': True}),
+            'categoria_municipio': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'max': 6}),
+            'valor_smlmv': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'pct_promedio_pagos': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'activo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+
+W = 'form-control'
+
+
+class TablaConcejoPersoneriaForm(forms.ModelForm):
+    class Meta:
+        model = TablaConcejoPersoneria
+        fields = '__all__'
+        widgets = {
+            'categoria': forms.Select(attrs={'class': W}),
+            'honorario_concejal_smlmv': forms.NumberInput(attrs={'class': W, 'step': '0.01'}),
+            'sesiones_ordinarias': forms.NumberInput(attrs={'class': W}),
+            'sesiones_extraordinarias': forms.NumberInput(attrs={'class': W}),
+            'num_concejales': forms.NumberInput(attrs={'class': W}),
+            'limite_concejo_pct_icld': forms.NumberInput(attrs={'class': W, 'step': '0.01'}),
+            'limite_personeria_pct_icld': forms.NumberInput(attrs={'class': W, 'step': '0.01'}),
+        }
+
+
+class VigenciaFuturaForm(forms.ModelForm):
+    class Meta:
+        model = VigenciaFutura
+        fields = '__all__'
+        widgets = {
+            'vigencia': forms.NumberInput(attrs={'class': W}),
+            'vigencia_futura': forms.NumberInput(attrs={'class': W}),
+            'descripcion': forms.Textarea(attrs={'class': W, 'rows': 2}),
+            'codigo_fuente': forms.TextInput(attrs={'class': W}),
+            'nombre_fuente': forms.TextInput(attrs={'class': W}),
+            'valor': forms.NumberInput(attrs={'class': W, 'step': '0.01'}),
+            'estado': forms.Select(attrs={'class': W}),
+            'observaciones': forms.Textarea(attrs={'class': W, 'rows': 2}),
         }

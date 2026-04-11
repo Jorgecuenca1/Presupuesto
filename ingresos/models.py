@@ -215,6 +215,30 @@ class RubroIngreso(models.Model):
         return total
 
 
+class CifraHistoricaIngreso(models.Model):
+    """Cifras históricas de ingresos CUIPO 2022-2025 para cálculo de TCPA"""
+    vigencia_calculo = models.IntegerField(verbose_name='Vigencia de Cálculo',
+                                           help_text='Año para el cual se proyecta')
+    anio = models.IntegerField(verbose_name='Año Histórico')
+    codigo_rubro = models.CharField(max_length=50, verbose_name='Código Rubro')
+    descripcion = models.CharField(max_length=400, verbose_name='Descripción')
+    valor_recaudo = models.DecimalField(max_digits=20, decimal_places=2, default=0,
+                                        verbose_name='Valor Recaudo ($)')
+    es_icld = models.BooleanField(default=False, verbose_name='¿Es ICLD?',
+                                   help_text='Ingreso Corriente de Libre Destinación')
+    es_sgp = models.BooleanField(default=False, verbose_name='¿Es SGP?')
+    es_sgp_libre = models.BooleanField(default=False, verbose_name='¿Es SGP Libre Asignación?')
+
+    class Meta:
+        verbose_name = 'Cifra Histórica Ingreso'
+        verbose_name_plural = 'Cifras Históricas Ingresos'
+        ordering = ['anio', 'codigo_rubro']
+        unique_together = ['vigencia_calculo', 'anio', 'codigo_rubro']
+
+    def __str__(self):
+        return f'{self.anio} - {self.codigo_rubro}: ${self.valor_recaudo:,.0f}'
+
+
 class ResumenCalculo(models.Model):
     vigencia = models.IntegerField()
     tipo = models.CharField(max_length=30, verbose_name='Tipo de Cálculo')

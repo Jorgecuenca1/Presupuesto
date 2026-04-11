@@ -81,30 +81,32 @@
         <a href="{% url 'parametros' %}" class="nav-link {% if request.resolver_match.url_name == 'parametros' %}active{% endif %}">
             <i class="bi bi-gear"></i> Parámetros del Sistema
         </a>
+        <a href="{% url 'tabla_concejo_personeria' %}" class="nav-link {% if request.resolver_match.url_name == 'tabla_concejo_personeria' %}active{% endif %}">
+            <i class="bi bi-building"></i> Tabla Concejo/Personería
+        </a>
 
-        <div class="nav-section">Impuesto Predial</div>
+        <div class="nav-section">Ingresos - Cifras Históricas</div>
+        <a href="{% url 'cifras_historicas_ingresos' %}" class="nav-link {% if request.resolver_match.url_name == 'cifras_historicas_ingresos' %}active{% endif %}">
+            <i class="bi bi-clock-history"></i> Cifras Históricas
+        </a>
+
+        <div class="nav-section">Ingresos - Predial</div>
         <a href="{% url 'tarifas_predial' %}" class="nav-link {% if request.resolver_match.url_name == 'tarifas_predial' %}active{% endif %}">
             <i class="bi bi-table"></i> Tarifas Predial
         </a>
         <a href="{% url 'contribuyentes_predial' %}" class="nav-link {% if request.resolver_match.url_name == 'contribuyentes_predial' %}active{% endif %}">
-            <i class="bi bi-people"></i> Contribuyentes Predial
-        </a>
-        <a href="{% url 'importar_predial' %}" class="nav-link {% if request.resolver_match.url_name == 'importar_predial' %}active{% endif %}">
-            <i class="bi bi-upload"></i> Importar Predial
+            <i class="bi bi-people"></i> Contribuyentes
         </a>
         <a href="{% url 'calculo_predial' %}" class="nav-link {% if request.resolver_match.url_name == 'calculo_predial' %}active{% endif %}">
             <i class="bi bi-calculator"></i> Cálculo Predial
         </a>
 
-        <div class="nav-section">Industria y Comercio</div>
+        <div class="nav-section">Ingresos - ICA</div>
         <a href="{% url 'tarifas_ica' %}" class="nav-link {% if request.resolver_match.url_name == 'tarifas_ica' %}active{% endif %}">
             <i class="bi bi-table"></i> Tarifas ICA
         </a>
         <a href="{% url 'contribuyentes_ica' %}" class="nav-link {% if request.resolver_match.url_name == 'contribuyentes_ica' %}active{% endif %}">
-            <i class="bi bi-shop"></i> Contribuyentes ICA
-        </a>
-        <a href="{% url 'importar_ica' %}" class="nav-link {% if request.resolver_match.url_name == 'importar_ica' %}active{% endif %}">
-            <i class="bi bi-upload"></i> Importar ICA
+            <i class="bi bi-shop"></i> Contribuyentes
         </a>
         <a href="{% url 'calculo_ica' %}" class="nav-link {% if request.resolver_match.url_name == 'calculo_ica' %}active{% endif %}">
             <i class="bi bi-calculator"></i> Cálculo ICA
@@ -118,7 +120,12 @@
             <i class="bi bi-file-earmark-text"></i> Reporte Anexo 1
         </a>
 
-        <div class="nav-section">Presupuesto Gastos</div>
+        <div class="nav-section">Gastos - Cifras Históricas</div>
+        <a href="{% url 'cifras_historicas_gastos' %}" class="nav-link {% if request.resolver_match.url_name == 'cifras_historicas_gastos' %}active{% endif %}">
+            <i class="bi bi-clock-history"></i> Cifras Históricas
+        </a>
+
+        <div class="nav-section">Gastos - Estructura</div>
         <a href="{% url 'gastos_secciones' %}" class="nav-link {% if request.resolver_match.url_name == 'gastos_secciones' %}active{% endif %}">
             <i class="bi bi-diagram-3"></i> Secciones
         </a>
@@ -128,6 +135,22 @@
         <a href="{% url 'rubros_gasto_list' %}" class="nav-link {% if request.resolver_match.url_name == 'rubros_gasto_list' %}active{% endif %}">
             <i class="bi bi-list-nested"></i> Rubros de Gasto
         </a>
+
+        <div class="nav-section">Gastos - Cálculos</div>
+        <a href="{% url 'costo_personal_list' %}" class="nav-link {% if request.resolver_match.url_name == 'costo_personal_list' %}active{% endif %}">
+            <i class="bi bi-people"></i> Costo de Personal
+        </a>
+        <a href="{% url 'deuda_contratos_list' %}" class="nav-link {% if 'deuda' in request.resolver_match.url_name %}active{% endif %}">
+            <i class="bi bi-bank"></i> Deuda Pública
+        </a>
+        <a href="{% url 'deuda_resumen' %}" class="nav-link {% if request.resolver_match.url_name == 'deuda_resumen' %}active{% endif %}">
+            <i class="bi bi-file-earmark-bar-graph"></i> Resumen Deuda
+        </a>
+        <a href="{% url 'vigencias_futuras_list' %}" class="nav-link {% if request.resolver_match.url_name == 'vigencias_futuras_list' %}active{% endif %}">
+            <i class="bi bi-calendar-range"></i> Vigencias Futuras
+        </a>
+
+        <div class="nav-section">Gastos - Importar</div>
         <a href="{% url 'importar_anexo2' %}" class="nav-link {% if request.resolver_match.url_name == 'importar_anexo2' %}active{% endif %}">
             <i class="bi bi-upload"></i> Importar Anexo 2
         </a>
@@ -137,8 +160,16 @@
         <a href="{% url 'ejecucion_gastos' %}" class="nav-link {% if request.resolver_match.url_name == 'ejecucion_gastos' %}active{% endif %}">
             <i class="bi bi-bar-chart-line"></i> Ejecución Gastos
         </a>
+
+        <div class="nav-section">Reportes</div>
         <a href="{% url 'reporte_gastos' %}" class="nav-link {% if request.resolver_match.url_name == 'reporte_gastos' %}active{% endif %}">
             <i class="bi bi-file-earmark-text"></i> Reporte Anexo 2
+        </a>
+        <a href="{% url 'reporte_techos_inversion' %}" class="nav-link {% if request.resolver_match.url_name == 'reporte_techos_inversion' %}active{% endif %}">
+            <i class="bi bi-bar-chart-steps"></i> Techos Inversión / FAEP
+        </a>
+        <a href="{% url 'limpiar_gastos' %}" class="nav-link {% if request.resolver_match.url_name == 'limpiar_gastos' %}active{% endif %}">
+            <i class="bi bi-trash3"></i> Limpiar Datos
         </a>
 
         <div class="nav-section mt-3" style="border-top:1px solid rgba(255,255,255,.1); padding-top:.8rem;">

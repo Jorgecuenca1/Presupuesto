@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Pagarés - {{ contrato.banco }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'deuda_contratos_list' %}">Deuda Pública</a></li>
+<li class="breadcrumb-item active">Pagarés {{ contrato.banco }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4>Pagarés - {{ contrato.banco }}</h4>
+        <p class="text-muted mb-0">Renta Pignorada: <strong>{{ contrato.renta_pignorada }}</strong> | Contrato: ${{ contrato.valor_contrato|floatformat:0|intcomma }} | Plazo: {{ contrato.plazo_meses }} meses</p>
+    </div>
+    <a href="{% url 'deuda_contratos_list' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Volver a Contratos
+    </a>
+</div>
+
+{% if pagares %}
+<div class="card mb-4">
+    <div class="card-header bg-white"><i class="bi bi-file-text"></i> Pagarés / Desembolsos</div>
+    <div class="card-body table-responsive">
+        <table class="table table-sm table-hover">
+            <thead>
+                <tr>
+                    <th>No. Pagaré</th>
+                    <th>Fecha Desembolso</th>
+                    <th class="text-end">Capital ($)</th>
+                    <th class="text-end">IBR (%)</th>
+                    <th class="text-end">Puntos (%)</th>
+                    <th class="text-end">Tasa Total (%)</th>
+                    <th class="text-end">TCR (%)</th>
+                    <th class="text-end">Plazo (meses)</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in pagares %}
+                <tr>
+                    <td><strong>{{ p.numero_pagare }}</strong></td>
+                    <td>{{ p.fecha_desembolso|date:"d/m/Y"|default:"Pendiente" }}</td>
+                    <td class="text-end fw-bold">${{ p.valor_capital|floatformat:0|intcomma }}</td>
+                    <td class="text-end">{{ p.tasa_ibr|floatformat:4 }}</td>
+                    <td class="text-end">{{ p.puntos|floatformat:4 }}</td>
+                    <td class="text-end">{{ p.tasa_interes_total|floatformat:4 }}</td>
+                    <td class="text-end">{{ p.tasa_cobertura_riesgo|floatformat:4 }}</td>
+                    <td class="text-end">{{ p.plazo_meses }}</td>
+                    <td>
+                        <a href="{% url 'deuda_amortizacion' p.pk %}" class="btn btn-sm btn-outline-primary" title="Tabla de Amortización">
+                            <i class="bi bi-table"></i>
+                        </a>
+                        <a href="{% url 'deuda_pagare_eliminar' p.pk %}" class="btn btn-sm btn-outline-danger"
+                           onclick="return confirm('Eliminar pagaré?')"><i class="bi bi-trash"></i></a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot class="table-light fw-bold">
+                <tr>
+                    <td>TOTAL ({{ pagares.count }} pagarés)</td>
+                    <td></td>
+                    <td class="text-end">${{ contrato.total_desembolsado|floatformat:0|intcomma }}</td>
+                    <td colspan="5"></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-header bg-white"><i class="bi bi-plus-circle"></i> Agregar Pagaré / Desembolso</div>
+    <div class="card-body">
+        <form method="post" action="{% url 'deuda_pagare_guardar' %}">
+            {% csrf_token %}
+            <input type="hidden" name="contrato" value="{{ contrato.pk }}">
+            <div class="row g-2">
+                <div class="col-md-2">
+                    <label class="form-label">No. Pagaré</label>
+                    {{ form.numero_pagare }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Fecha Desembolso</label>
+                    {{ form.fecha_desembolso }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Capital ($)</label>
+                    {{ form.valor_capital }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Tasa IBR (%)</label>
+                    {{ form.tasa_ibr }}
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">Puntos (%)</label>
+                    {{ form.puntos }}
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">TCR (%)</label>
+                    {{ form.tasa_cobertura_riesgo }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Plazo (meses)</label>
+                    {{ form.plazo_meses }}
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm mt-2"><i class="bi bi-save"></i> Guardar Pagaré</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

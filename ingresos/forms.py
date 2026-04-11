@@ -2,6 +2,7 @@ from django import forms
 from .models import (
     TarifaPredial, CulturaPago, ContribuyentePredial,
     CarteraVigenciaAnterior, TarifaICA, ContribuyenteICA, RubroIngreso,
+    CifraHistoricaIngreso,
 )
 
 W = 'form-control'
@@ -106,4 +107,20 @@ class RubroIngresoForm(forms.ModelForm):
             'es_titulo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'orden': forms.NumberInput(attrs={'class': W}),
             'nivel': forms.NumberInput(attrs={'class': W}),
+        }
+
+
+class CifraHistoricaIngresoForm(forms.ModelForm):
+    class Meta:
+        model = CifraHistoricaIngreso
+        fields = '__all__'
+        widgets = {
+            'vigencia_calculo': forms.NumberInput(attrs={'class': W}),
+            'anio': forms.NumberInput(attrs={'class': W}),
+            'codigo_rubro': forms.TextInput(attrs={'class': W}),
+            'descripcion': forms.TextInput(attrs={'class': W}),
+            'valor_recaudo': forms.NumberInput(attrs={'class': W, 'step': '0.01'}),
+            'es_icld': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'es_sgp': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'es_sgp_libre': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }

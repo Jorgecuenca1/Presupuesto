@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Limpiar Datos de Gastos{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Limpiar Datos</li>{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <h4 class="mb-3"><i class="bi bi-trash3"></i> Limpiar Datos de Gastos - Vigencia {{ vigencia }}</h4>
+
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle"></i>
+            <strong>Precaucion:</strong> Las acciones de esta pagina eliminan datos de forma permanente. Asegurese de tener un respaldo antes de continuar.
+        </div>
+
+        <!-- Resumen actual -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card stat-card blue">
+                    <div class="card-body py-2">
+                        <div class="stat-label">Rubros de Gasto</div>
+                        <div class="stat-value">{{ rubros_count }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card orange">
+                    <div class="card-body py-2">
+                        <div class="stat-label">Ejecuciones</div>
+                        <div class="stat-value">{{ ejecucion_count }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card green">
+                    <div class="card-body py-2">
+                        <div class="stat-label">Secciones</div>
+                        <div class="stat-value">{{ secciones_count }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card purple">
+                    <div class="card-body py-2">
+                        <div class="stat-label">Fuentes</div>
+                        <div class="stat-value">{{ fuentes_count }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Borrar por secciones -->
+        <div class="card mb-3">
+            <div class="card-header bg-white"><i class="bi bi-eraser"></i> Borrar por categoria</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="card border-danger">
+                            <div class="card-body text-center">
+                                <h6>Rubros de Gasto</h6>
+                                <p class="text-muted mb-2" style="font-size:.85rem;">Elimina todos los rubros y sus ejecuciones asociadas ({{ rubros_count }} registros)</p>
+                                <form method="post" onsubmit="return confirm('¿Esta seguro de eliminar TODOS los rubros de gasto? Esto tambien eliminara las ejecuciones asociadas.')">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="accion" value="borrar_rubros">
+                                    <button type="submit" class="btn btn-outline-danger btn-sm" {% if rubros_count == 0 %}disabled{% endif %}>
+                                        <i class="bi bi-trash"></i> Borrar Rubros
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-warning">
+                            <div class="card-body text-center">
+                                <h6>Solo Ejecuciones</h6>
+                                <p class="text-muted mb-2" style="font-size:.85rem;">Elimina solo los datos de ejecucion, mantiene los rubros ({{ ejecucion_count }} registros)</p>
+                                <form method="post" onsubmit="return confirm('¿Esta seguro de eliminar TODOS los datos de ejecucion?')">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="accion" value="borrar_ejecucion">
+                                    <button type="submit" class="btn btn-outline-warning btn-sm" {% if ejecucion_count == 0 %}disabled{% endif %}>
+                                        <i class="bi bi-trash"></i> Borrar Ejecuciones
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-info">
+                            <div class="card-body text-center">
+                                <h6>Secciones</h6>
+                                <p class="text-muted mb-2" style="font-size:.85rem;">Elimina las secciones presupuestales ({{ secciones_count }} registros)</p>
+                                <form method="post" onsubmit="return confirm('¿Eliminar todas las secciones?')">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="accion" value="borrar_secciones">
+                                    <button type="submit" class="btn btn-outline-info btn-sm" {% if secciones_count == 0 %}disabled{% endif %}>
+                                        <i class="bi bi-trash"></i> Borrar Secciones
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-secondary">
+                            <div class="card-body text-center">
+                                <h6>Fuentes</h6>
+                                <p class="text-muted mb-2" style="font-size:.85rem;">Elimina las fuentes de financiacion ({{ fuentes_count }} registros)</p>
+                                <form method="post" onsubmit="return confirm('¿Eliminar todas las fuentes?')">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="accion" value="borrar_fuentes">
+                                    <button type="submit" class="btn btn-outline-secondary btn-sm" {% if fuentes_count == 0 %}disabled{% endif %}>
+                                        <i class="bi bi-trash"></i> Borrar Fuentes
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Borrar TODO -->
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white"><i class="bi bi-exclamation-octagon"></i> Borrar TODO</div>
+            <div class="card-body text-center">
+                <p class="mb-2">Elimina <strong>TODOS</strong> los datos de gastos de la vigencia {{ vigencia }}: rubros, ejecuciones, secciones y fuentes.</p>
+                <form method="post" onsubmit="return confirm('ATENCION: Esto eliminara ABSOLUTAMENTE TODOS los datos de gastos de la vigencia {{ vigencia }}. ¿Esta completamente seguro?')">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="borrar_todo">
+                    <button type="submit" class="btn btn-danger" {% if rubros_count == 0 and secciones_count == 0 and fuentes_count == 0 %}disabled{% endif %}>
+                        <i class="bi bi-trash3-fill"></i> Borrar TODOS los datos de gastos
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Deuda Pública - Contratos{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item">Gastos</li>
+<li class="breadcrumb-item active">Contratos de Crédito</li>
+{% endblock %}
+{% block vigencia_display %}{{ vigencia }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4>Deuda Pública - Contratos de Crédito</h4>
+    <a href="{% url 'deuda_resumen' %}" class="btn btn-outline-dark btn-sm">
+        <i class="bi bi-file-earmark-text"></i> Ver Resumen Consolidado
+    </a>
+</div>
+
+{% if contratos %}
+<div class="row g-3 mb-4">
+    {% for c in contratos %}
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-bank"></i> <strong>{{ c.banco }}</strong></span>
+                <div>
+                    <a href="{% url 'deuda_pagares' c.pk %}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-file-text"></i> Pagarés ({{ c.num_pagares }})
+                    </a>
+                    <a href="{% url 'deuda_contrato_eliminar' c.pk %}" class="btn btn-sm btn-outline-danger"
+                       onclick="return confirm('Eliminar contrato y todos sus pagarés?')"><i class="bi bi-trash"></i></a>
+                </div>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm mb-0">
+                    <tr><td>Renta Pignorada</td><td class="text-end"><strong>{{ c.renta_pignorada }}</strong></td></tr>
+                    <tr><td>Objeto</td><td class="text-end"><small>{{ c.objeto_credito|truncatechars:80 }}</small></td></tr>
+                    <tr><td>Valor Contrato</td><td class="text-end fw-bold">${{ c.valor_contrato|floatformat:0|intcomma }}</td></tr>
+                    <tr><td>Total Desembolsado</td><td class="text-end">${{ c.total_desembolsado|floatformat:0|intcomma }}</td></tr>
+                    <tr><td>Plazo</td><td class="text-end">{{ c.plazo_meses }} meses</td></tr>
+                    <tr><td>Fuente</td><td class="text-end">{{ c.nombre_fuente }}</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-header bg-white"><i class="bi bi-plus-circle"></i> Nuevo Contrato de Crédito</div>
+    <div class="card-body">
+        <form method="post" action="{% url 'deuda_contrato_guardar' %}">
+            {% csrf_token %}
+            <div class="row g-2">
+                <div class="col-md-1">
+                    <label class="form-label">Vigencia</label>
+                    {{ form.vigencia }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Banco</label>
+                    {{ form.banco }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Renta Pignorada</label>
+                    {{ form.renta_pignorada }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Objeto del Crédito</label>
+                    {{ form.objeto_credito }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Valor Contrato ($)</label>
+                    {{ form.valor_contrato }}
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">Plazo (meses)</label>
+                    {{ form.plazo_meses }}
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">Cód. Fuente</label>
+                    {{ form.codigo_fuente }}
+                </div>
+            </div>
+            <div class="row g-2 mt-1">
+                <div class="col-md-3">
+                    <label class="form-label">Nombre Fuente</label>
+                    {{ form.nombre_fuente }}
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm mt-2"><i class="bi bi-save"></i> Guardar Contrato</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

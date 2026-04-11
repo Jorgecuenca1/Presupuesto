@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Costo de Personal{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item">Gastos</li>
+<li class="breadcrumb-item active">Costo de Personal</li>
+{% endblock %}
+{% block vigencia_display %}{{ vigencia }}{% endblock %}
+
+{% block content %}
+<h4 class="mb-4">Costo de Personal - Vigencia {{ vigencia }}</h4>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card blue p-3">
+            <div class="stat-label">Total Salarios</div>
+            <div class="stat-value">${{ total_salarios|floatformat:0|intcomma }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card green p-3">
+            <div class="stat-label">Total Prestaciones</div>
+            <div class="stat-value">${{ total_prestaciones|floatformat:0|intcomma }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card orange p-3">
+            <div class="stat-label">Total Aportes</div>
+            <div class="stat-value">${{ total_aportes|floatformat:0|intcomma }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card purple p-3">
+            <div class="stat-label">Total General</div>
+            <div class="stat-value">${{ total_general|floatformat:0|intcomma }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Resumen por sección -->
+{% if secciones_resumen %}
+<div class="card mb-4">
+    <div class="card-header bg-white"><i class="bi bi-diagram-3"></i> Resumen por Sección</div>
+    <div class="card-body">
+        <table class="table table-sm">
+            <thead><tr><th>Sección</th><th class="text-end">Costo Total Anual</th></tr></thead>
+            <tbody>
+                {% for sec, val in secciones_resumen.items %}
+                <tr><td>{{ sec }}</td><td class="text-end fw-bold">${{ val|floatformat:0|intcomma }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Personal activo -->
+{% if personal %}
+<div class="card mb-4">
+    <div class="card-header bg-white"><i class="bi bi-people"></i> Personal Activo</div>
+    <div class="card-body table-responsive">
+        <table class="table table-sm table-hover">
+            <thead>
+                <tr>
+                    <th>Sección</th>
+                    <th>Cargo</th>
+                    <th>Grado</th>
+                    <th class="text-end">Cant.</th>
+                    <th class="text-end">Salario Básico</th>
+                    <th class="text-end">Costo Salarial Anual</th>
+                    <th class="text-end">Prestaciones</th>
+                    <th class="text-end">Aportes</th>
+                    <th class="text-end">Total Anual</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in personal %}
+                <tr>
+                    <td><small>{{ p.seccion.nombre|default:"—" }}</small></td>
+                    <td>{{ p.cargo }}</td>
+                    <td>{{ p.grado }}</td>
+                    <td class="text-end">{{ p.cantidad }}</td>
+                    <td class="text-end">${{ p.salario_basico|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ p.costo_salarial_anual|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ p.costo_prestaciones|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ p.costo_aportes|floatformat:0|intcomma }}</td>
+                    <td class="text-end fw-bold">${{ p.costo_total_anual|floatformat:0|intcomma }}</td>
+                    <td>
+                        <a href="{% url 'costo_personal_eliminar' p.pk %}" class="btn btn-sm btn-outline-danger"
+                           onclick="return confirm('Eliminar?')"><i class="bi bi-trash"></i></a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Pensionados -->
+{% if pensionados %}
+<div class="card mb-4">
+    <div class="card-header bg-white text-danger"><i class="bi bi-person-badge"></i> Pensionados - Fondo de Pensiones</div>
+    <div class="card-body table-responsive">
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Cargo</th>
+                    <th class="text-end">Cantidad</th>
+                    <th class="text-end">Salario Básico</th>
+                    <th class="text-end">Total Anual</th>
+                    <th>Observaciones</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in pensionados %}
+                <tr>
+                    <td>{{ p.cargo }}</td>
+                    <td class="text-end">{{ p.cantidad }}</td>
+                    <td class="text-end">${{ p.salario_basico|floatformat:0|intcomma }}</td>
+                    <td class="text-end fw-bold">${{ p.costo_total_anual|floatformat:0|intcomma }}</td>
+                    <td><small>{{ p.observaciones }}</small></td>
+                    <td>
+                        <a href="{% url 'costo_personal_eliminar' p.pk %}" class="btn btn-sm btn-outline-danger"
+                           onclick="return confirm('Eliminar?')"><i class="bi bi-trash"></i></a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot class="table-light">
+                <tr class="fw-bold">
+                    <td colspan="3">TOTAL PENSIONADOS</td>
+                    <td class="text-end">${{ total_pensionados|floatformat:0|intcomma }}</td>
+                    <td colspan="2"></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Formulario agregar -->
+<div class="card">
+    <div class="card-header bg-white"><i class="bi bi-plus-circle"></i> Agregar Personal</div>
+    <div class="card-body">
+        <form method="post" action="{% url 'costo_personal_guardar' %}">
+            {% csrf_token %}
+            <div class="row g-2">
+                <div class="col-md-1">
+                    <label class="form-label">Vigencia</label>
+                    {{ form.vigencia }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Sección</label>
+                    {{ form.seccion }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Cargo</label>
+                    {{ form.cargo }}
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">Grado</label>
+                    {{ form.grado }}
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">Cantidad</label>
+                    {{ form.cantidad }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Salario Básico</label>
+                    {{ form.salario_basico }}
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <div class="form-check">{{ form.es_pensionado }} <label class="form-check-label">Pensionado</label></div>
+                </div>
+            </div>
+            <div class="row g-2 mt-1">
+                <div class="col-md-2">
+                    <label class="form-label">Prima Navidad</label>
+                    {{ form.prima_navidad }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Prima Vacaciones</label>
+                    {{ form.prima_vacaciones }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Prima Servicios</label>
+                    {{ form.prima_servicios }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Cesantías</label>
+                    {{ form.cesantias }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Int. Cesantías</label>
+                    {{ form.intereses_cesantias }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Vacaciones</label>
+                    {{ form.vacaciones }}
+                </div>
+            </div>
+            <div class="row g-2 mt-1">
+                <div class="col-md-2">
+                    <label class="form-label">Aporte Salud</label>
+                    {{ form.aportes_salud }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Aporte Pensión</label>
+                    {{ form.aportes_pension }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Aporte ARL</label>
+                    {{ form.aportes_arl }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Aporte Caja</label>
+                    {{ form.aportes_caja }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Aporte ICBF</label>
+                    {{ form.aportes_icbf }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Aporte SENA</label>
+                    {{ form.aportes_sena }}
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm mt-2"><i class="bi bi-save"></i> Guardar</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

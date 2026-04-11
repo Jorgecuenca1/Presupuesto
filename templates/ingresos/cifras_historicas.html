@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Cifras Históricas Ingresos{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item">Ingresos</li>
+<li class="breadcrumb-item active">Cifras Históricas</li>
+{% endblock %}
+{% block vigencia_display %}{{ vigencia }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4>Cifras Históricas Ingresos CUIPO</h4>
+    <div>
+        <a href="{% url 'importar_cifras_historicas_ingresos' %}" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-upload"></i> Importar Excel
+        </a>
+        <form method="post" action="{% url 'calcular_tcpa_ingresos' %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-calculator"></i> Calcular TCPA</button>
+        </form>
+    </div>
+</div>
+
+<!-- Resumen TCPA e ICLD -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card blue p-3">
+            <div class="stat-label">TCPA Ingresos (4 años)</div>
+            <div class="stat-value">{{ tcpa|floatformat:4 }}%</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card green p-3">
+            <div class="stat-label">ICLD Netos sin SGP</div>
+            <div class="stat-value">${{ icld_netos_sin_sgp|floatformat:0|intcomma }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card orange p-3">
+            <div class="stat-label">1% Ley 99/93 (Medio Ambiente)</div>
+            <div class="stat-value">${{ valor_medio_ambiente|floatformat:0|intcomma }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card purple p-3">
+            <div class="stat-label">ICLD Totales (+ SGP Libre)</div>
+            <div class="stat-value">${{ icld_totales|floatformat:0|intcomma }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabla cruzada de cifras por año -->
+{% if rubros_unicos %}
+<div class="card mb-4">
+    <div class="card-header bg-white d-flex justify-content-between">
+        <span><i class="bi bi-table"></i> Cifras Históricas por Año</span>
+    </div>
+    <div class="card-body table-responsive">
+        <table class="table table-sm table-hover">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Descripción</th>
+                    <th class="text-center">ICLD</th>
+                    <th class="text-center">SGP</th>
+                    {% for anio in anios %}
+                    <th class="text-end">{{ anio }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for rubro in rubros_unicos %}
+                <tr>
+                    <td><small>{{ rubro.codigo_rubro }}</small></td>
+                    <td>{{ rubro.descripcion }}</td>
+                    <td class="text-center">{% if rubro.es_icld %}<i class="bi bi-check-circle text-success"></i>{% endif %}</td>
+                    <td class="text-center">{% if rubro.es_sgp %}<i class="bi bi-check-circle text-primary"></i>{% endif %}</td>
+                    {% for anio in anios %}
+                    <td class="text-end">${{ rubro.valores|dictsort:anio }}
+                        {% for k, v in rubro.valores.items %}{% if k == anio %}{{ v|floatformat:0|intcomma }}{% endif %}{% endfor %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot class="table-light fw-bold">
+                <tr>
+                    <td colspan="4">TOTAL INGRESOS</td>
+                    {% for anio in anios %}
+                    <td class="text-end">${{ totales_por_anio|dictsort:anio }}
+                        {% for k, v in totales_por_anio.items %}{% if k == anio %}{{ v|floatformat:0|intcomma }}{% endif %}{% endfor %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                <tr class="text-success">
+                    <td colspan="4">ICLD Netos (sin SGP)</td>
+                    {% for anio in anios %}
+                    <td class="text-end">
+                        {% for k, v in icld_sin_sgp_por_anio.items %}{% if k == anio %}${{ v|floatformat:0|intcomma }}{% endif %}{% endfor %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                <tr class="text-primary">
+                    <td colspan="4">ICLD Totales (+ SGP Libre Asignación)</td>
+                    {% for anio in anios %}
+                    <td class="text-end">
+                        {% for k, v in icld_total_por_anio.items %}{% if k == anio %}${{ v|floatformat:0|intcomma }}{% endif %}{% endfor %}
+                    </td>
+                    {% endfor %}
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Formulario para agregar cifra individual -->
+<div class="card">
+    <div class="card-header bg-white"><i class="bi bi-plus-circle"></i> Agregar Cifra Histórica</div>
+    <div class="card-body">
+        <form method="post" action="{% url 'cifra_historica_ingreso_guardar' %}">
+            {% csrf_token %}
+            <div class="row g-2">
+                <div class="col-md-2">
+                    <label class="form-label">Vigencia Cálculo</label>
+                    {{ form.vigencia_calculo }}
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">Año</label>
+                    {{ form.anio }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Código</label>
+                    {{ form.codigo_rubro }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Descripción</label>
+                    {{ form.descripcion }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Valor Recaudo</label>
+                    {{ form.valor_recaudo }}
+                </div>
+                <div class="col-md-2 d-flex align-items-end gap-2">
+                    <div class="form-check">{{ form.es_icld }} <label class="form-check-label">ICLD</label></div>
+                    <div class="form-check">{{ form.es_sgp }} <label class="form-check-label">SGP</label></div>
+                    <div class="form-check">{{ form.es_sgp_libre }} <label class="form-check-label">SGP L</label></div>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm mt-2"><i class="bi bi-save"></i> Guardar</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

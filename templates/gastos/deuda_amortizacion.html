@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Amortización - Pagaré {{ pagare.numero_pagare }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'deuda_contratos_list' %}">Deuda Pública</a></li>
+<li class="breadcrumb-item"><a href="{% url 'deuda_pagares' contrato.pk %}">{{ contrato.banco }}</a></li>
+<li class="breadcrumb-item active">Pagaré {{ pagare.numero_pagare }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h4>Tabla de Amortización - Pagaré No. {{ pagare.numero_pagare }}</h4>
+    <p class="text-muted">
+        <strong>Banco:</strong> {{ contrato.banco }} |
+        <strong>Renta Pignorada:</strong> {{ contrato.renta_pignorada }} |
+        <strong>Capital:</strong> ${{ pagare.valor_capital|floatformat:0|intcomma }} |
+        <strong>IBR:</strong> {{ pagare.tasa_ibr|floatformat:4 }}% +
+        <strong>Puntos:</strong> {{ pagare.puntos|floatformat:4 }}% =
+        <strong>{{ pagare.tasa_interes_total|floatformat:4 }}%</strong> |
+        <strong>TCR:</strong> {{ pagare.tasa_cobertura_riesgo|floatformat:4 }}%
+    </p>
+</div>
+
+<div class="card">
+    <div class="card-header bg-white"><i class="bi bi-table"></i> Amortización por Vigencia</div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Vigencia</th>
+                        <th class="text-end">Capital (Principal) ($)</th>
+                        <th class="text-end">Intereses sin TCR ($)</th>
+                        <th class="text-end">Intereses TCR ($)</th>
+                        <th class="text-end">Total ($)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in tabla %}
+                    <tr>
+                        <td>
+                            <input type="hidden" name="vigencia_pago" value="{{ row.vigencia }}">
+                            <strong>{{ row.vigencia }}</strong>
+                        </td>
+                        <td>
+                            <input type="number" name="capital_principal" value="{{ row.capital }}"
+                                   class="form-control form-control-sm text-end" step="0.01">
+                        </td>
+                        <td>
+                            <input type="number" name="intereses" value="{{ row.intereses }}"
+                                   class="form-control form-control-sm text-end" step="0.01">
+                        </td>
+                        <td>
+                            <input type="number" name="intereses_tcr" value="{{ row.tcr }}"
+                                   class="form-control form-control-sm text-end" step="0.01">
+                        </td>
+                        <td class="text-end fw-bold align-middle">${{ row.total|floatformat:0|intcomma }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-light fw-bold">
+                    <tr>
+                        <td>TOTALES</td>
+                        <td class="text-end">${{ totales.capital|floatformat:0|intcomma }}</td>
+                        <td class="text-end">${{ totales.intereses|floatformat:0|intcomma }}</td>
+                        <td class="text-end">${{ totales.tcr|floatformat:0|intcomma }}</td>
+                        <td class="text-end">${{ totales.total|floatformat:0|intcomma }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-save"></i> Guardar Amortización</button>
+                <a href="{% url 'deuda_pagares' contrato.pk %}" class="btn btn-outline-secondary btn-sm">Volver a Pagarés</a>
+                <a href="{% url 'deuda_resumen' %}" class="btn btn-outline-dark btn-sm">Ver Resumen Consolidado</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

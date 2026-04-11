@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Vigencias Futuras{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item">Gastos</li>
+<li class="breadcrumb-item active">Vigencias Futuras</li>
+{% endblock %}
+{% block vigencia_display %}{{ vigencia }}{% endblock %}
+
+{% block content %}
+<h4 class="mb-4">Vigencias Futuras - Vigencia {{ vigencia }}</h4>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card stat-card green p-3">
+            <div class="stat-label">Total VF Aprobadas</div>
+            <div class="stat-value">${{ total_aprobadas|floatformat:0|intcomma }}</div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card stat-card orange p-3">
+            <div class="stat-label">Total VF en Ejecución</div>
+            <div class="stat-value">${{ total_ejecucion|floatformat:0|intcomma }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Por fuente -->
+{% if por_fuente %}
+<div class="card mb-4">
+    <div class="card-header bg-white"><i class="bi bi-wallet2"></i> Vigencias Futuras por Fuente de Financiación</div>
+    <div class="card-body">
+        <table class="table table-sm">
+            <thead>
+                <tr><th>Fuente</th><th class="text-end">Aprobadas</th><th class="text-end">En Ejecución</th><th class="text-end">Total</th></tr>
+            </thead>
+            <tbody>
+                {% for fuente, vals in por_fuente.items %}
+                <tr>
+                    <td>{{ fuente }}</td>
+                    <td class="text-end">${{ vals.aprobadas|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ vals.ejecucion|floatformat:0|intcomma }}</td>
+                    <td class="text-end fw-bold">
+                        {% widthratio vals.aprobadas 1 1 as apr %}
+                        {% widthratio vals.ejecucion 1 1 as eje %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Listado completo -->
+{% if vf %}
+<div class="card mb-4">
+    <div class="card-header bg-white"><i class="bi bi-list-check"></i> Detalle Vigencias Futuras</div>
+    <div class="card-body table-responsive">
+        <table class="table table-sm table-hover">
+            <thead>
+                <tr>
+                    <th>Año VF</th>
+                    <th>Descripción</th>
+                    <th>Fuente</th>
+                    <th class="text-end">Valor</th>
+                    <th>Estado</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in vf %}
+                <tr>
+                    <td>{{ item.vigencia_futura }}</td>
+                    <td>{{ item.descripcion|truncatechars:60 }}</td>
+                    <td><small>{{ item.nombre_fuente }}</small></td>
+                    <td class="text-end">${{ item.valor|floatformat:0|intcomma }}</td>
+                    <td>
+                        {% if item.estado == 'APR' %}
+                        <span class="badge bg-success">Aprobada</span>
+                        {% else %}
+                        <span class="badge bg-warning">Ejecución</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'vigencia_futura_eliminar' item.pk %}" class="btn btn-sm btn-outline-danger"
+                           onclick="return confirm('Eliminar?')"><i class="bi bi-trash"></i></a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Formulario -->
+<div class="card">
+    <div class="card-header bg-white"><i class="bi bi-plus-circle"></i> Agregar Vigencia Futura</div>
+    <div class="card-body">
+        <form method="post" action="{% url 'vigencia_futura_guardar' %}">
+            {% csrf_token %}
+            <div class="row g-2">
+                <div class="col-md-1">
+                    <label class="form-label">Vigencia</label>
+                    {{ form.vigencia }}
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">Año VF</label>
+                    {{ form.vigencia_futura }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Descripción</label>
+                    {{ form.descripcion }}
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">Cód. Fuente</label>
+                    {{ form.codigo_fuente }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Nombre Fuente</label>
+                    {{ form.nombre_fuente }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Valor ($)</label>
+                    {{ form.valor }}
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">Estado</label>
+                    {{ form.estado }}
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm mt-2"><i class="bi bi-save"></i> Guardar</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

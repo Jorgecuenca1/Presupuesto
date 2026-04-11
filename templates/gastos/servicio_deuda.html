@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Servicio de Deuda{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item">Gastos</li>
+<li class="breadcrumb-item active">Servicio de Deuda</li>
+{% endblock %}
+{% block vigencia_display %}{{ vigencia }}{% endblock %}
+
+{% block content %}
+<h4 class="mb-4">Servicio de Deuda Pública - Vigencia {{ vigencia }}</h4>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card stat-card blue p-3">
+            <div class="stat-label">Total Capital Anual</div>
+            <div class="stat-value">${{ total_capital|floatformat:0|intcomma }}</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card orange p-3">
+            <div class="stat-label">Total Intereses Anuales</div>
+            <div class="stat-value">${{ total_intereses|floatformat:0|intcomma }}</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card green p-3">
+            <div class="stat-label">Total Servicio Deuda</div>
+            <div class="stat-value">${{ total_servicio|floatformat:0|intcomma }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabla de deudas -->
+{% if deudas %}
+<div class="card mb-4">
+    <div class="card-header bg-white"><i class="bi bi-bank"></i> Créditos Vigentes</div>
+    <div class="card-body table-responsive">
+        <table class="table table-sm table-hover">
+            <thead>
+                <tr>
+                    <th>Entidad</th>
+                    <th>Objeto</th>
+                    <th class="text-end">Valor Inicial</th>
+                    <th class="text-end">Saldo Capital</th>
+                    <th class="text-end">Tasa %</th>
+                    <th class="text-end">Meses Rest.</th>
+                    <th class="text-end">Capital Anual</th>
+                    <th class="text-end">Intereses Anual</th>
+                    <th class="text-end">Total Servicio</th>
+                    <th>Fuente</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in deudas %}
+                <tr>
+                    <td>{{ d.entidad_financiera }}</td>
+                    <td><small>{{ d.objeto_credito|truncatechars:50 }}</small></td>
+                    <td class="text-end">${{ d.valor_inicial|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ d.saldo_capital|floatformat:0|intcomma }}</td>
+                    <td class="text-end">{{ d.tasa_interes|floatformat:2 }}%</td>
+                    <td class="text-end">{{ d.meses_restantes }}</td>
+                    <td class="text-end">${{ d.cuota_capital_anual|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ d.intereses_anual|floatformat:0|intcomma }}</td>
+                    <td class="text-end fw-bold">${{ d.total_servicio_anual|floatformat:0|intcomma }}</td>
+                    <td><small>{{ d.nombre_fuente }}</small></td>
+                    <td>
+                        <a href="{% url 'servicio_deuda_eliminar' d.pk %}" class="btn btn-sm btn-outline-danger"
+                           onclick="return confirm('Eliminar?')"><i class="bi bi-trash"></i></a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Formulario -->
+<div class="card">
+    <div class="card-header bg-white"><i class="bi bi-plus-circle"></i> Agregar Crédito</div>
+    <div class="card-body">
+        <form method="post" action="{% url 'servicio_deuda_guardar' %}">
+            {% csrf_token %}
+            <div class="row g-2">
+                <div class="col-md-2">
+                    <label class="form-label">Vigencia</label>
+                    {{ form.vigencia }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Entidad Financiera</label>
+                    {{ form.entidad_financiera }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Objeto del Crédito</label>
+                    {{ form.objeto_credito }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Valor Inicial ($)</label>
+                    {{ form.valor_inicial }}
+                </div>
+            </div>
+            <div class="row g-2 mt-1">
+                <div class="col-md-2">
+                    <label class="form-label">Saldo Capital ($)</label>
+                    {{ form.saldo_capital }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Tasa Interés (%)</label>
+                    {{ form.tasa_interes }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Plazo Total (meses)</label>
+                    {{ form.plazo_meses }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Meses Restantes</label>
+                    {{ form.meses_restantes }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Código Fuente</label>
+                    {{ form.codigo_fuente }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Nombre Fuente</label>
+                    {{ form.nombre_fuente }}
+                </div>
+            </div>
+            <p class="text-muted mt-1"><small>Capital anual e intereses se calculan automáticamente al guardar.</small></p>
+            <button type="submit" class="btn btn-primary btn-sm mt-2"><i class="bi bi-save"></i> Guardar</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

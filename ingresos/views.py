@@ -340,8 +340,22 @@ def calculo_predial(request):
 
     resumen_urbano = ResumenCalculo.objects.filter(vigencia=vigencia, tipo='predial_urbano')
     resumen_rural = ResumenCalculo.objects.filter(vigencia=vigencia, tipo='predial_rural')
-    total_urbano = resumen_urbano.aggregate(t=Sum('proyeccion'))['t'] or 0
-    total_rural = resumen_rural.aggregate(t=Sum('proyeccion'))['t'] or 0
+    agg_urb = resumen_urbano.aggregate(
+        proy=Sum('proyeccion'), avaluo=Sum('total_avaluo'),
+        recaudo=Sum('recaudo_potencial'), predios=Sum('cantidad_predios'),
+    )
+    agg_rur = resumen_rural.aggregate(
+        proy=Sum('proyeccion'), avaluo=Sum('total_avaluo'),
+        recaudo=Sum('recaudo_potencial'), predios=Sum('cantidad_predios'),
+    )
+    total_urbano = agg_urb['proy'] or 0
+    total_rural = agg_rur['proy'] or 0
+    total_avaluo_urb = agg_urb['avaluo'] or 0
+    total_avaluo_rur = agg_rur['avaluo'] or 0
+    total_recaudo_urb = agg_urb['recaudo'] or 0
+    total_recaudo_rur = agg_rur['recaudo'] or 0
+    total_predios_urb = agg_urb['predios'] or 0
+    total_predios_rur = agg_rur['predios'] or 0
 
     total_urb_ant, detalle_urb_ant = calcular_predial_vigencias_anteriores(vigencia, 'urbano')
     total_rur_ant, detalle_rur_ant = calcular_predial_vigencias_anteriores(vigencia, 'rural')
@@ -353,6 +367,9 @@ def calculo_predial(request):
         'params': params,
         'resumen_urbano': resumen_urbano, 'total_urbano': total_urbano,
         'resumen_rural': resumen_rural, 'total_rural': total_rural,
+        'total_avaluo_urb': total_avaluo_urb, 'total_avaluo_rur': total_avaluo_rur,
+        'total_recaudo_urb': total_recaudo_urb, 'total_recaudo_rur': total_recaudo_rur,
+        'total_predios_urb': total_predios_urb, 'total_predios_rur': total_predios_rur,
         'total_urb_ant': total_urb_ant, 'detalle_urb_ant': detalle_urb_ant,
         'total_rur_ant': total_rur_ant, 'detalle_rur_ant': detalle_rur_ant,
         'carteras': carteras, 'form_cartera': form_cartera,

@@ -59,6 +59,16 @@
             {% if resumen_urbano %}
             <tfoot class="table-primary">
                 <tr>
+                    <td class="fw-bold">TOTALES</td>
+                    <td></td>
+                    <td class="text-center fw-bold">{{ total_predios_urb|intcomma }}</td>
+                    <td class="text-end fw-bold">${{ total_avaluo_urb|floatformat:0|intcomma }}</td>
+                    <td></td>
+                    <td class="text-end fw-bold">${{ total_recaudo_urb|floatformat:0|intcomma }}</td>
+                    <td></td>
+                    <td class="text-end fw-bold">${{ total_urbano|floatformat:0|intcomma }}</td>
+                </tr>
+                <tr>
                     <td colspan="7" class="text-end fw-bold">TOTAL PREDIAL URBANO VIG. ACTUAL:</td>
                     <td class="text-end fw-bold">${{ total_urbano|floatformat:0|intcomma }}</td>
                 </tr>
@@ -148,6 +158,16 @@
             </tbody>
             {% if resumen_rural %}
             <tfoot class="table-success">
+                <tr>
+                    <td class="fw-bold">TOTALES</td>
+                    <td></td>
+                    <td class="text-center fw-bold">{{ total_predios_rur|intcomma }}</td>
+                    <td class="text-end fw-bold">${{ total_avaluo_rur|floatformat:0|intcomma }}</td>
+                    <td></td>
+                    <td class="text-end fw-bold">${{ total_recaudo_rur|floatformat:0|intcomma }}</td>
+                    <td></td>
+                    <td class="text-end fw-bold">${{ total_rural|floatformat:0|intcomma }}</td>
+                </tr>
                 <tr>
                     <td colspan="7" class="text-end fw-bold">TOTAL PREDIAL RURAL VIG. ACTUAL:</td>
                     <td class="text-end fw-bold">${{ total_rural|floatformat:0|intcomma }}</td>

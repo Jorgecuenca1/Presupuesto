@@ -14,8 +14,11 @@ class CategoriaPredial(models.TextChoices):
     PARCELACION_NO_EDIFICADO = 'PNE', 'Parcelación/Finca Recreo - No Edificado'
 
 
-CATEGORIAS_URBANAS = ['UV', 'UEF', 'UED', 'UNEU', 'UNUE', 'UNNU']
-CATEGORIAS_RURALES = ['RU', 'PE', 'PNE']
+# Urbano edificados: vivienda, edificado demás, financieros.
+# Los urbanos NO edificados (UNEU/UNUE/UNNU) se agrupan con RURAL en el reporte,
+# aunque conservan su tarifa propia porque se filtran por su código de categoría.
+CATEGORIAS_URBANAS = ['UV', 'UEF', 'UED']
+CATEGORIAS_RURALES = ['RU', 'PE', 'PNE', 'UNEU', 'UNUE', 'UNNU']
 
 
 class TarifaPredial(models.Model):

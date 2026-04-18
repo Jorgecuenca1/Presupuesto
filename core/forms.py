@@ -45,6 +45,7 @@ class ParametrosForm(forms.ModelForm):
             'categoria_municipio': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'max': 6}),
             'valor_smlmv': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'pct_promedio_pagos': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'pct_crecimiento_viviendas': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.000001'}),
             'activo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 

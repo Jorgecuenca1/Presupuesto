@@ -53,6 +53,11 @@ def calcular_predial(vigencia, tipo='urbano'):
         cultura = CulturaPago.objects.filter(vigencia=vigencia, categoria=cat).first()
         pct_cultura = cultura.porcentaje / 100 if cultura else Decimal('0.70')
 
+        # Factor de crecimiento viviendas aplica sólo a UV (Urbano Vivienda)
+        factor_crecimiento = Decimal('1')
+        if cat == 'UV':
+            factor_crecimiento = Decimal('1') + (params.pct_crecimiento_viviendas or Decimal('0'))
+
         if tarifas.filter(uvt_desde__isnull=False).exists():
             for tarifa in tarifas:
                 if tarifa.uvt_desde is not None:
@@ -77,7 +82,7 @@ def calcular_predial(vigencia, tipo='urbano'):
                     total_avaluo = agg['total_avaluo'] or 0
                     cantidad = agg['cantidad'] or 0
                     recaudo_pot = total_avaluo * tarifa.tarifa_por_mil / 1000
-                    proyeccion = recaudo_pot * pct_cultura
+                    proyeccion = recaudo_pot * pct_cultura * factor_crecimiento
 
                     rango_desc = f'{tarifa.uvt_desde}-{tarifa.uvt_hasta or "∞"} UVT'
                     resumen = ResumenCalculo.objects.create(
@@ -108,7 +113,7 @@ def calcular_predial(vigencia, tipo='urbano'):
                 total_avaluo = agg['total_avaluo'] or 0
                 cantidad = agg['cantidad'] or 0
                 recaudo_pot = total_avaluo * tarifa.tarifa_por_mil / 1000
-                proyeccion = recaudo_pot * pct_cultura
+                proyeccion = recaudo_pot * pct_cultura * factor_crecimiento
 
                 resumen = ResumenCalculo.objects.create(
                     vigencia=vigencia,

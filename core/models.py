@@ -28,6 +28,9 @@ class ParametrosSistema(models.Model):
     pct_promedio_pagos = models.DecimalField(max_digits=6, decimal_places=2, default=0,
                                              verbose_name='% Promedio Pagos/Aprob. Definitiva',
                                              help_text='Para cálculo estampillas')
+    pct_crecimiento_viviendas = models.DecimalField(max_digits=8, decimal_places=6, default=Decimal('0.015'),
+                                                     verbose_name='% Crecimiento Viviendas',
+                                                     help_text='Incremento anual de viviendas para proyección predial urbano vivienda. Ej: 0.015 = 1.5%')
     activo = models.BooleanField(default=True)
 
     class Meta:

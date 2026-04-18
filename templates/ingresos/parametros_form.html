@@ -78,6 +78,18 @@
                         </div>
                     </div>
 
+                    <h6 class="text-muted mb-3 mt-4">Crecimiento Viviendas (Predial Urbano Vivienda)</h6>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">% Crecimiento Viviendas</label>
+                            {{ form.pct_crecimiento_viviendas }}
+                            <small class="text-muted">
+                                Ej: 0.015 = 1.5%. Se aplica a proyección efectiva = Proyección × (1 + %).
+                                Solo afecta categoría UV (Urbano Vivienda).
+                            </small>
+                        </div>
+                    </div>
+
                     <div class="mt-3">
                         <div class="form-check">
                             {{ form.activo }}

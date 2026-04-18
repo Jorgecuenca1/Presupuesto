@@ -46,6 +46,10 @@ class ParametrosForm(forms.ModelForm):
             'valor_smlmv': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'pct_promedio_pagos': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'pct_crecimiento_viviendas': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.000001'}),
+            'pct_cartera_base': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'pct_cartera_urbano': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'pct_cartera_rural': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'pct_eficiencia_recaudo': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'activo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 

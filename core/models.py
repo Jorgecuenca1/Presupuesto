@@ -31,6 +31,18 @@ class ParametrosSistema(models.Model):
     pct_crecimiento_viviendas = models.DecimalField(max_digits=8, decimal_places=6, default=Decimal('0.015'),
                                                      verbose_name='% Crecimiento Viviendas',
                                                      help_text='Incremento anual de viviendas para proyección predial urbano vivienda. Ej: 0.015 = 1.5%')
+    pct_cartera_base = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('40.00'),
+                                           verbose_name='% Base Recaudo Cartera',
+                                           help_text='Porcentaje base de recaudo sobre el valor de cartera de vigencias anteriores. Ej: 40.00 = 40%')
+    pct_cartera_urbano = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('10.00'),
+                                             verbose_name='% Urbano Cartera',
+                                             help_text='Porción de la cartera asignada a predial urbano. Ej: 10.00 = 10%')
+    pct_cartera_rural = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('90.00'),
+                                            verbose_name='% Rural Cartera',
+                                            help_text='Porción de la cartera asignada a predial rural. Ej: 90.00 = 90%')
+    pct_eficiencia_recaudo = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('70.00'),
+                                                  verbose_name='% Eficiencia Recaudo',
+                                                  help_text='Porcentaje global de eficiencia de recaudo (antes Cultura de Pago). Se aplica al recaudo potencial. Ej: 70.00 = 70%')
     activo = models.BooleanField(default=True)
 
     class Meta:

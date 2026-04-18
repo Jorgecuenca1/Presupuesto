@@ -43,12 +43,12 @@ class TarifaPredial(models.Model):
 class CulturaPago(models.Model):
     vigencia = models.IntegerField()
     categoria = models.CharField(max_length=4, choices=CategoriaPredial.choices)
-    porcentaje = models.DecimalField(max_digits=5, decimal_places=2, verbose_name='% Cultura de Pago',
-                                     help_text='Ej: 70.00 para 70%')
+    porcentaje = models.DecimalField(max_digits=5, decimal_places=2, verbose_name='% Eficiencia Recaudo',
+                                     help_text='Ej: 70.00 para 70%. Override por categoría; si no se define se usa el % global de Parámetros.')
 
     class Meta:
-        verbose_name = 'Cultura de Pago'
-        verbose_name_plural = 'Cultura de Pago'
+        verbose_name = 'Eficiencia Recaudo'
+        verbose_name_plural = 'Eficiencia Recaudo'
         unique_together = ['vigencia', 'categoria']
 
     def __str__(self):

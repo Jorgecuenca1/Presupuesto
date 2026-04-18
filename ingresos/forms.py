@@ -55,10 +55,9 @@ class ImportarExcelForm(forms.Form):
 class CarteraForm(forms.ModelForm):
     class Meta:
         model = CarteraVigenciaAnterior
-        fields = '__all__'
+        fields = ['vigencia_calculo', 'vigencia_cartera', 'valor_cartera']
         widgets = {f: forms.NumberInput(attrs={'class': W, 'step': '0.01'}) for f in
-                   ['vigencia_calculo', 'vigencia_cartera', 'valor_cartera',
-                    'porcentaje_base', 'porcentaje_urbano', 'porcentaje_rural']}
+                   ['vigencia_calculo', 'vigencia_cartera', 'valor_cartera']}
 
 
 class TarifaICAForm(forms.ModelForm):

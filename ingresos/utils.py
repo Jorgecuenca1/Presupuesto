@@ -47,11 +47,15 @@ def calcular_predial(vigencia, tipo='urbano'):
     ResumenCalculo.objects.filter(vigencia=vigencia, tipo=f'predial_{tipo}').delete()
     resultados = []
 
+    pct_eficiencia_global = (params.pct_eficiencia_recaudo / Decimal('100')
+                             if params.pct_eficiencia_recaudo is not None
+                             else Decimal('0.70'))
+
     for cat in categorias:
         contribuyentes = ContribuyentePredial.objects.filter(vigencia=vigencia, categoria=cat)
         tarifas = TarifaPredial.objects.filter(vigencia=vigencia, categoria=cat).order_by('uvt_desde')
         cultura = CulturaPago.objects.filter(vigencia=vigencia, categoria=cat).first()
-        pct_cultura = cultura.porcentaje / 100 if cultura else Decimal('0.70')
+        pct_cultura = cultura.porcentaje / Decimal('100') if cultura else pct_eficiencia_global
 
         # Factor de crecimiento viviendas aplica sólo a UV (Urbano Vivienda)
         factor_crecimiento = Decimal('1')
@@ -133,21 +137,26 @@ def calcular_predial(vigencia, tipo='urbano'):
 
 
 def calcular_predial_vigencias_anteriores(vigencia, tipo='urbano'):
-    """Calcula el predial de vigencias anteriores basado en cartera."""
+    """Calcula el predial de vigencias anteriores basado en cartera.
+    Usa los porcentajes globales de ParametrosSistema (% Base Cartera, % Urbano, % Rural)."""
+    params = get_params(vigencia)
+    pct_base = (params.pct_cartera_base if params else Decimal('40.00'))
+    if tipo == 'urbano':
+        pct_tipo = (params.pct_cartera_urbano if params else Decimal('10.00'))
+    else:
+        pct_tipo = (params.pct_cartera_rural if params else Decimal('90.00'))
+
     carteras = CarteraVigenciaAnterior.objects.filter(vigencia_calculo=vigencia)
     total = Decimal('0')
     detalles = []
     for cartera in carteras:
-        if tipo == 'urbano':
-            proy = cartera.proyeccion_urbano
-        else:
-            proy = cartera.proyeccion_rural
+        proy = cartera.valor_cartera * pct_base / Decimal('100') * pct_tipo / Decimal('100')
         total += proy
         detalles.append({
             'vigencia': cartera.vigencia_cartera,
             'valor_cartera': cartera.valor_cartera,
-            'pct_base': cartera.porcentaje_base,
-            'pct_tipo': cartera.porcentaje_urbano if tipo == 'urbano' else cartera.porcentaje_rural,
+            'pct_base': pct_base,
+            'pct_tipo': pct_tipo,
             'proyeccion': proy,
         })
     return total, detalles

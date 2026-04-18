@@ -40,9 +40,14 @@ import openpyxl
 from ingresos.models import ContribuyentePredial
 
 
-URBANO_TIPOS = {
-    # Solo CABECERA MUNICIPAL es urbano. Corregimientos son rurales.
-    'CABECERA MUNICIPAL',
+URBANO_TIPOS = {'CABECERA MUNICIPAL'}
+DESTINOS_EXENTOS = {
+    'USO PUBLICO', 'INFRAESTRUCTURA_HIDRAULICA', 'INFRAESTRUCTURA_TRANSPORTE',
+    'SERVICIOS_FUNERARIOS', 'CULTUTAL', 'CULTURAL',
+}
+DESTINOS_URBANO_EDIF_DEMAS = {
+    'COMERCIAL', 'INDUSTRIAL', 'INSTITUCIONAL', 'EDUCATIVO',
+    'RECREACIONAL', 'SALUBRIDAD', 'RELIGIOSO',
 }
 
 
@@ -50,43 +55,30 @@ def clasificar(tipo, destino, clase):
     tipo = (tipo or '').strip().upper()
     destino = (destino or '').strip().upper()
     clase = (clase or '').strip().upper()
-
-    is_urbano = tipo in URBANO_TIPOS
     is_parcelacion = 'PARCELACION' in clase or 'FINCA' in clase
-    is_financiero = 'FINANCIERA' in clase or 'FINANCIER' in clase
     is_no_edif_clase = 'NO EDIFICAD' in clase
 
-    is_lote = 'LOTE' in destino
-    is_urbanizable_no_urbanizado = 'URBANIZABLE NO URBAN' in destino
-    is_no_urbanizable = 'NO URBANIZABLE' in destino
-    is_urbanizado_no_edif = destino == 'LOTE URBANIZADO NO CONST'
-    is_habitacional = destino == 'HABITACIONAL'
-
-    # Parcelación / Finca de Recreo (rural, por clase)
     if is_parcelacion:
-        if is_no_edif_clase:
-            return 'PNE'
-        return 'PE'
-
-    if is_urbano:
-        # Urbano
-        if is_financiero:
-            return 'UEF'
-        if is_habitacional:
-            return 'UV'
-        if is_lote:
-            if is_no_urbanizable:
-                return 'UNNU'
-            if is_urbanizable_no_urbanizado:
-                return 'UNEU'
-            if is_urbanizado_no_edif:
-                return 'UNUE'
+        return 'PNE' if is_no_edif_clase else 'PE'
+    if tipo not in URBANO_TIPOS:
+        return 'RU'
+    if destino in DESTINOS_EXENTOS:
+        return 'RU'
+    if 'FINANCIERA' in clase:
+        return 'UEF'
+    if destino == 'HABITACIONAL':
+        return 'UV'
+    if 'LOTE' in destino:
+        if 'NO URBANIZABLE' in destino:
+            return 'UNNU'
+        if 'URBANIZABLE NO URBAN' in destino:
             return 'UNEU'
-        # Comercial, Industrial, Institucional, Servicios, etc. edificado
+        if destino == 'LOTE URBANIZADO NO CONST':
+            return 'UNUE'
+        return 'UNEU'
+    if destino in DESTINOS_URBANO_EDIF_DEMAS:
         return 'UED'
-
-    # Rural puro
-    return 'RU'
+    return 'UED'
 
 
 def to_decimal(val):

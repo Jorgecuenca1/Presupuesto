@@ -17,6 +17,19 @@ import openpyxl
 from ingresos.models import ContribuyentePredial
 
 
+# Destinos exentos de predial (bienes de uso público / institucionales no tributarios)
+DESTINOS_EXENTOS = {
+    'USO PUBLICO', 'INFRAESTRUCTURA_HIDRAULICA', 'INFRAESTRUCTURA_TRANSPORTE',
+    'SERVICIOS_FUNERARIOS', 'CULTUTAL', 'CULTURAL',
+}
+
+# Destinos urbanos edificados "no vivienda" (UED)
+DESTINOS_URBANO_EDIF_DEMAS = {
+    'COMERCIAL', 'INDUSTRIAL', 'INSTITUCIONAL', 'EDUCATIVO',
+    'RECREACIONAL', 'SALUBRIDAD', 'RELIGIOSO',
+}
+
+
 def clasificar(tipo, destino, clase):
     tipo = (tipo or '').strip().upper()
     destino = (destino or '').strip().upper()
@@ -32,6 +45,10 @@ def clasificar(tipo, destino, clase):
         return 'RU'
 
     # CABECERA MUNICIPAL
+    # Exentos: bienes de uso público / infraestructura / funerarios / cultural → RU
+    if destino in DESTINOS_EXENTOS:
+        return 'RU'
+
     if 'FINANCIERA' in clase:
         return 'UEF'
     if destino == 'HABITACIONAL':
@@ -44,6 +61,9 @@ def clasificar(tipo, destino, clase):
         if destino == 'LOTE URBANIZADO NO CONST':
             return 'UNUE'
         return 'UNEU'
+    if destino in DESTINOS_URBANO_EDIF_DEMAS:
+        return 'UED'
+    # Cualquier otro destino en cabecera → UED por defecto
     return 'UED'
 
 

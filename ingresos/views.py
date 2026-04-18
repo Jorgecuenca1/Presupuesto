@@ -1,9 +1,10 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.db.models import Sum
+from django.db.models import Sum, Q, Count
+from django.core.paginator import Paginator
 from django.http import HttpResponse
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 import openpyxl
 
 from core.models import ParametrosSistema
@@ -78,13 +79,47 @@ def cultura_pago_guardar(request):
 @login_required
 def contribuyentes_predial(request):
     vigencia = _vigencia()
-    contribuyentes = ContribuyentePredial.objects.filter(vigencia=vigencia)
-    total = contribuyentes.count()
-    total_avaluo = contribuyentes.aggregate(t=Sum('avaluo_catastral'))['t'] or 0
+    q = (request.GET.get('q') or '').strip()
+    categoria = (request.GET.get('categoria') or '').strip()
+    qs = ContribuyentePredial.objects.filter(vigencia=vigencia)
+    if q:
+        qs = qs.filter(
+            Q(propietario__icontains=q) |
+            Q(cedula_catastral__icontains=q) |
+            Q(direccion__icontains=q) |
+            Q(nombre_predio__icontains=q)
+        )
+    if categoria:
+        qs = qs.filter(categoria=categoria)
+
+    total = qs.count()
+    total_avaluo = qs.aggregate(t=Sum('avaluo_catastral'))['t'] or 0
+
+    try:
+        per_page = max(10, min(500, int(request.GET.get('per_page') or 50)))
+    except ValueError:
+        per_page = 50
+    paginator = Paginator(qs.order_by('-avaluo_catastral'), per_page)
+    page_number = request.GET.get('page') or 1
+    page_obj = paginator.get_page(page_number)
+
+    resumen_cat = (ContribuyentePredial.objects.filter(vigencia=vigencia)
+                   .values('categoria')
+                   .annotate(n=Count('id'), total=Sum('avaluo_catastral'))
+                   .order_by('-n'))
+
     return render(request, 'ingresos/contribuyentes_predial.html', {
-        'contribuyentes': contribuyentes[:200],
-        'total': total, 'total_avaluo': total_avaluo,
+        'contribuyentes': page_obj.object_list,
+        'page_obj': page_obj,
+        'paginator': paginator,
+        'total': total,
+        'total_avaluo': total_avaluo,
         'vigencia': vigencia,
+        'q': q,
+        'categoria': categoria,
+        'categorias': CategoriaPredial.choices,
+        'resumen_cat': resumen_cat,
+        'per_page': per_page,
     })
 
 
@@ -109,6 +144,146 @@ def contribuyente_predial_eliminar(request, pk):
     return redirect('contribuyentes_predial')
 
 
+URBANO_TIPOS_SET = {
+    'CABECERA MUNICIPAL', 'PACHAQUIARO', 'PUERTO GUADALUPE',
+    'PUEBLO NUEVO (GETSEMANÍ)', 'PUEBLO NUEVO (GETSEMANI)',
+    'BOCAS DEL GUAYURIBA', 'LA BALSA', 'CHAVIVA', 'GUICHIRAL',
+    'PUERTO PORFÍA', 'PUERTO PORFIA', 'ALTAMIRA', 'EL TIGRE',
+    '13-CORREGIMIENTO 13',
+}
+
+
+def _clasificar_predio(tipo, destino, clase):
+    tipo = (tipo or '').strip().upper()
+    destino = (destino or '').strip().upper()
+    clase = (clase or '').strip().upper()
+    is_urbano = tipo in URBANO_TIPOS_SET
+    is_parcelacion = 'PARCELACION' in clase or 'FINCA' in clase
+    is_financiero = 'FINANCIERA' in clase or 'FINANCIER' in clase
+    is_no_edif_clase = 'NO EDIFICAD' in clase
+    is_lote = 'LOTE' in destino
+    is_no_urbanizable = 'NO URBANIZABLE' in destino
+    is_urbanizable_no_urbanizado = 'URBANIZABLE NO URBAN' in destino
+    is_urbanizado_no_edif = destino == 'LOTE URBANIZADO NO CONST'
+    is_habitacional = destino == 'HABITACIONAL'
+    if is_parcelacion:
+        return 'PNE' if is_no_edif_clase else 'PE'
+    if is_urbano:
+        if is_financiero:
+            return 'UEF'
+        if is_habitacional:
+            return 'UV'
+        if is_lote:
+            if is_no_urbanizable:
+                return 'UNNU'
+            if is_urbanizable_no_urbanizado:
+                return 'UNEU'
+            if is_urbanizado_no_edif:
+                return 'UNUE'
+            return 'UNEU'
+        return 'UED'
+    return 'RU'
+
+
+def _to_decimal(val):
+    if val is None or val == '':
+        return None
+    try:
+        if isinstance(val, (int, float, Decimal)):
+            return Decimal(str(val))
+        return Decimal(str(val).replace(',', '').replace('$', '').strip())
+    except (InvalidOperation, ValueError):
+        return None
+
+
+def _detectar_formato_predial(ws):
+    """Retorna 'comparativo' si el Excel parece ser la Tabla Predial Comparativo.
+    Detecta por: ≥25 columnas y encabezado 'REFERENCIA CATASTRAL' en fila 7 col 1."""
+    if ws.max_column < 25:
+        return 'simple'
+    try:
+        val = str(ws.cell(row=7, column=1).value or '').strip().upper()
+        if 'REFERENCIA' in val and 'CATASTRAL' in val:
+            return 'comparativo'
+    except Exception:
+        pass
+    return 'simple'
+
+
+def _importar_comparativo(ws, vigencia):
+    """Importa formato Tabla Predial Comparativo. Encabezados fila 7, datos desde 8.
+    Columnas: 1=ref, 11=propietario, 12=direccion, 13=tipo, 14=destino, 15=clase,
+    20=avaluo anterior, 23=avaluo actual."""
+    existentes = set(ContribuyentePredial.objects.filter(vigencia=vigencia)
+                     .values_list('cedula_catastral', flat=True))
+    por_cat = {}
+    nuevos = []
+    omitidos = 0
+    for row in ws.iter_rows(min_row=8, values_only=True):
+        if not row or not row[0]:
+            continue
+        ref = str(row[0]).strip()[:50]
+        if ref in existentes:
+            omitidos += 1
+            continue
+        if len(row) < 23:
+            continue
+        avaluo = _to_decimal(row[22])
+        if not avaluo or avaluo <= 0:
+            avaluo = _to_decimal(row[19])  # fallback vigencia anterior
+        if not avaluo or avaluo <= 0:
+            continue
+        propietario = str(row[10] or row[2] or '').strip()[:300] or 'SIN PROPIETARIO'
+        direccion = str(row[11] or '').strip()[:300]
+        tipo = str(row[12] or '').strip()
+        destino = str(row[13] or '').strip()
+        clase = str(row[14] or '').strip()
+        categoria = _clasificar_predio(tipo, destino, clase)
+        por_cat[categoria] = por_cat.get(categoria, 0) + 1
+        nuevos.append(ContribuyentePredial(
+            vigencia=vigencia,
+            direccion=direccion or tipo[:300],
+            nombre_predio=(destino or clase or 'PREDIO')[:200],
+            propietario=propietario,
+            cedula_catastral=ref,
+            avaluo_catastral=avaluo,
+            categoria=categoria,
+        ))
+        existentes.add(ref)
+        if len(nuevos) >= 500:
+            ContribuyentePredial.objects.bulk_create(nuevos)
+            nuevos = []
+    if nuevos:
+        ContribuyentePredial.objects.bulk_create(nuevos)
+    return por_cat, omitidos
+
+
+def _importar_simple(ws, vigencia):
+    cat_map = {v.lower(): k for k, v in CategoriaPredial.choices}
+    count = 0
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        if not row or len(row) < 5:
+            continue
+        direccion = str(row[0] or '').strip()
+        nombre = str(row[1] or '').strip()
+        propietario = str(row[2] or '').strip()
+        avaluo = _to_decimal(row[3])
+        if not avaluo:
+            continue
+        cat_raw = str(row[4] or '').strip()
+        cedula_cat = str(row[5]).strip() if len(row) > 5 and row[5] else ''
+        categoria = cat_map.get(cat_raw.lower(), cat_raw.upper()[:4])
+        if categoria not in dict(CategoriaPredial.choices):
+            categoria = 'UV'
+        ContribuyentePredial.objects.create(
+            vigencia=vigencia, direccion=direccion, nombre_predio=nombre,
+            propietario=propietario, avaluo_catastral=avaluo,
+            categoria=categoria, cedula_catastral=cedula_cat,
+        )
+        count += 1
+    return count
+
+
 @login_required
 def importar_predial(request):
     if request.method == 'POST':
@@ -117,32 +292,20 @@ def importar_predial(request):
             archivo = request.FILES['archivo']
             vigencia = _vigencia()
             try:
-                wb = openpyxl.load_workbook(archivo)
+                wb = openpyxl.load_workbook(archivo, data_only=True, read_only=True)
                 ws = wb.active
-                count = 0
-                cat_map = {v.lower(): k for k, v in CategoriaPredial.choices}
-                for row in ws.iter_rows(min_row=2, values_only=True):
-                    if not row or len(row) < 5:
-                        continue
-                    direccion = str(row[0] or '').strip()
-                    nombre = str(row[1] or '').strip()
-                    propietario = str(row[2] or '').strip()
-                    try:
-                        avaluo = Decimal(str(row[3]).replace(',', '').replace('$', '').strip())
-                    except (ValueError, TypeError):
-                        continue
-                    cat_raw = str(row[4] or '').strip()
-                    cedula_cat = str(row[5]).strip() if len(row) > 5 and row[5] else ''
-                    categoria = cat_map.get(cat_raw.lower(), cat_raw.upper()[:4])
-                    if categoria not in dict(CategoriaPredial.choices):
-                        categoria = 'UV'
-                    ContribuyentePredial.objects.create(
-                        vigencia=vigencia, direccion=direccion, nombre_predio=nombre,
-                        propietario=propietario, avaluo_catastral=avaluo,
-                        categoria=categoria, cedula_catastral=cedula_cat,
+                formato = _detectar_formato_predial(ws)
+                if formato == 'comparativo':
+                    por_cat, omitidos = _importar_comparativo(ws, vigencia)
+                    total = sum(por_cat.values())
+                    detalle = ', '.join(f'{k}={v}' for k, v in sorted(por_cat.items(), key=lambda x: -x[1]))
+                    messages.success(
+                        request,
+                        f'{total} predios importados (Tabla Comparativo). {omitidos} ya existían. Por categoría: {detalle}'
                     )
-                    count += 1
-                messages.success(request, f'{count} contribuyentes importados')
+                else:
+                    count = _importar_simple(ws, vigencia)
+                    messages.success(request, f'{count} contribuyentes importados')
                 return redirect('contribuyentes_predial')
             except Exception as e:
                 messages.error(request, f'Error al importar: {e}')
@@ -150,8 +313,17 @@ def importar_predial(request):
         form = ImportarExcelForm()
     return render(request, 'ingresos/importar_contribuyentes.html', {
         'form': form, 'tipo': 'Predial',
-        'columnas': ['Dirección', 'Nombre Predio', 'Propietario', 'Avalúo Catastral', 'Categoría', 'Cédula Catastral (opcional)'],
+        'columnas': [
+            'Dirección', 'Nombre Predio', 'Propietario',
+            'Avalúo Catastral', 'Categoría', 'Cédula Catastral (opcional)',
+        ],
         'categorias': CategoriaPredial.choices,
+        'info_extra': (
+            'También acepta el formato "Tabla Predial Comparativo con vigencia anterior" '
+            '(32 columnas, encabezados en fila 7). En ese caso el sistema clasifica '
+            'automáticamente cada predio por TIPO/DESTINO/CLASE y usa el Avalúo 2026 '
+            '(columna 23) con fallback al avalúo anterior (columna 20).'
+        ),
     })
 
 

@@ -145,11 +145,9 @@ def contribuyente_predial_eliminar(request, pk):
 
 
 URBANO_TIPOS_SET = {
-    'CABECERA MUNICIPAL', 'PACHAQUIARO', 'PUERTO GUADALUPE',
-    'PUEBLO NUEVO (GETSEMANÍ)', 'PUEBLO NUEVO (GETSEMANI)',
-    'BOCAS DEL GUAYURIBA', 'LA BALSA', 'CHAVIVA', 'GUICHIRAL',
-    'PUERTO PORFÍA', 'PUERTO PORFIA', 'ALTAMIRA', 'EL TIGRE',
-    '13-CORREGIMIENTO 13',
+    # Según clasificación catastral municipal, SOLO la cabecera es urbana.
+    # Los corregimientos (Pachaquiaro, Puerto Guadalupe, etc.) son rurales.
+    'CABECERA MUNICIPAL',
 }
 
 

@@ -3,7 +3,7 @@ from django.db.models import Sum, Count
 from core.models import ParametrosSistema
 from .models import (
     TarifaPredial, CulturaPago, ContribuyentePredial, CarteraVigenciaAnterior,
-    TarifaICA, ContribuyenteICA, RubroIngreso, ResumenCalculo,
+    TarifaICA, ContribuyenteICA, RubroIngreso, ResumenCalculo, Estampilla,
     CATEGORIAS_URBANAS, CATEGORIAS_RURALES, TIPO_ACTIVIDAD_MAP,
 )
 
@@ -207,6 +207,96 @@ def calcular_ica(vigencia):
     return resultados
 
 
+def calcular_base_estampillas(vigencia):
+    """Replica la hoja 'Base Estampillas'. Retorna dict con la base y los sub-totales
+    usados en el cálculo. La tarifa de cada estampilla se aplica sobre ``total_base``.
+
+    Ítems del Excel (equivalentes):
+      1  POAI Total              → params.poai_total_inversion
+      2  Gasto SEV ppto NC       → params.gasto_sev_ppto_nc
+      3  Saldo neto base ppto    = 1 - 2
+      4  SGR                     → params.sgr_presupuesto
+      5  Gasto SEV SGR           → params.gasto_sev_sgr
+      6  Saldo neto base SGR     = 4 - 5         (coincide con item 82 = 6 × 72 del Excel;
+                                                  la nota del libro "3 + 4 - 5" es incorrecta,
+                                                  se verificó contra los valores calculados)
+      71 % pagos sin SGR         → params.pct_pagos_sin_sgr
+      72 % pagos SGR             → params.pct_pagos_sgr
+      81 Valor base ppto sin SGR = 3 * 71
+      82 Valor base ppto SGR     = 6 * 72
+      9  Reservas Ppto NC        → params.reservas_presupuestales_nc
+      10 Cuentas por pagar NC    → params.cuentas_por_pagar_nc
+      11 Superávit Fiscal        → params.superavit_fiscal
+      12 Total base cálculo      = 81 + 82 + 9 + 10 + 11
+    """
+    params = get_params(vigencia)
+    if not params:
+        return None
+    poai = params.poai_total_inversion or Decimal('0')
+    gasto_sev = params.gasto_sev_ppto_nc or Decimal('0')
+    sgr = params.sgr_presupuesto or Decimal('0')
+    gasto_sev_sgr = params.gasto_sev_sgr or Decimal('0')
+    pct_sin_sgr = params.pct_pagos_sin_sgr or Decimal('0')
+    pct_sgr = params.pct_pagos_sgr or Decimal('0')
+    reservas = params.reservas_presupuestales_nc or Decimal('0')
+    cxp = params.cuentas_por_pagar_nc or Decimal('0')
+    superavit = params.superavit_fiscal or Decimal('0')
+
+    saldo_neto_ppto = poai - gasto_sev
+    saldo_neto_sgr = sgr - gasto_sev_sgr
+    base_sin_sgr = saldo_neto_ppto * pct_sin_sgr
+    base_sgr = saldo_neto_sgr * pct_sgr
+    total_base = base_sin_sgr + base_sgr + reservas + cxp + superavit
+
+    return {
+        'poai_total': poai,
+        'gasto_sev': gasto_sev,
+        'saldo_neto_ppto': saldo_neto_ppto,
+        'sgr': sgr,
+        'gasto_sev_sgr': gasto_sev_sgr,
+        'saldo_neto_sgr': saldo_neto_sgr,
+        'pct_sin_sgr': pct_sin_sgr,
+        'pct_sgr': pct_sgr,
+        'base_sin_sgr': base_sin_sgr,
+        'base_sgr': base_sgr,
+        'reservas': reservas,
+        'cuentas_por_pagar': cxp,
+        'superavit': superavit,
+        'total_base': total_base,
+    }
+
+
+def calcular_estampillas(vigencia):
+    """Calcula la proyección anual de cada estampilla registrada.
+    Retorna (total_base, [{estampilla, tarifa, proyeccion}, ...])
+    y almacena un ResumenCalculo tipo 'estampilla' por cada una.
+    """
+    base = calcular_base_estampillas(vigencia)
+    if base is None:
+        return Decimal('0'), []
+
+    ResumenCalculo.objects.filter(vigencia=vigencia, tipo='estampilla').delete()
+
+    total_base = base['total_base']
+    detalles = []
+    for e in Estampilla.objects.filter(vigencia=vigencia):
+        proy = total_base * e.tarifa
+        ResumenCalculo.objects.create(
+            vigencia=vigencia,
+            tipo='estampilla',
+            categoria=e.nombre,
+            descripcion_rango=f'Tarifa {e.tarifa * 100:.2f}% sobre base ${float(total_base):,.0f}',
+            total_avaluo=total_base,
+            tarifa_por_mil=e.tarifa * 1000,
+            recaudo_potencial=proy,
+            cultura_pago=100,
+            proyeccion=proy,
+            cantidad_predios=0,
+        )
+        detalles.append({'estampilla': e, 'tarifa': e.tarifa, 'proyeccion': proy})
+    return total_base, detalles
+
+
 def calcular_todos_ingresos(vigencia):
     """Calcula todos los rubros de ingreso según su método."""
     params = get_params(vigencia)
@@ -232,6 +322,10 @@ def calcular_todos_ingresos(vigencia):
     # 2. Calcular ICA
     ica_resultados = calcular_ica(vigencia)
     total_ica = sum(ica_resultados.values())
+
+    # 2.5 Calcular estampillas
+    total_base_est, estampillas_det = calcular_estampillas(vigencia)
+    estampillas_map = {d['estampilla'].id: d['proyeccion'] for d in estampillas_det}
 
     # 3. Actualizar rubros según método
     rubros = RubroIngreso.objects.filter(vigencia=vigencia, es_titulo=False)
@@ -259,6 +353,9 @@ def calcular_todos_ingresos(vigencia):
         elif rubro.metodo_calculo == 'POAI':
             if rubro.tarifa_poai:
                 rubro.valor_apropiacion = params.poai_total_inversion * rubro.tarifa_poai
+        elif rubro.metodo_calculo == 'EST':
+            if rubro.estampilla_id and rubro.estampilla_id in estampillas_map:
+                rubro.valor_apropiacion = estampillas_map[rubro.estampilla_id]
         # MAN = manual, no se cambia
         rubro.save(update_fields=['valor_apropiacion'])
 

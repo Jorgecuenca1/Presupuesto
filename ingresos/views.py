@@ -11,16 +11,17 @@ from core.models import ParametrosSistema
 from .models import (
     TarifaPredial, CulturaPago, ContribuyentePredial, CarteraVigenciaAnterior,
     TarifaICA, ContribuyenteICA, RubroIngreso, ResumenCalculo,
-    CategoriaPredial, ActividadICA, CifraHistoricaIngreso,
+    CategoriaPredial, ActividadICA, CifraHistoricaIngreso, Estampilla,
 )
 from .forms import (
     TarifaPredialForm, CulturaPagoForm, ContribuyentePredialForm,
     ImportarExcelForm, CarteraForm, TarifaICAForm, ContribuyenteICAForm,
-    RubroIngresoForm, CifraHistoricaIngresoForm,
+    RubroIngresoForm, CifraHistoricaIngresoForm, EstampillaForm,
 )
 from .utils import (
     calcular_predial, calcular_predial_vigencias_anteriores,
     calcular_ica, calcular_todos_ingresos,
+    calcular_base_estampillas, calcular_estampillas,
 )
 
 
@@ -574,6 +575,58 @@ def rubro_eliminar(request, pk):
     get_object_or_404(RubroIngreso, pk=pk).delete()
     messages.success(request, 'Rubro eliminado')
     return redirect('rubros_list')
+
+
+# ─── ESTAMPILLAS ──────────────────────────────────────────────────
+@login_required
+def calculo_estampillas(request):
+    vigencia = _vigencia()
+    params = ParametrosSistema.objects.filter(vigencia=vigencia).first()
+    if request.method == 'POST':
+        calcular_estampillas(vigencia)
+        messages.success(request, 'Cálculo de estampillas ejecutado correctamente')
+        return redirect('calculo_estampillas')
+
+    base = calcular_base_estampillas(vigencia) or {}
+    estampillas = Estampilla.objects.filter(vigencia=vigencia)
+    total_base = base.get('total_base', Decimal('0'))
+    detalles = []
+    total_proy = Decimal('0')
+    for e in estampillas:
+        proy = total_base * e.tarifa
+        total_proy += proy
+        detalles.append({'estampilla': e, 'proyeccion': proy})
+
+    return render(request, 'ingresos/calculo_estampillas.html', {
+        'params': params,
+        'vigencia': vigencia,
+        'base': base,
+        'estampillas': estampillas,
+        'detalles': detalles,
+        'total_proy': total_proy,
+        'form_estampilla': EstampillaForm(initial={'vigencia': vigencia}),
+    })
+
+
+@login_required
+def estampilla_guardar(request):
+    if request.method == 'POST':
+        pk = request.POST.get('pk')
+        instance = get_object_or_404(Estampilla, pk=pk) if pk else None
+        form = EstampillaForm(request.POST, instance=instance)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Estampilla guardada')
+        else:
+            messages.error(request, f'Error: {form.errors.as_text()}')
+    return redirect('calculo_estampillas')
+
+
+@login_required
+def estampilla_eliminar(request, pk):
+    get_object_or_404(Estampilla, pk=pk).delete()
+    messages.success(request, 'Estampilla eliminada')
+    return redirect('calculo_estampillas')
 
 
 # ─── CALCULAR TODOS ───────────────────────────────────────────────

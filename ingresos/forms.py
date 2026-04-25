@@ -2,7 +2,7 @@ from django import forms
 from .models import (
     TarifaPredial, CulturaPago, ContribuyentePredial,
     CarteraVigenciaAnterior, TarifaICA, ContribuyenteICA, RubroIngreso,
-    CifraHistoricaIngreso,
+    CifraHistoricaIngreso, Estampilla,
 )
 
 W = 'form-control'
@@ -89,8 +89,9 @@ class RubroIngresoForm(forms.ModelForm):
     class Meta:
         model = RubroIngreso
         fields = ['vigencia', 'codigo', 'descripcion', 'codigo_fuente', 'nombre_fuente',
-                  'parent', 'metodo_calculo', 'recaudo_vigencia_anterior', 'tarifa_poai',
-                  'valor_apropiacion', 'observaciones', 'es_titulo', 'orden', 'nivel']
+                  'parent', 'metodo_calculo', 'estampilla', 'recaudo_vigencia_anterior',
+                  'tarifa_poai', 'valor_apropiacion', 'observaciones', 'es_titulo',
+                  'orden', 'nivel']
         widgets = {
             'vigencia': forms.NumberInput(attrs={'class': W}),
             'codigo': forms.TextInput(attrs={'class': W}),
@@ -99,6 +100,7 @@ class RubroIngresoForm(forms.ModelForm):
             'nombre_fuente': forms.TextInput(attrs={'class': W}),
             'parent': forms.Select(attrs={'class': W}),
             'metodo_calculo': forms.Select(attrs={'class': W}),
+            'estampilla': forms.Select(attrs={'class': W}),
             'recaudo_vigencia_anterior': forms.NumberInput(attrs={'class': W}),
             'tarifa_poai': forms.NumberInput(attrs={'class': W, 'step': '0.0001'}),
             'valor_apropiacion': forms.NumberInput(attrs={'class': W}),
@@ -106,6 +108,19 @@ class RubroIngresoForm(forms.ModelForm):
             'es_titulo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'orden': forms.NumberInput(attrs={'class': W}),
             'nivel': forms.NumberInput(attrs={'class': W}),
+        }
+
+
+class EstampillaForm(forms.ModelForm):
+    class Meta:
+        model = Estampilla
+        fields = ['vigencia', 'nombre', 'codigo_rubro', 'tarifa', 'descripcion']
+        widgets = {
+            'vigencia': forms.NumberInput(attrs={'class': W}),
+            'nombre': forms.TextInput(attrs={'class': W}),
+            'codigo_rubro': forms.TextInput(attrs={'class': W}),
+            'tarifa': forms.NumberInput(attrs={'class': W, 'step': '0.0001'}),
+            'descripcion': forms.TextInput(attrs={'class': W}),
         }
 
 

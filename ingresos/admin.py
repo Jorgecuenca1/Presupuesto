@@ -1,8 +1,15 @@
 from django.contrib import admin
 from .models import (
     TarifaPredial, CulturaPago, ContribuyentePredial, CarteraVigenciaAnterior,
-    TarifaICA, ContribuyenteICA, RubroIngreso, ResumenCalculo,
+    TarifaICA, ContribuyenteICA, RubroIngreso, ResumenCalculo, Estampilla,
 )
+
+
+@admin.register(Estampilla)
+class EstampillaAdmin(admin.ModelAdmin):
+    list_display = ['vigencia', 'nombre', 'codigo_rubro', 'tarifa']
+    list_filter = ['vigencia']
+    search_fields = ['nombre', 'codigo_rubro']
 
 
 @admin.register(TarifaPredial)

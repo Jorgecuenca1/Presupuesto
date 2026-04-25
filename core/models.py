@@ -43,6 +43,29 @@ class ParametrosSistema(models.Model):
     pct_eficiencia_recaudo = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('70.00'),
                                                   verbose_name='% Eficiencia Recaudo',
                                                   help_text='Porcentaje global de eficiencia de recaudo (antes Cultura de Pago). Se aplica al recaudo potencial. Ej: 70.00 = 70%')
+
+    # Cálculo de estampillas (Base Estampillas)
+    gasto_sev_ppto_nc = models.DecimalField(max_digits=20, decimal_places=2, default=0,
+                                            verbose_name='Gasto SEV Ppto NC ($)',
+                                            help_text='Gasto apropiado en Salud, Educación y Vivienda sobre presupuesto NC')
+    sgr_presupuesto = models.DecimalField(max_digits=20, decimal_places=2, default=0,
+                                          verbose_name='Presupuesto SGR ($)')
+    gasto_sev_sgr = models.DecimalField(max_digits=20, decimal_places=2, default=0,
+                                        verbose_name='Gasto SEV SGR ($)',
+                                        help_text='Gasto apropiado en Salud, Educación y Vivienda sobre SGR')
+    pct_pagos_sin_sgr = models.DecimalField(max_digits=6, decimal_places=4, default=Decimal('0.8483'),
+                                            verbose_name='% Promedio Pagos sin SGR',
+                                            help_text='Ej: 0.8483 = 84.83%. Promedio ppto últimas 3 vigencias sin SGR')
+    pct_pagos_sgr = models.DecimalField(max_digits=6, decimal_places=4, default=Decimal('0.3480'),
+                                        verbose_name='% Promedio Pagos SGR',
+                                        help_text='Ej: 0.3480 = 34.80%. Promedio ppto últimas 3 vigencias SGR')
+    reservas_presupuestales_nc = models.DecimalField(max_digits=20, decimal_places=2, default=0,
+                                                     verbose_name='Reservas Presupuestales NC ($)')
+    cuentas_por_pagar_nc = models.DecimalField(max_digits=20, decimal_places=2, default=0,
+                                               verbose_name='Cuentas por Pagar NC ($)')
+    superavit_fiscal = models.DecimalField(max_digits=20, decimal_places=2, default=0,
+                                           verbose_name='Superávit Fiscal Estimado ($)')
+
     activo = models.BooleanField(default=True)
 
     class Meta:

@@ -33,6 +33,11 @@ urlpatterns = [
     # Cálculo ICA
     path('calculo-ica/', views.calculo_ica, name='calculo_ica'),
 
+    # Estampillas
+    path('estampillas/', views.calculo_estampillas, name='calculo_estampillas'),
+    path('estampillas/guardar/', views.estampilla_guardar, name='estampilla_guardar'),
+    path('estampillas/<int:pk>/eliminar/', views.estampilla_eliminar, name='estampilla_eliminar'),
+
     # Rubros de Ingreso
     path('rubros/', views.rubros_list, name='rubros_list'),
     path('rubros/crear/', views.rubro_crear, name='rubro_crear'),

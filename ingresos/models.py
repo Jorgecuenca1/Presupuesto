@@ -176,7 +176,30 @@ class MetodoCalculo(models.TextChoices):
     IPC = 'IPC', 'Incremento IPC sobre Recaudo Anterior'
     ICN = 'ICN', 'Tasa Crecimiento ICN sobre Recaudo Anterior'
     POAI = 'POAI', 'Tarifa % sobre POAI Inversión'
+    ESTAMPILLA = 'EST', 'Cálculo Estampilla (Base × Tarifa)'
     MANUAL = 'MAN', 'Valor Manual'
+
+
+class Estampilla(models.Model):
+    vigencia = models.IntegerField()
+    nombre = models.CharField(max_length=120, verbose_name='Nombre Estampilla',
+                               help_text='Ej: Adulto Mayor, Pro-cultura, Justicia Familiar')
+    codigo_rubro = models.CharField(max_length=50, blank=True,
+                                     verbose_name='Código Rubro Presupuestal',
+                                     help_text='Opcional. Código al que se asocia la proyección')
+    tarifa = models.DecimalField(max_digits=6, decimal_places=4,
+                                  verbose_name='Tarifa',
+                                  help_text='Ej: 0.02 = 2%. Se multiplica por la base de cálculo')
+    descripcion = models.CharField(max_length=200, blank=True)
+
+    class Meta:
+        verbose_name = 'Estampilla'
+        verbose_name_plural = 'Estampillas'
+        unique_together = ['vigencia', 'nombre']
+        ordering = ['vigencia', 'nombre']
+
+    def __str__(self):
+        return f'{self.nombre} ({self.tarifa * 100:.2f}%)'
 
 
 class RubroIngreso(models.Model):
@@ -187,6 +210,9 @@ class RubroIngreso(models.Model):
     nombre_fuente = models.CharField(max_length=100, blank=True, verbose_name='Fuente')
     parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='hijos')
     metodo_calculo = models.CharField(max_length=4, choices=MetodoCalculo.choices, default='MAN')
+    estampilla = models.ForeignKey(Estampilla, null=True, blank=True, on_delete=models.SET_NULL,
+                                    verbose_name='Estampilla asociada',
+                                    help_text='Requerido cuando el método es Cálculo Estampilla')
     recaudo_vigencia_anterior = models.DecimalField(max_digits=20, decimal_places=2, default=0,
                                                      verbose_name='Recaudo Vig. Anterior ($)')
     tarifa_poai = models.DecimalField(max_digits=6, decimal_places=4, null=True, blank=True,

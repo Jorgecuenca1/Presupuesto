@@ -50,6 +50,14 @@ class ParametrosForm(forms.ModelForm):
             'pct_cartera_urbano': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'pct_cartera_rural': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'pct_eficiencia_recaudo': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'gasto_sev_ppto_nc': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'sgr_presupuesto': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'gasto_sev_sgr': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'pct_pagos_sin_sgr': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001'}),
+            'pct_pagos_sgr': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001'}),
+            'reservas_presupuestales_nc': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'cuentas_por_pagar_nc': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'superavit_fiscal': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'activo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 

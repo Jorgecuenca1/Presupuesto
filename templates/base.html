@@ -112,6 +112,11 @@
             <i class="bi bi-calculator"></i> Cálculo ICA
         </a>
 
+        <div class="nav-section">Ingresos - Estampillas</div>
+        <a href="{% url 'calculo_estampillas' %}" class="nav-link {% if request.resolver_match.url_name == 'calculo_estampillas' %}active{% endif %}">
+            <i class="bi bi-ticket-perforated"></i> Cálculo Estampillas
+        </a>
+
         <div class="nav-section">Presupuesto Ingresos</div>
         <a href="{% url 'rubros_list' %}" class="nav-link {% if request.resolver_match.url_name == 'rubros_list' %}active{% endif %}">
             <i class="bi bi-list-nested"></i> Rubros de Ingreso

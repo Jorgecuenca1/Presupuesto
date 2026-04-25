@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Cálculo Estampillas{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Cálculo Estampillas</li>{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="bi bi-ticket-perforated"></i> Cálculo de Estampillas (Vigencia {{ vigencia }})</h4>
+    <form method="post" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-success">
+            <i class="bi bi-play-circle"></i> Ejecutar Cálculo
+        </button>
+    </form>
+</div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card mb-3">
+            <div class="card-header bg-primary text-white">
+                <i class="bi bi-calculator-fill"></i> Base de Cálculo (hoja "Base Estampillas")
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        <tr><td>1) Valor Total POAI</td>
+                            <td class="text-end">${{ base.poai_total|default_if_none:0|floatformat:0|intcomma }}</td></tr>
+                        <tr><td>2) Gasto apropiado SEV (Ppto NC)</td>
+                            <td class="text-end">${{ base.gasto_sev|default_if_none:0|floatformat:0|intcomma }}</td></tr>
+                        <tr class="table-light"><td><strong>3) Saldo neto base ppto (1 − 2)</strong></td>
+                            <td class="text-end"><strong>${{ base.saldo_neto_ppto|default_if_none:0|floatformat:0|intcomma }}</strong></td></tr>
+                        <tr><td>4) Presupuesto SGR</td>
+                            <td class="text-end">${{ base.sgr|default_if_none:0|floatformat:0|intcomma }}</td></tr>
+                        <tr><td>5) Gasto apropiado SEV SGR</td>
+                            <td class="text-end">${{ base.gasto_sev_sgr|default_if_none:0|floatformat:0|intcomma }}</td></tr>
+                        <tr class="table-light"><td><strong>6) Saldo neto base SGR (4 − 5)</strong></td>
+                            <td class="text-end"><strong>${{ base.saldo_neto_sgr|default_if_none:0|floatformat:0|intcomma }}</strong></td></tr>
+                        <tr><td>7.1) % Promedio pagos sin SGR</td>
+                            <td class="text-end">{% widthratio base.pct_sin_sgr 1 100 %}%</td></tr>
+                        <tr><td>7.2) % Promedio pagos SGR</td>
+                            <td class="text-end">{% widthratio base.pct_sgr 1 100 %}%</td></tr>
+                        <tr><td>8.1) Valor base ppto sin SGR (3 × 7.1)</td>
+                            <td class="text-end">${{ base.base_sin_sgr|default_if_none:0|floatformat:0|intcomma }}</td></tr>
+                        <tr><td>8.2) Valor base SGR (6 × 7.2)</td>
+                            <td class="text-end">${{ base.base_sgr|default_if_none:0|floatformat:0|intcomma }}</td></tr>
+                        <tr><td>9) Reservas Presupuestales NC</td>
+                            <td class="text-end">${{ base.reservas|default_if_none:0|floatformat:0|intcomma }}</td></tr>
+                        <tr><td>10) Cuentas por pagar NC</td>
+                            <td class="text-end">${{ base.cuentas_por_pagar|default_if_none:0|floatformat:0|intcomma }}</td></tr>
+                        <tr><td>11) Superávit fiscal estimado</td>
+                            <td class="text-end">${{ base.superavit|default_if_none:0|floatformat:0|intcomma }}</td></tr>
+                        <tr class="table-primary"><td><strong>12) TOTAL BASE CÁLCULO (8.1 + 8.2 + 9 + 10 + 11)</strong></td>
+                            <td class="text-end"><strong>${{ base.total_base|default_if_none:0|floatformat:0|intcomma }}</strong></td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-footer small text-muted">
+                Ajusta estos valores en <a href="{% url 'parametros' %}">Parámetros del Sistema</a>.
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card mb-3">
+            <div class="card-header bg-white">
+                <i class="bi bi-plus-circle"></i> Agregar / Editar Estampilla
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'estampilla_guardar' %}" class="row g-2">
+                    {% csrf_token %}
+                    <div class="col-md-5">
+                        <label class="form-label small">Nombre</label>
+                        {{ form_estampilla.nombre }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small">Código Rubro</label>
+                        {{ form_estampilla.codigo_rubro }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">Tarifa (dec.)</label>
+                        {{ form_estampilla.tarifa }}
+                    </div>
+                    <div class="col-md-9">
+                        <label class="form-label small">Descripción</label>
+                        {{ form_estampilla.descripcion }}
+                    </div>
+                    {{ form_estampilla.vigencia.as_hidden }}
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-save"></i> Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <i class="bi bi-ticket"></i> Proyección por Estampilla
+                <span class="float-end fw-bold">Total: ${{ total_proy|floatformat:0|intcomma }}</span>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Estampilla</th>
+                            <th>Código Rubro</th>
+                            <th class="text-center">Tarifa</th>
+                            <th class="text-end">Proyección</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in detalles %}
+                        <tr>
+                            <td>{{ d.estampilla.nombre }}</td>
+                            <td><code>{{ d.estampilla.codigo_rubro|default:"-" }}</code></td>
+                            <td class="text-center">{% widthratio d.estampilla.tarifa 1 100 %}%</td>
+                            <td class="text-end fw-bold">${{ d.proyeccion|floatformat:0|intcomma }}</td>
+                            <td class="text-end">
+                                <a href="{% url 'estampilla_eliminar' d.estampilla.pk %}"
+                                   class="btn btn-sm btn-outline-danger"
+                                   onclick="return confirm('¿Eliminar estampilla {{ d.estampilla.nombre }}?');">
+                                   <i class="bi bi-trash"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" class="text-center text-muted py-3">
+                            Sin estampillas registradas. Use el formulario superior para agregarlas.
+                        </td></tr>
+                        {% endfor %}
+                    </tbody>
+                    {% if detalles %}
+                    <tfoot class="table-primary">
+                        <tr>
+                            <td colspan="3" class="text-end fw-bold">TOTAL ESTAMPILLAS:</td>
+                            <td class="text-end fw-bold">${{ total_proy|floatformat:0|intcomma }}</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

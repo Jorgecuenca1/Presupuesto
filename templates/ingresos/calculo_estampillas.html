@@ -51,6 +51,10 @@
                             <td class="text-end">${{ base.superavit|default_if_none:0|floatformat:0|intcomma }}</td></tr>
                         <tr class="table-primary"><td><strong>12) TOTAL BASE CÁLCULO (8.1 + 8.2 + 9 + 10 + 11)</strong></td>
                             <td class="text-end"><strong>${{ base.total_base|default_if_none:0|floatformat:0|intcomma }}</strong></td></tr>
+                        <tr class="table-secondary"><td>↳ {% widthratio pct_desp 1 100 %}% Despacho y Secretarías</td>
+                            <td class="text-end">${{ base_despacho|floatformat:0|intcomma }}</td></tr>
+                        <tr class="table-secondary"><td>↳ {% widthratio pct_pens 1 100 %}% Fondo de Pensiones</td>
+                            <td class="text-end">${{ base_pensiones|floatformat:0|intcomma }}</td></tr>
                     </tbody>
                 </table>
             </div>

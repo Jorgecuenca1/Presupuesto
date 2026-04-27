@@ -18,6 +18,7 @@ from .forms import (
     CifraHistoricaGastoForm, CostoPersonalForm,
     ContratoCreditoForm, PagareCreditoForm, AmortizacionPagareForm,
 )
+from .utils import recalcular_rubros_metodo
 
 
 def _vigencia():
@@ -145,10 +146,21 @@ def rubro_gasto_eliminar(request, pk):
 def recalcular_gastos(request):
     vigencia = _vigencia()
     if request.method == 'POST':
-        titulos = RubroGasto.objects.filter(vigencia=vigencia, es_titulo=True).order_by('-nivel')
-        for titulo in titulos:
-            titulo.calcular_hijos()
-        messages.success(request, 'Rubros de gasto recalculados correctamente')
+        # Primero ejecutar métodos automáticos (DEUDA / PENSIONADOS / COSTO_PERSONAL)
+        resumen = recalcular_rubros_metodo(vigencia)
+        partes = []
+        labels = {
+            'DCAP': 'Capital deuda', 'DINT': 'Intereses deuda',
+            'DTOT': 'Servicio deuda total', 'PEN': 'Pensionados',
+            'CPS': 'Costo personal x sección',
+        }
+        for k, v in resumen.items():
+            if v['rubros']:
+                partes.append(f"{labels[k]}: {v['rubros']} rubros · ${float(v['total_aplicado']):,.0f}")
+        msg = 'Rubros recalculados (titulos propagados).'
+        if partes:
+            msg += ' Métodos automáticos aplicados → ' + ' | '.join(partes)
+        messages.success(request, msg)
     return redirect('reporte_gastos')
 
 
@@ -1061,6 +1073,147 @@ def costo_personal_eliminar(request, pk):
     get_object_or_404(CostoPersonal, pk=pk).delete()
     messages.success(request, 'Registro eliminado')
     return redirect('costo_personal_list')
+
+
+@login_required
+def exportar_costo_personal(request):
+    """Genera un .xlsx con el costo de personal de la vigencia activa
+    (sirve como plantilla para volver a importar)."""
+    vigencia = _vigencia()
+    personal = CostoPersonal.objects.filter(vigencia=vigencia).select_related('seccion').order_by('seccion__codigo', 'cargo')
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = 'Costo Personal'
+    headers = ['Vigencia', 'Codigo Seccion', 'Cargo', 'Grado', 'Cantidad',
+               'Salario Basico', 'Prima Navidad', 'Prima Vacaciones', 'Prima Servicios',
+               'Cesantias', 'Intereses Cesantias', 'Vacaciones',
+               'Aportes Salud', 'Aportes Pension', 'Aportes ARL', 'Aportes Caja',
+               'Aportes ICBF', 'Aportes SENA', 'Es Pensionado (S/N)', 'Observaciones']
+    ws.append(headers)
+    from openpyxl.styles import Font, PatternFill
+    bold = Font(bold=True, color='FFFFFF'); fill = PatternFill('solid', fgColor='1A5276')
+    for col in range(1, len(headers) + 1):
+        c = ws.cell(row=1, column=col); c.font = bold; c.fill = fill
+
+    for p in personal:
+        ws.append([
+            p.vigencia,
+            p.seccion.codigo if p.seccion else '',
+            p.cargo, p.grado, p.cantidad,
+            float(p.salario_basico), float(p.prima_navidad), float(p.prima_vacaciones),
+            float(p.prima_servicios), float(p.cesantias), float(p.intereses_cesantias),
+            float(p.vacaciones), float(p.aportes_salud), float(p.aportes_pension),
+            float(p.aportes_arl), float(p.aportes_caja), float(p.aportes_icbf), float(p.aportes_sena),
+            'S' if p.es_pensionado else 'N',
+            p.observaciones,
+        ])
+    if not personal.exists():
+        # ejemplo
+        ws.append([vigencia, '01', 'Alcalde', '', 1, 8000000, 8000000, 4000000, 4000000,
+                   8000000, 950000, 4000000, 720000, 1280000, 41760, 320000, 240000, 160000, 'N', 'Ejemplo'])
+
+    widths = [10, 14, 30, 8, 9] + [16] * 13 + [12, 25]
+    for i, w in enumerate(widths, 1):
+        ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = w
+
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename=Costo_Personal_{vigencia}.xlsx'
+    wb.save(response)
+    return response
+
+
+@login_required
+def importar_costo_personal(request):
+    """Importa costo de personal desde Excel. Encabezados en fila 1.
+    update_or_create por (vigencia, seccion, cargo, grado)."""
+    if request.method == 'POST':
+        form = ImportarGastosExcelForm(request.POST, request.FILES)
+        if form.is_valid():
+            archivo = request.FILES['archivo']
+            vigencia_default = _vigencia()
+            try:
+                wb = openpyxl.load_workbook(archivo, data_only=True)
+                ws = wb.active
+                creados = 0
+                actualizados = 0
+                seccion_cache = {}
+                for row in ws.iter_rows(min_row=2, values_only=True):
+                    if not row or all(v in (None, '') for v in row):
+                        continue
+                    if len(row) < 5:
+                        continue
+                    try:
+                        vig = int(row[0]) if row[0] not in (None, '') else vigencia_default
+                    except (TypeError, ValueError):
+                        vig = vigencia_default
+                    cod_seccion = str(row[1] or '').strip()
+                    seccion_obj = None
+                    if cod_seccion:
+                        if cod_seccion not in seccion_cache:
+                            seccion_obj, _c = SeccionGasto.objects.get_or_create(
+                                vigencia=vig, codigo=cod_seccion,
+                                defaults={'nombre': cod_seccion}
+                            )
+                            seccion_cache[cod_seccion] = seccion_obj
+                        else:
+                            seccion_obj = seccion_cache[cod_seccion]
+                    cargo = str(row[2] or '').strip()
+                    if not cargo:
+                        continue
+                    grado = str(row[3] or '').strip()
+                    try:
+                        cantidad = int(row[4]) if row[4] not in (None, '') else 1
+                    except (TypeError, ValueError):
+                        cantidad = 1
+                    def _d(idx):
+                        if len(row) > idx and row[idx] not in (None, ''):
+                            return _safe_decimal(row[idx])
+                        return Decimal('0')
+                    es_pen = False
+                    if len(row) > 18 and row[18] not in (None, ''):
+                        v = str(row[18]).strip().upper()
+                        es_pen = v in ('S', 'SI', 'SÍ', 'X', '1', 'TRUE', 'YES')
+                    obs = str(row[19]).strip() if len(row) > 19 and row[19] else ''
+
+                    obj, created = CostoPersonal.objects.update_or_create(
+                        vigencia=vig, seccion=seccion_obj, cargo=cargo, grado=grado,
+                        defaults={
+                            'cantidad': cantidad,
+                            'salario_basico': _d(5), 'prima_navidad': _d(6),
+                            'prima_vacaciones': _d(7), 'prima_servicios': _d(8),
+                            'cesantias': _d(9), 'intereses_cesantias': _d(10),
+                            'vacaciones': _d(11), 'aportes_salud': _d(12),
+                            'aportes_pension': _d(13), 'aportes_arl': _d(14),
+                            'aportes_caja': _d(15), 'aportes_icbf': _d(16),
+                            'aportes_sena': _d(17), 'es_pensionado': es_pen,
+                            'observaciones': obs,
+                        }
+                    )
+                    if created:
+                        creados += 1
+                    else:
+                        actualizados += 1
+                messages.success(request, f'Costo de personal: {creados} creados, {actualizados} actualizados')
+                return redirect('costo_personal_list')
+            except Exception as e:
+                messages.error(request, f'Error al importar: {e}')
+    else:
+        form = ImportarGastosExcelForm()
+    return render(request, 'gastos/importar_gastos.html', {
+        'form': form,
+        'tipo': 'Costo de Personal por Sección',
+        'descripcion': (
+            'Encabezados (fila 1): Vigencia, Código Sección, Cargo, Grado, Cantidad, '
+            'Salario Básico, Prima Navidad, Prima Vacaciones, Prima Servicios, '
+            'Cesantías, Intereses Cesantías, Vacaciones, Aportes (Salud, Pensión, '
+            'ARL, Caja, ICBF, SENA), Es Pensionado (S/N), Observaciones. '
+            'Use el botón "Exportar formato" para descargar la plantilla con los '
+            'datos actuales como referencia.'
+        ),
+    })
 
 
 # ─── VIGENCIAS FUTURAS ──────────────────────────────────────────

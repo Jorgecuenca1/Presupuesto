@@ -34,8 +34,9 @@ class RubroGastoForm(forms.ModelForm):
     class Meta:
         model = RubroGasto
         fields = ['vigencia', 'codigo', 'descripcion', 'seccion', 'fuente',
-                  'codigo_fuente', 'nombre_fuente', 'tipo_gasto', 'parent',
-                  'valor_apropiacion', 'observaciones', 'es_titulo', 'orden', 'nivel']
+                  'codigo_fuente', 'nombre_fuente', 'tipo_gasto', 'metodo_calculo',
+                  'parent', 'valor_apropiacion', 'observaciones', 'es_titulo',
+                  'orden', 'nivel']
         widgets = {
             'vigencia': forms.NumberInput(attrs={'class': W}),
             'codigo': forms.TextInput(attrs={'class': W}),
@@ -45,6 +46,7 @@ class RubroGastoForm(forms.ModelForm):
             'codigo_fuente': forms.TextInput(attrs={'class': W}),
             'nombre_fuente': forms.TextInput(attrs={'class': W}),
             'tipo_gasto': forms.Select(attrs={'class': W}),
+            'metodo_calculo': forms.Select(attrs={'class': W}),
             'parent': forms.Select(attrs={'class': W}),
             'valor_apropiacion': forms.NumberInput(attrs={'class': W}),
             'observaciones': forms.Textarea(attrs={'class': W, 'rows': 2}),

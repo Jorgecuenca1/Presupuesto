@@ -23,15 +23,46 @@
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card stat-card blue p-3">
-            <div class="stat-label">Contribuyentes Predial</div>
-            <div class="stat-value">{{ total_contribuyentes_predial|intcomma }}</div>
+        <div class="card stat-card {% if equilibrio >= 0 %}green{% else %}orange{% endif %} p-3">
+            <div class="stat-label">Equilibrio (Ing − Gas)</div>
+            <div class="stat-value">${{ equilibrio|floatformat:0|intcomma }}</div>
         </div>
     </div>
     <div class="col-md-3">
         <div class="card stat-card purple p-3">
             <div class="stat-label">UVT {{ params.vigencia|default:"2026" }}</div>
             <div class="stat-value">${{ params.valor_uvt|floatformat:0|intcomma|default:"0" }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Componentes de Ingresos -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card blue p-3">
+            <div class="stat-label">Predial (calculado)</div>
+            <div class="stat-value">${{ total_predial|floatformat:0|intcomma }}</div>
+            <small class="text-muted">{{ total_contribuyentes_predial|intcomma }} predios</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card green p-3">
+            <div class="stat-label">ICA (calculado)</div>
+            <div class="stat-value">${{ total_ica_calc|floatformat:0|intcomma }}</div>
+            <small class="text-muted">{{ total_contribuyentes_ica|intcomma }} contribuyentes</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card orange p-3">
+            <div class="stat-label">Estampillas (calculado)</div>
+            <div class="stat-value">${{ total_estampillas_calc|floatformat:0|intcomma }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card purple p-3">
+            <div class="stat-label">Otros ingresos</div>
+            <div class="stat-value">${{ total_ingresos|floatformat:0|intcomma }}</div>
+            <small class="text-muted">total Anexo 1 (rubros hoja)</small>
         </div>
     </div>
 </div>

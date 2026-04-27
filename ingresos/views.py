@@ -597,6 +597,12 @@ def calculo_estampillas(request):
         total_proy += proy
         detalles.append({'estampilla': e, 'proyeccion': proy})
 
+    # Split base entre Despacho/Secretarías (80%) y Fondo de Pensiones (20%)
+    pct_desp = params.pct_pagos_despacho if params else Decimal('0.80')
+    pct_pens = params.pct_pagos_pensiones if params else Decimal('0.20')
+    base_despacho = total_base * pct_desp
+    base_pensiones = total_base * pct_pens
+
     return render(request, 'ingresos/calculo_estampillas.html', {
         'params': params,
         'vigencia': vigencia,
@@ -604,6 +610,10 @@ def calculo_estampillas(request):
         'estampillas': estampillas,
         'detalles': detalles,
         'total_proy': total_proy,
+        'base_despacho': base_despacho,
+        'base_pensiones': base_pensiones,
+        'pct_desp': pct_desp,
+        'pct_pens': pct_pens,
         'form_estampilla': EstampillaForm(initial={'vigencia': vigencia}),
     })
 

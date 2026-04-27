@@ -59,6 +59,8 @@ urlpatterns = [
     path('personal/', views.costo_personal_list, name='costo_personal_list'),
     path('personal/guardar/', views.costo_personal_guardar, name='costo_personal_guardar'),
     path('personal/<int:pk>/eliminar/', views.costo_personal_eliminar, name='costo_personal_eliminar'),
+    path('personal/exportar/', views.exportar_costo_personal, name='exportar_costo_personal'),
+    path('personal/importar/', views.importar_costo_personal, name='importar_costo_personal'),
 
     # Vigencias Futuras
     path('vigencias-futuras/', views.vigencias_futuras_list, name='vigencias_futuras_list'),

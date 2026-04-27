@@ -45,7 +45,7 @@ def logout_view(request):
 
 @login_required
 def dashboard(request):
-    from ingresos.models import ContribuyentePredial, ContribuyenteICA, RubroIngreso
+    from ingresos.models import ContribuyentePredial, ContribuyenteICA, RubroIngreso, ResumenCalculo
     from gastos.models import RubroGasto
     params = ParametrosSistema.objects.filter(activo=True).first()
     vigencia = params.vigencia if params else 2026
@@ -53,25 +53,30 @@ def dashboard(request):
     total_contribuyentes_predial = ContribuyentePredial.objects.filter(vigencia=vigencia).count()
     total_contribuyentes_ica = ContribuyenteICA.objects.filter(vigencia=vigencia).count()
 
-    # Total ingresos - buscar primero en títulos nivel 0, si no en rubros hoja
-    total_ingresos_titulo = RubroIngreso.objects.filter(
-        vigencia=vigencia, nivel=0, es_titulo=True
-    ).aggregate(total=Sum('valor_apropiacion'))['total']
-    if not total_ingresos_titulo:
-        total_ingresos_titulo = RubroIngreso.objects.filter(
-            vigencia=vigencia, es_titulo=False
-        ).aggregate(total=Sum('valor_apropiacion'))['total'] or 0
-    total_ingresos = total_ingresos_titulo
+    # Total ingresos = suma de rubros HOJA (es_titulo=False). Más confiable que
+    # depender de que los títulos nivel 0 estén recalculados.
+    total_ingresos = RubroIngreso.objects.filter(
+        vigencia=vigencia, es_titulo=False
+    ).aggregate(total=Sum('valor_apropiacion'))['total'] or 0
 
-    # Total gastos
-    total_gastos_titulo = RubroGasto.objects.filter(
-        vigencia=vigencia, nivel=0, es_titulo=True
-    ).aggregate(total=Sum('valor_apropiacion'))['total']
-    if not total_gastos_titulo:
-        total_gastos_titulo = RubroGasto.objects.filter(
-            vigencia=vigencia, es_titulo=False
-        ).aggregate(total=Sum('valor_apropiacion'))['total'] or 0
-    total_gastos = total_gastos_titulo
+    # Total gastos = suma de rubros HOJA
+    total_gastos = RubroGasto.objects.filter(
+        vigencia=vigencia, es_titulo=False
+    ).aggregate(total=Sum('valor_apropiacion'))['total'] or 0
+
+    # Equilibrio
+    equilibrio = Decimal(str(total_ingresos)) - Decimal(str(total_gastos))
+
+    # Componentes de ingresos (suma de proyecciones por tipo en ResumenCalculo)
+    total_predial = ResumenCalculo.objects.filter(
+        vigencia=vigencia, tipo__in=['predial_urbano', 'predial_rural']
+    ).aggregate(t=Sum('proyeccion'))['t'] or Decimal('0')
+    total_ica_calc = ResumenCalculo.objects.filter(
+        vigencia=vigencia, tipo='ica'
+    ).aggregate(t=Sum('proyeccion'))['t'] or Decimal('0')
+    total_estampillas_calc = ResumenCalculo.objects.filter(
+        vigencia=vigencia, tipo='estampilla'
+    ).aggregate(t=Sum('proyeccion'))['t'] or Decimal('0')
 
     # Gastos por tipo
     total_funcionamiento = RubroGasto.objects.filter(
@@ -109,6 +114,10 @@ def dashboard(request):
         'total_contribuyentes_ica': total_contribuyentes_ica,
         'total_ingresos': total_ingresos,
         'total_gastos': total_gastos,
+        'equilibrio': equilibrio,
+        'total_predial': total_predial,
+        'total_ica_calc': total_ica_calc,
+        'total_estampillas_calc': total_estampillas_calc,
         'total_funcionamiento': total_funcionamiento,
         'total_inversion': total_inversion,
         'total_deuda': total_deuda,

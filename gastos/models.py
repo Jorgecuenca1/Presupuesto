@@ -8,6 +8,15 @@ class TipoGasto(models.TextChoices):
     DEUDA = 'DEU', 'Servicio de la Deuda'
 
 
+class MetodoCalculoGasto(models.TextChoices):
+    MANUAL = 'MAN', 'Manual'
+    DEUDA_CAPITAL = 'DCAP', 'Servicio Deuda - Capital (vigencia)'
+    DEUDA_INTERESES = 'DINT', 'Servicio Deuda - Intereses (vigencia)'
+    DEUDA_TOTAL = 'DTOT', 'Servicio Deuda - Total (Capital + Intereses + TCR)'
+    PENSIONADOS = 'PEN', 'Costo total Pensionados (Fondo de Pensiones)'
+    COSTO_PERSONAL_SECCION = 'CPS', 'Costo Personal por Sección (rubro = sección.cargo)'
+
+
 class CifraHistoricaGasto(models.Model):
     """Cifras históricas de gastos CUIPO 2022-2025 para cálculo de TCPA"""
     vigencia_calculo = models.IntegerField(verbose_name='Vigencia de Cálculo')
@@ -271,6 +280,8 @@ class RubroGasto(models.Model):
     es_titulo = models.BooleanField(default=False, verbose_name='Es título/subtotal')
     orden = models.IntegerField(default=0)
     nivel = models.IntegerField(default=0, help_text='Nivel de jerarquía para indentación')
+    metodo_calculo = models.CharField(max_length=4, choices=MetodoCalculoGasto.choices,
+                                       default='MAN', verbose_name='Método de Cálculo')
 
     class Meta:
         verbose_name = 'Rubro de Gasto'

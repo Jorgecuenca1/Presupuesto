@@ -74,7 +74,17 @@
                         <div class="col-md-3">
                             <label class="form-label">% Promedio Pagos/Aprob.</label>
                             {{ form.pct_promedio_pagos }}
-                            <small class="text-muted">Para cálculo estampillas</small>
+                            <small class="text-muted">Para cálculo estampillas (global)</small>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">% Pagos Despacho y Secretarías</label>
+                            {{ form.pct_pagos_despacho }}
+                            <small class="text-muted">Ej: 0.80 = 80% (peso despacho)</small>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">% Pagos Fondo de Pensiones</label>
+                            {{ form.pct_pagos_pensiones }}
+                            <small class="text-muted">Ej: 0.20 = 20% (peso pensiones)</small>
                         </div>
                     </div>
 

@@ -629,6 +629,124 @@ def estampilla_eliminar(request, pk):
     return redirect('calculo_estampillas')
 
 
+@login_required
+def exportar_estampillas(request):
+    """Genera un .xlsx con las estampillas de la vigencia activa (sirve como
+    plantilla para volver a importar). Si no hay datos, igualmente trae los
+    encabezados y un par de ejemplos comentados."""
+    vigencia = _vigencia()
+    estampillas = Estampilla.objects.filter(vigencia=vigencia).order_by('nombre')
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = 'Estampillas'
+    headers = ['Vigencia', 'Nombre Estampilla', 'Codigo Rubro', 'Tarifa (decimal)', 'Descripcion']
+    ws.append(headers)
+    # estilo header
+    from openpyxl.styles import Font, PatternFill
+    bold = Font(bold=True, color='FFFFFF')
+    fill = PatternFill('solid', fgColor='1A5276')
+    for col in range(1, len(headers) + 1):
+        c = ws.cell(row=1, column=col)
+        c.font = bold
+        c.fill = fill
+    # datos actuales
+    for e in estampillas:
+        ws.append([e.vigencia, e.nombre, e.codigo_rubro, float(e.tarifa), e.descripcion])
+    # si no hay datos, ejemplos
+    if not estampillas.exists():
+        ws.append([vigencia, 'Pro Cultura', '1.1.01.02.300.55', 0.02, 'Estampilla Pro-cultura 2%'])
+        ws.append([vigencia, 'Pro Adulto Mayor', '1.1.01.02.300.01', 0.04, 'Estampilla Pro-adulto mayor 4%'])
+        ws.append([vigencia, 'Justicia Familiar', '1.1.01.02.300.61', 0.02, 'Estampilla Justicia Familiar 2%'])
+        ws.append([vigencia, 'Tasa Deportes', '1.1.01.02.218', 0.025, 'Tasa Pro-deporte 2.5%'])
+        ws.append([vigencia, 'Pro Hospitales', '1.1.01.02.300.40', 0.01, 'Pro-hospitales 1%'])
+
+    # ancho columnas
+    widths = [10, 35, 25, 18, 45]
+    for i, w in enumerate(widths, 1):
+        ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = w
+
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename=Estampillas_{vigencia}.xlsx'
+    wb.save(response)
+    return response
+
+
+@login_required
+def importar_estampillas(request):
+    """Importa estampillas desde Excel. Columnas (encabezado en fila 1):
+    Vigencia | Nombre | Codigo Rubro | Tarifa (decimal) | Descripcion
+    Si una estampilla con el mismo (vigencia, nombre) existe, se actualiza."""
+    if request.method == 'POST':
+        form = ImportarExcelForm(request.POST, request.FILES)
+        if form.is_valid():
+            archivo = request.FILES['archivo']
+            vigencia_default = _vigencia()
+            try:
+                wb = openpyxl.load_workbook(archivo, data_only=True)
+                ws = wb.active
+                creadas = 0
+                actualizadas = 0
+                for row in ws.iter_rows(min_row=2, values_only=True):
+                    if not row or all(v is None or v == '' for v in row):
+                        continue
+                    if len(row) < 4:
+                        continue
+                    try:
+                        vig = int(row[0]) if row[0] not in (None, '') else vigencia_default
+                    except (TypeError, ValueError):
+                        vig = vigencia_default
+                    nombre = str(row[1] or '').strip()
+                    if not nombre:
+                        continue
+                    codigo_rubro = str(row[2] or '').strip()
+                    try:
+                        tarifa_raw = row[3]
+                        if isinstance(tarifa_raw, str):
+                            tarifa_raw = tarifa_raw.replace(',', '.').replace('%', '').strip()
+                        tarifa = Decimal(str(tarifa_raw))
+                        # si viene como porcentaje (ej. 2 en vez de 0.02), normaliza
+                        if tarifa > 1:
+                            tarifa = tarifa / Decimal('100')
+                    except (InvalidOperation, ValueError, TypeError):
+                        continue
+                    descripcion = str(row[4] or '').strip() if len(row) > 4 else ''
+                    obj, created = Estampilla.objects.update_or_create(
+                        vigencia=vig, nombre=nombre,
+                        defaults={
+                            'codigo_rubro': codigo_rubro,
+                            'tarifa': tarifa,
+                            'descripcion': descripcion,
+                        }
+                    )
+                    if created:
+                        creadas += 1
+                    else:
+                        actualizadas += 1
+                messages.success(
+                    request,
+                    f'Importación completa: {creadas} creadas, {actualizadas} actualizadas'
+                )
+                return redirect('calculo_estampillas')
+            except Exception as e:
+                messages.error(request, f'Error al importar: {e}')
+    else:
+        form = ImportarExcelForm()
+    return render(request, 'ingresos/importar_contribuyentes.html', {
+        'form': form, 'tipo': 'Estampillas',
+        'columnas': ['Vigencia', 'Nombre Estampilla', 'Codigo Rubro', 'Tarifa (decimal o %)', 'Descripcion'],
+        'categorias': [],
+        'info_extra': (
+            'Si la tarifa viene como número mayor a 1 (ej. 2) se interpreta como porcentaje '
+            'y se divide entre 100. Si una estampilla con el mismo nombre/vigencia existe, '
+            'se actualiza. Use el botón "Exportar formato" para descargar la plantilla con '
+            'las estampillas actuales como referencia.'
+        ),
+    })
+
+
 # ─── CALCULAR TODOS ───────────────────────────────────────────────
 @login_required
 def calcular_todos(request):
@@ -667,14 +785,17 @@ def exportar_reporte_excel(request):
     ws.append([])
     ws.append(['CÓDIGO', 'FUENTE', 'DESCRIPCIÓN', 'APROPIACIÓN', 'OBSERVACIONES'])
 
+    import re as _re
+    _pct = _re.compile(r'\b\d+(?:[.,]\d+)?\s*%')
     for rubro in rubros:
         indent = '  ' * rubro.nivel
+        obs = _pct.sub('', rubro.observaciones or '').strip(' -–—,;:')
         ws.append([
             rubro.codigo,
             rubro.codigo_fuente,
             indent + rubro.descripcion,
             float(rubro.valor_apropiacion),
-            rubro.observaciones,
+            obs,
         ])
 
     response = HttpResponse(

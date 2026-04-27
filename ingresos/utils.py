@@ -54,8 +54,9 @@ def calcular_predial(vigencia, tipo='urbano'):
     for cat in categorias:
         contribuyentes = ContribuyentePredial.objects.filter(vigencia=vigencia, categoria=cat)
         tarifas = TarifaPredial.objects.filter(vigencia=vigencia, categoria=cat).order_by('uvt_desde')
-        cultura = CulturaPago.objects.filter(vigencia=vigencia, categoria=cat).first()
-        pct_cultura = cultura.porcentaje / Decimal('100') if cultura else pct_eficiencia_global
+        # El % de eficiencia parametrizado es la fuente única de verdad para todas las
+        # categorías. CulturaPago se mantiene como tabla histórica pero ya no se aplica.
+        pct_cultura = pct_eficiencia_global
 
         # Factor de crecimiento viviendas aplica sólo a UV (Urbano Vivienda)
         factor_crecimiento = Decimal('1')
@@ -356,6 +357,9 @@ def calcular_todos_ingresos(vigencia):
         elif rubro.metodo_calculo == 'EST':
             if rubro.estampilla_id and rubro.estampilla_id in estampillas_map:
                 rubro.valor_apropiacion = estampillas_map[rubro.estampilla_id]
+                rubro.observaciones = 'Base calculo estampillas * tarifa Estatuto tributario'
+                rubro.save(update_fields=['valor_apropiacion', 'observaciones'])
+                continue
         # MAN = manual, no se cambia
         rubro.save(update_fields=['valor_apropiacion'])
 

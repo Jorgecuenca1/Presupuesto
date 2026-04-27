@@ -37,6 +37,8 @@ urlpatterns = [
     path('estampillas/', views.calculo_estampillas, name='calculo_estampillas'),
     path('estampillas/guardar/', views.estampilla_guardar, name='estampilla_guardar'),
     path('estampillas/<int:pk>/eliminar/', views.estampilla_eliminar, name='estampilla_eliminar'),
+    path('estampillas/exportar/', views.exportar_estampillas, name='exportar_estampillas'),
+    path('estampillas/importar/', views.importar_estampillas, name='importar_estampillas'),
 
     # Rubros de Ingreso
     path('rubros/', views.rubros_list, name='rubros_list'),

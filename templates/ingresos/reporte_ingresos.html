@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load humanize %}
+{% load ingresos_extras %}
 {% block title %}Reporte Anexo 1{% endblock %}
 {% block breadcrumb %}<li class="breadcrumb-item active">Reporte Anexo 1</li>{% endblock %}
 
@@ -53,7 +54,7 @@
                         <td class="text-end {% if r.es_titulo %}fw-bold{% endif %}">
                             {% if r.valor_apropiacion %}${{ r.valor_apropiacion|floatformat:0|intcomma }}{% endif %}
                         </td>
-                        <td style="font-size:.75rem;">{{ r.observaciones }}</td>
+                        <td style="font-size:.75rem;">{{ r.observaciones|sin_porcentaje }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>

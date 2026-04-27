@@ -17,6 +17,11 @@
 {% if params %}
 <div class="alert alert-light border">
     <strong>UVT {{ params.vigencia }}:</strong> ${{ params.valor_uvt|floatformat:0|intcomma }}
+    &nbsp;|&nbsp;
+    <strong>% Eficiencia Recaudo:</strong> {{ params.pct_eficiencia_recaudo }}%
+    &nbsp;|&nbsp;
+    <strong>% Crecimiento Viviendas:</strong> {{ params.pct_crecimiento_viviendas }}
+    <small class="text-muted ms-2">(editables en <a href="{% url 'parametros' %}">Parámetros</a>; tras cambiar pulse "Ejecutar Cálculo")</small>
 </div>
 {% endif %}
 
@@ -49,7 +54,7 @@
                     <td class="text-end">${{ r.total_avaluo|floatformat:0|intcomma }}</td>
                     <td class="text-center">{{ r.tarifa_por_mil }}‰</td>
                     <td class="text-end">${{ r.recaudo_potencial|floatformat:0|intcomma }}</td>
-                    <td class="text-center">{{ r.cultura_pago }}%</td>
+                    <td class="text-center">{{ params.pct_eficiencia_recaudo }}%</td>
                     <td class="text-end fw-bold">${{ r.proyeccion|floatformat:0|intcomma }}</td>
                 </tr>
                 {% empty %}
@@ -149,7 +154,7 @@
                     <td class="text-end">${{ r.total_avaluo|floatformat:0|intcomma }}</td>
                     <td class="text-center">{{ r.tarifa_por_mil }}‰</td>
                     <td class="text-end">${{ r.recaudo_potencial|floatformat:0|intcomma }}</td>
-                    <td class="text-center">{{ r.cultura_pago }}%</td>
+                    <td class="text-center">{{ params.pct_eficiencia_recaudo }}%</td>
                     <td class="text-end fw-bold">${{ r.proyeccion|floatformat:0|intcomma }}</td>
                 </tr>
                 {% empty %}

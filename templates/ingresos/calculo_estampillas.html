@@ -93,27 +93,38 @@
         </div>
 
         <div class="card">
-            <div class="card-header bg-primary text-white">
-                <i class="bi bi-ticket"></i> Proyección por Estampilla
-                <span class="float-end fw-bold">Total: ${{ total_proy|floatformat:0|intcomma }}</span>
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-ticket"></i> Proyección por Estampilla (Base × Tarifa)</span>
+                <span class="fw-bold">Total: ${{ total_proy|floatformat:0|intcomma }}</span>
+            </div>
+            <div class="card-body p-2 d-flex gap-2">
+                <a href="{% url 'exportar_estampillas' %}" class="btn btn-sm btn-outline-success">
+                    <i class="bi bi-file-earmark-excel"></i> Exportar formato (con datos actuales)
+                </a>
+                <a href="{% url 'importar_estampillas' %}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-upload"></i> Importar desde Excel
+                </a>
             </div>
             <div class="card-body p-0">
                 <table class="table table-sm mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>Estampilla</th>
-                            <th>Código Rubro</th>
+                            <th>NOMBRE ESTAMPILLA</th>
+                            <th class="text-end">Valor Base</th>
                             <th class="text-center">Tarifa</th>
-                            <th class="text-end">Proyección</th>
+                            <th class="text-end">Proyección Anual</th>
                             <th></th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for d in detalles %}
                         <tr>
-                            <td>{{ d.estampilla.nombre }}</td>
-                            <td><code>{{ d.estampilla.codigo_rubro|default:"-" }}</code></td>
-                            <td class="text-center">{% widthratio d.estampilla.tarifa 1 100 %}%</td>
+                            <td>
+                                <strong>{{ d.estampilla.nombre }}</strong>
+                                {% if d.estampilla.codigo_rubro %}<br><small class="text-muted">{{ d.estampilla.codigo_rubro }}</small>{% endif %}
+                            </td>
+                            <td class="text-end">${{ base.total_base|default_if_none:0|floatformat:0|intcomma }}</td>
+                            <td class="text-center">{% widthratio d.estampilla.tarifa 1 100 %}% ({{ d.estampilla.tarifa }})</td>
                             <td class="text-end fw-bold">${{ d.proyeccion|floatformat:0|intcomma }}</td>
                             <td class="text-end">
                                 <a href="{% url 'estampilla_eliminar' d.estampilla.pk %}"
@@ -125,7 +136,7 @@
                         </tr>
                         {% empty %}
                         <tr><td colspan="5" class="text-center text-muted py-3">
-                            Sin estampillas registradas. Use el formulario superior para agregarlas.
+                            Sin estampillas registradas. Use el formulario superior o importe desde Excel.
                         </td></tr>
                         {% endfor %}
                     </tbody>
@@ -139,6 +150,10 @@
                     </tfoot>
                     {% endif %}
                 </table>
+            </div>
+            <div class="card-footer small text-muted">
+                Fórmula: <strong>Proyección Anual = Total Base × Tarifa</strong>.
+                Observación que aparece en Anexo 1: <em>"Base calculo estampillas * tarifa Estatuto tributario"</em>.
             </div>
         </div>
     </div>

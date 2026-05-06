@@ -49,38 +49,18 @@
 </div>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h5><i class="bi bi-percent"></i> % Eficiencia Recaudo por Categoría (opcional)</h5>
-    <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalCultura">
-        <i class="bi bi-plus"></i> Agregar % por Categoría
-    </button>
+    <h5><i class="bi bi-percent"></i> % Eficiencia Recaudo (global)</h5>
+    <a href="{% url 'parametros' %}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-pencil"></i> Editar en Parámetros
+    </a>
 </div>
-<div class="alert alert-light border py-2">
-    <small>
-        <i class="bi bi-info-circle"></i>
-        Si una categoría no tiene porcentaje propio aquí, el cálculo usa el
-        <strong>% Eficiencia Recaudo</strong> definido en
-        <a href="{% url 'parametros' %}">Parámetros del Sistema</a>.
-    </small>
-</div>
-
-<div class="card">
-    <div class="card-body p-0">
-        <table class="table table-hover mb-0">
-            <thead class="table-light">
-                <tr><th>Categoría</th><th class="text-center">% Eficiencia Recaudo</th></tr>
-            </thead>
-            <tbody>
-                {% for c in culturas %}
-                <tr>
-                    <td>{{ c.get_categoria_display }}</td>
-                    <td class="text-center fw-bold">{{ c.porcentaje }}%</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="2" class="text-center text-muted py-3">Sin datos</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i>
+    El cálculo de Predial Vigencia Actual aplica el
+    <strong>% Eficiencia Recaudo</strong> definido en
+    <a href="{% url 'parametros' %}">Parámetros del Sistema</a> a TODAS las categorías
+    (Urbano y Rural). Cuando lo modifique, las proyecciones del Anexo 1 y de la pantalla de
+    Cálculo Predial se recalculan automáticamente.
 </div>
 
 <!-- Modal Tarifa -->
@@ -108,27 +88,4 @@
     </div>
 </div>
 
-<!-- Modal Cultura -->
-<div class="modal fade" id="modalCultura" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form method="post" action="{% url 'cultura_pago_guardar' %}">
-                {% csrf_token %}
-                <div class="modal-header"><h5 class="modal-title">% Eficiencia Recaudo por Categoría</h5></div>
-                <div class="modal-body">
-                    {% for field in form_cultura %}
-                    <div class="mb-2">
-                        <label class="form-label">{{ field.label }}</label>
-                        {{ field }}
-                    </div>
-                    {% endfor %}
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-success">Guardar</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 {% endblock %}

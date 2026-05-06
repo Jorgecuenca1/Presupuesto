@@ -110,13 +110,15 @@
                 </a>
             </div>
             <div class="card-body p-0">
-                <table class="table table-sm mb-0">
+                <table class="table table-sm mb-0 align-middle">
                     <thead class="table-light">
                         <tr>
                             <th>NOMBRE ESTAMPILLA</th>
                             <th class="text-end">Valor Base</th>
                             <th class="text-center">Tarifa</th>
                             <th class="text-end">Proyección Anual</th>
+                            <th class="text-end" title="Sección Despacho y Secretarías">{% widthratio pct_desp 1 100 %}% Despacho</th>
+                            <th class="text-end" title="Fondo de Pensiones">{% widthratio pct_pens 1 100 %}% Pensiones</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -130,6 +132,8 @@
                             <td class="text-end">${{ base.total_base|default_if_none:0|floatformat:0|intcomma }}</td>
                             <td class="text-center">{% widthratio d.estampilla.tarifa 1 100 %}% ({{ d.estampilla.tarifa }})</td>
                             <td class="text-end fw-bold">${{ d.proyeccion|floatformat:0|intcomma }}</td>
+                            <td class="text-end text-primary">${{ d.proyeccion_despacho|floatformat:0|intcomma }}</td>
+                            <td class="text-end text-success">${{ d.proyeccion_pensiones|floatformat:0|intcomma }}</td>
                             <td class="text-end">
                                 <a href="{% url 'estampilla_eliminar' d.estampilla.pk %}"
                                    class="btn btn-sm btn-outline-danger"
@@ -139,7 +143,7 @@
                             </td>
                         </tr>
                         {% empty %}
-                        <tr><td colspan="5" class="text-center text-muted py-3">
+                        <tr><td colspan="7" class="text-center text-muted py-3">
                             Sin estampillas registradas. Use el formulario superior o importe desde Excel.
                         </td></tr>
                         {% endfor %}
@@ -149,6 +153,8 @@
                         <tr>
                             <td colspan="3" class="text-end fw-bold">TOTAL ESTAMPILLAS:</td>
                             <td class="text-end fw-bold">${{ total_proy|floatformat:0|intcomma }}</td>
+                            <td class="text-end fw-bold text-primary">${{ total_desp|floatformat:0|intcomma }}</td>
+                            <td class="text-end fw-bold text-success">${{ total_pens|floatformat:0|intcomma }}</td>
                             <td></td>
                         </tr>
                     </tfoot>
@@ -157,7 +163,10 @@
             </div>
             <div class="card-footer small text-muted">
                 Fórmula: <strong>Proyección Anual = Total Base × Tarifa</strong>.
-                Observación que aparece en Anexo 1: <em>"Base calculo estampillas * tarifa Estatuto tributario"</em>.
+                Distribución: <strong>{% widthratio pct_desp 1 100 %}% al Despacho/Secretarías</strong> y
+                <strong>{% widthratio pct_pens 1 100 %}% al Fondo de Pensiones</strong>.
+                Observación en Anexo 1: <em>"Base calculo estampillas * tarifa Estatuto tributario"</em>.
+                Pulse <em>"Ejecutar Cálculo"</em> para propagar al Presupuesto de Ingresos.
             </div>
         </div>
     </div>

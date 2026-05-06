@@ -269,12 +269,19 @@ def calcular_base_estampillas(vigencia):
 
 def calcular_estampillas(vigencia):
     """Calcula la proyección anual de cada estampilla registrada.
-    Retorna (total_base, [{estampilla, tarifa, proyeccion}, ...])
+    Retorna (total_base, [{estampilla, tarifa, proyeccion, proyeccion_despacho, proyeccion_pensiones}, ...])
     y almacena un ResumenCalculo tipo 'estampilla' por cada una.
+
+    La proyección anual se reparte 80% Despacho/Secretarías + 20% Fondo de Pensiones
+    según los parámetros pct_pagos_despacho y pct_pagos_pensiones del sistema.
     """
     base = calcular_base_estampillas(vigencia)
     if base is None:
         return Decimal('0'), []
+
+    params = get_params(vigencia)
+    pct_d = (params.pct_pagos_despacho if params else Decimal('0.80')) or Decimal('0.80')
+    pct_p = (params.pct_pagos_pensiones if params else Decimal('0.20')) or Decimal('0.20')
 
     ResumenCalculo.objects.filter(vigencia=vigencia, tipo='estampilla').delete()
 
@@ -282,6 +289,8 @@ def calcular_estampillas(vigencia):
     detalles = []
     for e in Estampilla.objects.filter(vigencia=vigencia):
         proy = total_base * e.tarifa
+        proy_d = proy * pct_d
+        proy_p = proy * pct_p
         ResumenCalculo.objects.create(
             vigencia=vigencia,
             tipo='estampilla',
@@ -294,8 +303,59 @@ def calcular_estampillas(vigencia):
             proyeccion=proy,
             cantidad_predios=0,
         )
-        detalles.append({'estampilla': e, 'tarifa': e.tarifa, 'proyeccion': proy})
+        detalles.append({
+            'estampilla': e,
+            'tarifa': e.tarifa,
+            'proyeccion': proy,
+            'proyeccion_despacho': proy_d,
+            'proyeccion_pensiones': proy_p,
+        })
     return total_base, detalles
+
+
+def propagar_estampillas_8020(vigencia):
+    """Distribuye la proyección de cada estampilla en los rubros del Anexo 1.
+
+    Convención de códigos:
+      - Rubro Despacho/Secretarías (80%):  estampilla.codigo_rubro
+        (ej: 1.1.01.02.300.55  =  Estampilla Pro-cultura 80%)
+      - Rubro Fondo de Pensiones (20%):    "1.3.6." + estampilla.codigo_rubro
+        (ej: 1.3.6.1.1.01.02.300.55  =  Estampilla Pro-cultura 20% Fondo Pensiones)
+
+    Si la estampilla.codigo_rubro está vacío no se hace nada.
+    Asigna también la observación estándar y enlaza el FK estampilla.
+    """
+    params = get_params(vigencia)
+    pct_d = (params.pct_pagos_despacho if params else Decimal('0.80')) or Decimal('0.80')
+    pct_p = (params.pct_pagos_pensiones if params else Decimal('0.20')) or Decimal('0.20')
+    obs_d = 'Base calculo estampillas * tarifa Estatuto tributario × 80% Despacho/Secretarías'
+    obs_p = 'Base calculo estampillas * tarifa Estatuto tributario × 20% Fondo de Pensiones'
+
+    proyecciones = {r.categoria: r.proyeccion
+                    for r in ResumenCalculo.objects.filter(vigencia=vigencia, tipo='estampilla')}
+
+    for e in Estampilla.objects.filter(vigencia=vigencia):
+        proy = proyecciones.get(e.nombre, Decimal('0')) or Decimal('0')
+        if not e.codigo_rubro:
+            continue
+        cod_d = e.codigo_rubro
+        cod_p = e.codigo_rubro if e.codigo_rubro.startswith('1.3.6.') else f'1.3.6.{e.codigo_rubro}'
+
+        rubro_d = RubroIngreso.objects.filter(vigencia=vigencia, codigo=cod_d).first()
+        if rubro_d:
+            rubro_d.valor_apropiacion = proy * pct_d
+            rubro_d.estampilla = e
+            rubro_d.observaciones = obs_d
+            rubro_d.metodo_calculo = 'EST'
+            rubro_d.save(update_fields=['valor_apropiacion', 'estampilla', 'observaciones', 'metodo_calculo'])
+
+        rubro_p = RubroIngreso.objects.filter(vigencia=vigencia, codigo=cod_p).first()
+        if rubro_p:
+            rubro_p.valor_apropiacion = proy * pct_p
+            rubro_p.estampilla = e
+            rubro_p.observaciones = obs_p
+            rubro_p.metodo_calculo = 'EST'
+            rubro_p.save(update_fields=['valor_apropiacion', 'estampilla', 'observaciones', 'metodo_calculo'])
 
 
 def calcular_todos_ingresos(vigencia):
@@ -328,6 +388,12 @@ def calcular_todos_ingresos(vigencia):
     total_base_est, estampillas_det = calcular_estampillas(vigencia)
     estampillas_map = {d['estampilla'].id: d['proyeccion'] for d in estampillas_det}
 
+    # 2.6 Propagar 80% Despacho/Secretarías + 20% Fondo Pensiones a los rubros del Anexo 1
+    propagar_estampillas_8020(vigencia)
+
+    import re as _re_pct
+    _pat_pct = _re_pct.compile(r'\b\d+(?:[.,]\d+)?\s*%')
+
     # 3. Actualizar rubros según método
     rubros = RubroIngreso.objects.filter(vigencia=vigencia, es_titulo=False)
     for rubro in rubros:
@@ -355,9 +421,20 @@ def calcular_todos_ingresos(vigencia):
             if rubro.tarifa_poai:
                 rubro.valor_apropiacion = params.poai_total_inversion * rubro.tarifa_poai
         elif rubro.metodo_calculo == 'EST':
+            # Si propagar_estampillas_8020 ya manejó este rubro (vía codigo_rubro),
+            # respetamos esa asignación. Sólo asignamos aquí si no fue tocado.
             if rubro.estampilla_id and rubro.estampilla_id in estampillas_map:
-                rubro.valor_apropiacion = estampillas_map[rubro.estampilla_id]
-                rubro.observaciones = 'Base calculo estampillas * tarifa Estatuto tributario'
+                # Si la observación aún no es la canónica, asume rubro genérico (100%)
+                if 'Despacho' not in rubro.observaciones and 'Pensiones' not in rubro.observaciones:
+                    rubro.valor_apropiacion = estampillas_map[rubro.estampilla_id]
+                    rubro.observaciones = 'Base calculo estampillas * tarifa Estatuto tributario'
+                    rubro.save(update_fields=['valor_apropiacion', 'observaciones'])
+                continue
+        # Limpieza permanente de % residual en observaciones (Anexo 1)
+        if rubro.observaciones:
+            obs_limpia = _pat_pct.sub('', rubro.observaciones).strip(' -–—,;:')
+            if obs_limpia != rubro.observaciones:
+                rubro.observaciones = obs_limpia
                 rubro.save(update_fields=['valor_apropiacion', 'observaciones'])
                 continue
         # MAN = manual, no se cambia

@@ -340,6 +340,11 @@ def calculo_predial(request):
         messages.success(request, 'Cálculo predial ejecutado correctamente')
         return redirect('calculo_predial')
 
+    # Recalcula siempre al entrar para reflejar cambios en % Eficiencia y demás
+    # parámetros sin requerir que el usuario presione "Ejecutar Cálculo".
+    calcular_predial(vigencia, 'urbano')
+    calcular_predial(vigencia, 'rural')
+
     resumen_urbano = ResumenCalculo.objects.filter(vigencia=vigencia, tipo='predial_urbano')
     resumen_rural = ResumenCalculo.objects.filter(vigencia=vigencia, tipo='predial_rural')
     agg_urb = resumen_urbano.aggregate(
@@ -583,23 +588,42 @@ def calculo_estampillas(request):
     vigencia = _vigencia()
     params = ParametrosSistema.objects.filter(vigencia=vigencia).first()
     if request.method == 'POST':
+        from .utils import propagar_estampillas_8020
         calcular_estampillas(vigencia)
-        messages.success(request, 'Cálculo de estampillas ejecutado correctamente')
+        propagar_estampillas_8020(vigencia)
+        # Recalcula títulos para que el Anexo 1 quede consistente
+        from ingresos.models import RubroIngreso as _RI
+        for t in _RI.objects.filter(vigencia=vigencia, es_titulo=True).order_by('-nivel'):
+            t.calcular_hijos()
+        messages.success(request, 'Cálculo de estampillas ejecutado y propagado al Anexo 1 (80% Despacho / 20% Fondo Pensiones)')
         return redirect('calculo_estampillas')
 
     base = calcular_base_estampillas(vigencia) or {}
     estampillas = Estampilla.objects.filter(vigencia=vigencia)
     total_base = base.get('total_base', Decimal('0'))
+
+    # Split entre Despacho/Secretarías (80%) y Fondo de Pensiones (20%)
+    pct_desp = (params.pct_pagos_despacho if params else Decimal('0.80')) or Decimal('0.80')
+    pct_pens = (params.pct_pagos_pensiones if params else Decimal('0.20')) or Decimal('0.20')
+
     detalles = []
     total_proy = Decimal('0')
+    total_desp = Decimal('0')
+    total_pens = Decimal('0')
     for e in estampillas:
         proy = total_base * e.tarifa
+        proy_d = proy * pct_desp
+        proy_p = proy * pct_pens
         total_proy += proy
-        detalles.append({'estampilla': e, 'proyeccion': proy})
+        total_desp += proy_d
+        total_pens += proy_p
+        detalles.append({
+            'estampilla': e,
+            'proyeccion': proy,
+            'proyeccion_despacho': proy_d,
+            'proyeccion_pensiones': proy_p,
+        })
 
-    # Split base entre Despacho/Secretarías (80%) y Fondo de Pensiones (20%)
-    pct_desp = params.pct_pagos_despacho if params else Decimal('0.80')
-    pct_pens = params.pct_pagos_pensiones if params else Decimal('0.20')
     base_despacho = total_base * pct_desp
     base_pensiones = total_base * pct_pens
 
@@ -610,6 +634,8 @@ def calculo_estampillas(request):
         'estampillas': estampillas,
         'detalles': detalles,
         'total_proy': total_proy,
+        'total_desp': total_desp,
+        'total_pens': total_pens,
         'base_despacho': base_despacho,
         'base_pensiones': base_pensiones,
         'pct_desp': pct_desp,
@@ -772,10 +798,17 @@ def calcular_todos(request):
 def reporte_ingresos(request):
     vigencia = _vigencia()
     params = ParametrosSistema.objects.filter(vigencia=vigencia).first()
+    # Recalcula automáticamente en cada visita para que el Anexo 1 refleje los
+    # parámetros actuales (% eficiencia, base estampillas, etc.) sin que el
+    # usuario tenga que pulsar "Recalcular Todo".
+    try:
+        calcular_todos_ingresos(vigencia)
+    except Exception:
+        pass
     rubros = RubroIngreso.objects.filter(vigencia=vigencia)
-    total = rubros.filter(nivel=0, es_titulo=True).aggregate(t=Sum('valor_apropiacion'))['t']
-    if not total:
-        total = rubros.filter(es_titulo=False).aggregate(t=Sum('valor_apropiacion'))['t'] or 0
+    # Total = suma de rubros HOJA (es_titulo=False). Es coherente con el dashboard
+    # y no depende de que el árbol de títulos esté completamente bien armado.
+    total = rubros.filter(es_titulo=False).aggregate(t=Sum('valor_apropiacion'))['t'] or 0
     return render(request, 'ingresos/reporte_ingresos.html', {
         'rubros': rubros, 'vigencia': vigencia, 'params': params, 'total': total,
     })

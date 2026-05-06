@@ -617,11 +617,23 @@ def calculo_estampillas(request):
         total_proy += proy
         total_desp += proy_d
         total_pens += proy_p
+
+        # Diagnóstico: verificar que existan los rubros del Anexo 1
+        cod_d = (e.codigo_rubro or '').strip()
+        cod_p = (e.codigo_rubro_pensiones or '').strip()
+        if not cod_p and cod_d:
+            cod_p = cod_d if cod_d.startswith('1.3.6.') else f'1.3.6.{cod_d}'
+        rubro_d_existe = bool(cod_d) and RubroIngreso.objects.filter(vigencia=vigencia, codigo=cod_d).exists()
+        rubro_p_existe = bool(cod_p) and RubroIngreso.objects.filter(vigencia=vigencia, codigo=cod_p).exists()
+
         detalles.append({
             'estampilla': e,
             'proyeccion': proy,
             'proyeccion_despacho': proy_d,
             'proyeccion_pensiones': proy_p,
+            'cod_d': cod_d, 'cod_p': cod_p,
+            'rubro_d_existe': rubro_d_existe,
+            'rubro_p_existe': rubro_p_existe,
         })
 
     base_despacho = total_base * pct_desp

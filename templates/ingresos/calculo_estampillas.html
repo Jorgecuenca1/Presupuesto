@@ -72,26 +72,31 @@
             <div class="card-body">
                 <form method="post" action="{% url 'estampilla_guardar' %}" class="row g-2">
                     {% csrf_token %}
-                    <div class="col-md-5">
+                    <div class="col-md-6">
                         <label class="form-label small">Nombre</label>
                         {{ form_estampilla.nombre }}
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label small">Código Rubro</label>
-                        {{ form_estampilla.codigo_rubro }}
                     </div>
                     <div class="col-md-3">
                         <label class="form-label small">Tarifa (dec.)</label>
                         {{ form_estampilla.tarifa }}
+                        <small class="text-muted">Ej: 0.02 = 2%</small>
                     </div>
-                    <div class="col-md-9">
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-save"></i> Guardar</button>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small">Código Rubro <span class="badge bg-primary">80% Despacho/Secretarías</span></label>
+                        {{ form_estampilla.codigo_rubro }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small">Código Rubro <span class="badge bg-success">20% Fondo Pensiones</span></label>
+                        {{ form_estampilla.codigo_rubro_pensiones }}
+                    </div>
+                    <div class="col-md-12">
                         <label class="form-label small">Descripción</label>
                         {{ form_estampilla.descripcion }}
                     </div>
                     {{ form_estampilla.vigencia.as_hidden }}
-                    <div class="col-md-3 d-flex align-items-end">
-                        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-save"></i> Guardar</button>
-                    </div>
                 </form>
             </div>
         </div>
@@ -127,7 +132,16 @@
                         <tr>
                             <td>
                                 <strong>{{ d.estampilla.nombre }}</strong>
-                                {% if d.estampilla.codigo_rubro %}<br><small class="text-muted">{{ d.estampilla.codigo_rubro }}</small>{% endif %}
+                                {% if d.cod_d %}<br>
+                                  <small class="{% if d.rubro_d_existe %}text-success{% else %}text-danger{% endif %}">
+                                    80%: {{ d.cod_d }}
+                                    {% if not d.rubro_d_existe %}<i class="bi bi-exclamation-triangle" title="Falta crear este rubro en Anexo 1"></i>{% endif %}
+                                  </small><br>
+                                  <small class="{% if d.rubro_p_existe %}text-success{% else %}text-danger{% endif %}">
+                                    20%: {{ d.cod_p }}
+                                    {% if not d.rubro_p_existe %}<i class="bi bi-exclamation-triangle" title="Falta crear este rubro en Anexo 1"></i>{% endif %}
+                                  </small>
+                                {% else %}<br><small class="text-warning"><i class="bi bi-exclamation-circle"></i> Sin código de rubro asignado</small>{% endif %}
                             </td>
                             <td class="text-end">${{ base.total_base|default_if_none:0|floatformat:0|intcomma }}</td>
                             <td class="text-center">{% widthratio d.estampilla.tarifa 1 100 %}% ({{ d.estampilla.tarifa }})</td>

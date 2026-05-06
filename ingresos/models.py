@@ -185,8 +185,12 @@ class Estampilla(models.Model):
     nombre = models.CharField(max_length=120, verbose_name='Nombre Estampilla',
                                help_text='Ej: Adulto Mayor, Pro-cultura, Justicia Familiar')
     codigo_rubro = models.CharField(max_length=50, blank=True,
-                                     verbose_name='Código Rubro Presupuestal',
-                                     help_text='Opcional. Código al que se asocia la proyección')
+                                     verbose_name='Código Rubro 80% Despacho/Secretarías',
+                                     help_text='Rubro del Anexo 1 que recibe el 80% (ej: 1.1.01.02.300.55)')
+    codigo_rubro_pensiones = models.CharField(max_length=50, blank=True, default='',
+                                               verbose_name='Código Rubro 20% Fondo de Pensiones',
+                                               help_text='Rubro del Anexo 1 que recibe el 20% (ej: 1.3.6.1.1.01.02.300.55). '
+                                                         'Si se deja vacío se intenta automáticamente "1.3.6." + Código 80%.')
     tarifa = models.DecimalField(max_digits=6, decimal_places=4,
                                   verbose_name='Tarifa',
                                   help_text='Ej: 0.02 = 2%. Se multiplica por la base de cálculo')

@@ -339,7 +339,12 @@ def propagar_estampillas_8020(vigencia):
         if not e.codigo_rubro:
             continue
         cod_d = e.codigo_rubro
-        cod_p = e.codigo_rubro if e.codigo_rubro.startswith('1.3.6.') else f'1.3.6.{e.codigo_rubro}'
+        # Si el usuario ya configuró un código explícito para el 20%, lo usamos.
+        # Si no, intentamos derivarlo: "1.3.6." + código 80% (convención Fondos
+        # Especiales/FONPET). Si tampoco existe, simplemente no se asigna el 20%.
+        cod_p = (e.codigo_rubro_pensiones or '').strip()
+        if not cod_p:
+            cod_p = e.codigo_rubro if e.codigo_rubro.startswith('1.3.6.') else f'1.3.6.{e.codigo_rubro}'
 
         rubro_d = RubroIngreso.objects.filter(vigencia=vigencia, codigo=cod_d).first()
         if rubro_d:

@@ -114,11 +114,12 @@ class RubroIngresoForm(forms.ModelForm):
 class EstampillaForm(forms.ModelForm):
     class Meta:
         model = Estampilla
-        fields = ['vigencia', 'nombre', 'codigo_rubro', 'tarifa', 'descripcion']
+        fields = ['vigencia', 'nombre', 'codigo_rubro', 'codigo_rubro_pensiones', 'tarifa', 'descripcion']
         widgets = {
             'vigencia': forms.NumberInput(attrs={'class': W}),
             'nombre': forms.TextInput(attrs={'class': W}),
-            'codigo_rubro': forms.TextInput(attrs={'class': W}),
+            'codigo_rubro': forms.TextInput(attrs={'class': W, 'placeholder': 'Ej: 1.1.01.02.300.55'}),
+            'codigo_rubro_pensiones': forms.TextInput(attrs={'class': W, 'placeholder': 'Ej: 1.3.6.1.1.01.02.300.55 (opcional)'}),
             'tarifa': forms.NumberInput(attrs={'class': W, 'step': '0.0001'}),
             'descripcion': forms.TextInput(attrs={'class': W}),
         }

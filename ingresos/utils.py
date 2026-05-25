@@ -322,9 +322,22 @@ def propagar_estampillas_8020(vigencia):
       - Rubro Fondo de Pensiones (20%):    "1.3.6." + estampilla.codigo_rubro
         (ej: 1.3.6.1.1.01.02.300.55  =  Estampilla Pro-cultura 20% Fondo Pensiones)
 
+    Sub-distribución (ej. Pro-cultura): si el rubro del 80% es un título con
+    hijos, el 80% NO se asigna al título sino que se reparte entre los hijos
+    según el porcentaje indicado en la descripción de cada uno, calculado sobre
+    la proyección total. Ej:
+        1.1.01.02.300.55     (título)  Procultura 80%   ← suma de hijos
+          1.1.01.02.300.55-01 (hoja)   Procultura 60%   = proy × 60%
+          1.1.01.02.300.55-02 (hoja)   Procultura 10%   = proy × 10%
+          1.1.01.02.300.55-03 (hoja)   Procultura 10%   = proy × 10%
+    El título se recalcula como suma de sus hijos en calcular_hijos().
+
     Si la estampilla.codigo_rubro está vacío no se hace nada.
     Asigna también la observación estándar y enlaza el FK estampilla.
     """
+    import re as _re
+    _pct_re = _re.compile(r'(\d+(?:[.,]\d+)?)\s*%')
+
     params = get_params(vigencia)
     pct_d = (params.pct_pagos_despacho if params else Decimal('0.80')) or Decimal('0.80')
     pct_p = (params.pct_pagos_pensiones if params else Decimal('0.20')) or Decimal('0.20')
@@ -348,11 +361,31 @@ def propagar_estampillas_8020(vigencia):
 
         rubro_d = RubroIngreso.objects.filter(vigencia=vigencia, codigo=cod_d).first()
         if rubro_d:
-            rubro_d.valor_apropiacion = proy * pct_d
-            rubro_d.estampilla = e
-            rubro_d.observaciones = obs_d
-            rubro_d.metodo_calculo = 'EST'
-            rubro_d.save(update_fields=['valor_apropiacion', 'estampilla', 'observaciones', 'metodo_calculo'])
+            hijos = list(rubro_d.hijos.all()) if rubro_d.es_titulo else []
+            if hijos:
+                # Sub-distribución (ej. Pro-cultura 60/10/10): cada hijo recibe
+                # su % (leído de su descripción) sobre la proyección total. El
+                # título no se asigna directamente; lo recalcula calcular_hijos().
+                for h in hijos:
+                    m = _pct_re.search(h.descripcion or '')
+                    pct_txt = m.group(1) if m else '0'
+                    frac = Decimal(pct_txt.replace(',', '.')) / Decimal('100')
+                    h.valor_apropiacion = proy * frac
+                    h.estampilla = e
+                    h.metodo_calculo = 'EST'
+                    h.observaciones = (f'Base calculo estampillas * tarifa Estatuto tributario × '
+                                       f'{pct_txt}% Despacho/Secretarías')
+                    h.save(update_fields=['valor_apropiacion', 'estampilla', 'observaciones', 'metodo_calculo'])
+                rubro_d.estampilla = e
+                rubro_d.metodo_calculo = 'EST'
+                rubro_d.observaciones = obs_d
+                rubro_d.save(update_fields=['estampilla', 'observaciones', 'metodo_calculo'])
+            else:
+                rubro_d.valor_apropiacion = proy * pct_d
+                rubro_d.estampilla = e
+                rubro_d.observaciones = obs_d
+                rubro_d.metodo_calculo = 'EST'
+                rubro_d.save(update_fields=['valor_apropiacion', 'estampilla', 'observaciones', 'metodo_calculo'])
 
         rubro_p = RubroIngreso.objects.filter(vigencia=vigencia, codigo=cod_p).first()
         if rubro_p:

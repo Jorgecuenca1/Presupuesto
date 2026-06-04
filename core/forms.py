@@ -60,6 +60,9 @@ class ParametrosForm(forms.ModelForm):
             'reservas_presupuestales_nc': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'cuentas_por_pagar_nc': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'superavit_fiscal': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'recaudo_oleoductos_anio_n3': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'recaudo_oleoductos_anio_n2': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'recaudo_oleoductos_anio_n1': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'activo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 

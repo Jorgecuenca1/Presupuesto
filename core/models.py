@@ -72,6 +72,18 @@ class ParametrosSistema(models.Model):
     superavit_fiscal = models.DecimalField(max_digits=20, decimal_places=2, default=0,
                                            verbose_name='Superávit Fiscal Estimado ($)')
 
+    # Datos históricos para el cálculo del Impuesto de Transporte por Oleoductos.
+    # Se proyecta como promedio simple de los últimos 3 años de recaudo real.
+    recaudo_oleoductos_anio_n3 = models.DecimalField(max_digits=20, decimal_places=2, default=0,
+                                                      verbose_name='Recaudo Oleoductos hace 3 años ($)',
+                                                      help_text='Recaudo histórico hace 3 años (vigencia - 3)')
+    recaudo_oleoductos_anio_n2 = models.DecimalField(max_digits=20, decimal_places=2, default=0,
+                                                      verbose_name='Recaudo Oleoductos hace 2 años ($)',
+                                                      help_text='Recaudo histórico hace 2 años (vigencia - 2)')
+    recaudo_oleoductos_anio_n1 = models.DecimalField(max_digits=20, decimal_places=2, default=0,
+                                                      verbose_name='Recaudo Oleoductos año anterior ($)',
+                                                      help_text='Recaudo histórico del año anterior (vigencia - 1)')
+
     activo = models.BooleanField(default=True)
 
     class Meta:

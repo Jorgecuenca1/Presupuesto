@@ -177,6 +177,7 @@ class MetodoCalculo(models.TextChoices):
     ICN = 'ICN', 'Tasa Crecimiento ICN sobre Recaudo Anterior'
     POAI = 'POAI', 'Tarifa % sobre POAI Inversión'
     ESTAMPILLA = 'EST', 'Cálculo Estampilla (Base × Tarifa)'
+    OLEODUCTOS_3A = 'OLEO', 'Promedio últimos 3 años (Oleoductos)'
     MANUAL = 'MAN', 'Valor Manual'
 
 

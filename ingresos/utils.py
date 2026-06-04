@@ -458,6 +458,16 @@ def calcular_todos_ingresos(vigencia):
         elif rubro.metodo_calculo == 'POAI':
             if rubro.tarifa_poai:
                 rubro.valor_apropiacion = params.poai_total_inversion * rubro.tarifa_poai
+        elif rubro.metodo_calculo == 'OLEO':
+            # Promedio simple de los ultimos 3 años de recaudo del impuesto de
+            # transporte por oleoductos/gasoductos. Si no hay datos historicos
+            # (todo en cero) preservamos el valor actual.
+            n3 = params.recaudo_oleoductos_anio_n3 or Decimal('0')
+            n2 = params.recaudo_oleoductos_anio_n2 or Decimal('0')
+            n1 = params.recaudo_oleoductos_anio_n1 or Decimal('0')
+            suma = n3 + n2 + n1
+            if suma > 0:
+                rubro.valor_apropiacion = suma / Decimal('3')
         elif rubro.metodo_calculo == 'EST':
             # Si propagar_estampillas_8020 ya manejó este rubro (vía codigo_rubro),
             # respetamos esa asignación. Sólo asignamos aquí si no fue tocado.

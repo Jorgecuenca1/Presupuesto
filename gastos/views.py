@@ -548,23 +548,91 @@ def limpiar_gastos(request):
 # ─── REPORTE ANEXO 2 ─────────────────────────────────────────────
 @login_required
 def reporte_gastos(request):
+    """Reporte estilo Anexo 2: agrupado por SECCION (Unidad Ejecutora).
+
+    Cada sección muestra su árbol CUIPO (rubros con código que empieza con '2.')
+    asociados via FK seccion. Los rubros wrapper "01.2 SECCION ..." (sin FK seccion)
+    se ocultan: el valor real está en los rubros con FK.
+    """
+    from .models import SeccionGasto
+    from core.models import TablaConcejoPersoneria
+    from .utils import calcular_icld
     vigencia = _vigencia()
     params = ParametrosSistema.objects.filter(vigencia=vigencia).first()
-    rubros = RubroGasto.objects.filter(vigencia=vigencia)
-    total = rubros.filter(nivel=0, es_titulo=True).aggregate(t=Sum('valor_apropiacion'))['t']
-    if not total:
-        total = rubros.filter(es_titulo=False).aggregate(t=Sum('valor_apropiacion'))['t'] or 0
 
-    # Totales por tipo de gasto
-    total_funcionamiento = rubros.filter(tipo_gasto='FUN', es_titulo=False).aggregate(t=Sum('valor_apropiacion'))['t'] or 0
-    total_inversion = rubros.filter(tipo_gasto='INV', es_titulo=False).aggregate(t=Sum('valor_apropiacion'))['t'] or 0
-    total_deuda = rubros.filter(tipo_gasto='DEU', es_titulo=False).aggregate(t=Sum('valor_apropiacion'))['t'] or 0
+    # Total = suma de rubros HOJA (es_titulo=False) en toda la vigencia
+    rubros_qs = RubroGasto.objects.filter(vigencia=vigencia)
+    total = rubros_qs.filter(es_titulo=False, seccion__isnull=False).aggregate(
+        t=Sum('valor_apropiacion'))['t'] or 0
+    # Si no hay rubros con sección, caer al cálculo plano (compat)
+    if not total:
+        total = rubros_qs.filter(es_titulo=False).aggregate(t=Sum('valor_apropiacion'))['t'] or 0
+
+    total_funcionamiento = rubros_qs.filter(tipo_gasto='FUN', es_titulo=False).aggregate(t=Sum('valor_apropiacion'))['t'] or 0
+    total_inversion = rubros_qs.filter(tipo_gasto='INV', es_titulo=False).aggregate(t=Sum('valor_apropiacion'))['t'] or 0
+    total_deuda = rubros_qs.filter(tipo_gasto='DEU', es_titulo=False).aggregate(t=Sum('valor_apropiacion'))['t'] or 0
+
+    # Calcular topes Anexo 6 si hay parametros
+    tope_concejo = None
+    tope_personeria = None
+    if params:
+        tabla = TablaConcejoPersoneria.objects.filter(categoria=params.categoria_municipio).first()
+        if tabla:
+            icld = params.icld_calculado or calcular_icld(vigencia)
+            tope_concejo = tabla.calcular_transferencia_concejo(
+                icld, params.valor_smlmv or 0, params.pct_icld_adicional_concejo or 0)
+            tope_personeria = tabla.calcular_transferencia_personeria(
+                vigencia, icld, params.valor_smlmv or 0)
+
+    # Agrupar por seccion
+    secciones_data = []
+    for sec in SeccionGasto.objects.all().order_by('codigo'):
+        rubros_sec = list(rubros_qs.filter(seccion=sec).order_by('orden', 'codigo'))
+        if not rubros_sec:
+            continue
+        suma_sec = sum((r.valor_apropiacion for r in rubros_sec if not r.es_titulo), 0)
+        limite = None
+        codigo_norm = (sec.codigo or '').lstrip('0')
+        if codigo_norm == '1':  # Concejo
+            limite = tope_concejo
+        elif codigo_norm == '2':  # Personeria
+            limite = tope_personeria
+        secciones_data.append({
+            'codigo': sec.codigo,
+            'nombre': sec.nombre,
+            'rubros': rubros_sec,
+            'total': suma_sec,
+            'limite_oc': limite,
+        })
+
+    # Resumen de metodos automaticos
+    METODO_LABELS = {
+        'OCC': 'Concejo (Anexo 6)',
+        'OCP': 'Personería (Anexo 6)',
+        'DCAP': 'Deuda Capital',
+        'DINT': 'Deuda Intereses',
+        'DTOT': 'Deuda Total',
+        'PEN': 'Pensionados',
+        'CPS': 'Costo Personal',
+    }
+    metodos_resumen = []
+    metodos_qs = rubros_qs.exclude(metodo_calculo='MAN').values('metodo_calculo').annotate(
+        rubros=Count('id'), suma=Sum('valor_apropiacion')).order_by('metodo_calculo')
+    for row in metodos_qs:
+        metodos_resumen.append({
+            'metodo': row['metodo_calculo'],
+            'label': METODO_LABELS.get(row['metodo_calculo'], row['metodo_calculo']),
+            'rubros': row['rubros'],
+            'suma': row['suma'] or 0,
+        })
 
     return render(request, 'gastos/reporte_gastos.html', {
-        'rubros': rubros, 'vigencia': vigencia, 'params': params, 'total': total,
+        'vigencia': vigencia, 'params': params, 'total': total,
         'total_funcionamiento': total_funcionamiento,
         'total_inversion': total_inversion,
         'total_deuda': total_deuda,
+        'secciones': secciones_data,
+        'metodos_resumen': metodos_resumen,
     })
 
 

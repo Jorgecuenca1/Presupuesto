@@ -58,29 +58,74 @@
     </div>
 </div>
 
-<div class="card">
+<!-- Indicadores de metodos automaticos -->
+{% if metodos_resumen %}
+<div class="card mb-3">
+    <div class="card-header bg-light">
+        <i class="bi bi-cpu"></i> Métodos de Cálculo Automáticos
+    </div>
+    <div class="card-body py-2">
+        <div class="row g-2">
+            {% for m in metodos_resumen %}
+            <div class="col-md-3">
+                <small>
+                    <strong>{{ m.label }}</strong> ({{ m.metodo }}):
+                    {{ m.rubros }} rubros, ${{ m.suma|floatformat:0|intcomma }}
+                </small>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="card mb-3">
     <div class="card-header bg-dark text-white text-center">
-        <h5 class="mb-0">MUNICIPIO DE PUERTO LOPEZ</h5>
-        <p class="mb-0" style="font-size:.9rem;">PRESUPUESTO DE GASTOS - ADMINISTRACION CENTRAL</p>
+        <h5 class="mb-0">MUNICIPIO DE PUERTO LÓPEZ</h5>
+        <p class="mb-0" style="font-size:.9rem;">PRESUPUESTO DE GASTOS - ADMINISTRACIÓN CENTRAL</p>
         <p class="mb-0" style="font-size:.85rem;">VIGENCIA FISCAL {{ vigencia }}</p>
+    </div>
+</div>
+
+<!-- Reporte por Unidad Ejecutora (Seccion) -->
+{% for sec in secciones %}
+<div class="card mb-3">
+    <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+        <div>
+            <strong>Unidad Ejecutora {{ sec.codigo }}:</strong> {{ sec.nombre }}
+            {% if sec.limite_oc %}
+              <span class="badge bg-warning text-dark ms-2">
+                Tope Anexo 6: ${{ sec.limite_oc|floatformat:0|intcomma }}
+              </span>
+            {% endif %}
+        </div>
+        <div>
+            Total: <strong>${{ sec.total|floatformat:0|intcomma }}</strong>
+        </div>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-sm table-bordered mb-0" style="font-size:.82rem;">
+            <table class="table table-sm table-bordered mb-0" style="font-size:.78rem;">
                 <thead class="table-light">
                     <tr>
-                        <th style="width:18%">IDENTIFICACION</th>
+                        <th style="width:18%">IDENTIFICACIÓN</th>
                         <th style="width:5%">FUENTE</th>
-                        <th style="width:42%">DESCRIPCION</th>
-                        <th style="width:15%" class="text-end">APROPIACION</th>
-                        <th style="width:20%">OBSERVACIONES</th>
+                        <th style="width:8%">COD METODO</th>
+                        <th style="width:39%">DESCRIPCIÓN</th>
+                        <th style="width:15%" class="text-end">APROPIACIÓN</th>
+                        <th style="width:15%">OBSERVACIONES</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for r in rubros %}
+                    {% for r in sec.rubros %}
                     <tr class="{% if r.es_titulo %}titulo-rubro{% endif %}" style="{% if r.nivel == 0 and r.es_titulo %}background:#d5e8d4;{% endif %}">
                         <td>{{ r.codigo }}</td>
                         <td>{{ r.codigo_fuente }}</td>
+                        <td>
+                            {% if r.metodo_calculo != 'MAN' %}
+                                <span class="badge bg-info">{{ r.metodo_calculo }}</span>
+                            {% endif %}
+                        </td>
                         <td>
                             <span style="padding-left:{{ r.nivel }}5px;">
                                 {% if r.es_titulo %}<strong>{{ r.descripcion }}</strong>{% else %}{{ r.descripcion }}{% endif %}
@@ -89,19 +134,32 @@
                         <td class="text-end {% if r.es_titulo %}fw-bold{% endif %}">
                             {% if r.valor_apropiacion %}${{ r.valor_apropiacion|floatformat:0|intcomma }}{% endif %}
                         </td>
-                        <td style="font-size:.75rem;">{{ r.observaciones }}</td>
+                        <td style="font-size:.72rem;">{{ r.observaciones }}</td>
                     </tr>
                     {% endfor %}
+                    {% if not sec.rubros %}
+                    <tr>
+                        <td colspan="6" class="text-muted text-center py-3">Sin rubros cargados en esta unidad.</td>
+                    </tr>
+                    {% endif %}
                 </tbody>
                 <tfoot>
-                    <tr class="table-dark">
-                        <td colspan="3" class="text-end fw-bold" style="font-size:.95rem;">TOTAL PRESUPUESTO DE GASTOS</td>
-                        <td class="text-end fw-bold" style="font-size:.95rem;">${{ total|floatformat:0|intcomma }}</td>
+                    <tr class="table-secondary">
+                        <td colspan="4" class="text-end fw-bold">TOTAL {{ sec.nombre }}</td>
+                        <td class="text-end fw-bold">${{ sec.total|floatformat:0|intcomma }}</td>
                         <td></td>
                     </tr>
                 </tfoot>
             </table>
         </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- Total general -->
+<div class="card border-dark">
+    <div class="card-body text-end py-3" style="background:#222;color:#fff;">
+        <h5 class="mb-0">TOTAL PRESUPUESTO DE GASTOS {{ vigencia }}: ${{ total|floatformat:0|intcomma }}</h5>
     </div>
 </div>
 {% endblock %}
@@ -111,7 +169,8 @@
     @media print {
         #sidebar, .top-bar, .btn, .d-flex, .stat-card { display: none !important; }
         #content { margin-left: 0 !important; }
-        .card { box-shadow: none !important; border: 1px solid #000 !important; }
+        .card { box-shadow: none !important; border: 1px solid #000 !important; page-break-inside: avoid; }
+        .card-header { background: #eee !important; color: #000 !important; }
     }
 </style>
 {% endblock %}

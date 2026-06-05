@@ -84,6 +84,17 @@ class ParametrosSistema(models.Model):
                                                       verbose_name='Recaudo Oleoductos año anterior ($)',
                                                       help_text='Recaudo histórico del año anterior (vigencia - 1)')
 
+    # Anexo 6 Organos de Control
+    icld_calculado = models.DecimalField(max_digits=20, decimal_places=2, default=0,
+                                          verbose_name='ICLD vigencia anterior ($)',
+                                          help_text='Ingresos Corrientes de Libre Destinación del año anterior. '
+                                                    'Se autollena desde Cifras Históricas si está en 0; editable.')
+    pct_icld_adicional_concejo = models.DecimalField(max_digits=6, decimal_places=4,
+                                                       default=Decimal('0.015'),
+                                                       verbose_name='% ICLD Adicional Concejo',
+                                                       help_text='% sobre ICLD para sumar al Vr Honorarios del Concejo. '
+                                                                 'Ej: 0.015 = 1.5% (Excel Anexo 6).')
+
     activo = models.BooleanField(default=True)
 
     class Meta:
@@ -111,20 +122,47 @@ class CategoriaConcejoChoices(models.IntegerChoices):
 
 
 class TablaConcejoPersoneria(models.Model):
-    """Tabla de límites de Concejo y Personería según categoría del municipio (Ley 617/2000)"""
+    """Tabla de límites de Concejo y Personería según categoría del municipio.
+
+    Estructura del Anexo 6 (Leyes 617/2000, 2461 y 2422):
+
+    Concejo:
+        Vr Honorarios   = valor_sesion × (ses_ord + ses_extra) × num_concejales
+        % ICLD Adicional = ICLD × pct_icld_adicional_concejo / 100
+        Total Concejo    = Vr Honorarios + % ICLD Adicional
+
+    Personería (por categoría):
+        Especial, 1ª, 2ª:  ICLD × limite_personeria_pct_icld / 100
+        3ª, 4ª, 5ª, 6ª:    SMLV × valor_smlmv
+                           El SMLV para 5ª sigue la progresión Ley 2461/2422
+                           (210 en 2025, +10 por año hasta 250 en 2029). Para
+                           categorías con SMLV fijo (3ª=400, 4ª=330, 6ª=0) se
+                           guarda en personeria_smlv_fijo.
+    """
     categoria = models.IntegerField(choices=CategoriaConcejoChoices.choices, unique=True,
                                     verbose_name='Categoría Municipio')
-    # Concejo
-    honorario_concejal_smlmv = models.DecimalField(max_digits=6, decimal_places=2, default=0,
-                                                     verbose_name='Honorario Concejal (factor SMLMV)')
+    # Concejo - parametros del Excel
+    valor_sesion_concejal = models.DecimalField(max_digits=12, decimal_places=2, default=0,
+                                                  verbose_name='Valor Sesión Concejal ($)',
+                                                  help_text='Honorario por sesión (Ej. cat 5: $348.256)')
     sesiones_ordinarias = models.IntegerField(default=70, verbose_name='Sesiones Ordinarias/Año')
     sesiones_extraordinarias = models.IntegerField(default=12, verbose_name='Sesiones Extraordinarias/Año')
     num_concejales = models.IntegerField(default=11, verbose_name='Número de Concejales')
+    # Legacy: factor SMLMV (no se usa con el Excel nuevo, se mantiene por compat)
+    honorario_concejal_smlmv = models.DecimalField(max_digits=6, decimal_places=2, default=0,
+                                                     verbose_name='Honorario Concejal (factor SMLMV)',
+                                                     help_text='Legado. Solo si valor_sesion_concejal=0')
     limite_concejo_pct_icld = models.DecimalField(max_digits=6, decimal_places=2, default=0,
-                                                   verbose_name='Límite Concejo (% ICLD)')
+                                                   verbose_name='Límite Concejo (% ICLD)',
+                                                   help_text='Tope legal Ley 617. Solo referencia.')
     # Personería
     limite_personeria_pct_icld = models.DecimalField(max_digits=6, decimal_places=2, default=0,
-                                                      verbose_name='Límite Personería (% ICLD)')
+                                                      verbose_name='Límite Personería (% ICLD)',
+                                                      help_text='Para Especial/1ª/2ª (cálculo por % ICLD)')
+    personeria_smlv_fijo = models.IntegerField(default=0,
+                                                verbose_name='Personería SMLV Fijo',
+                                                help_text='Para categorías con SMLV fijo (3ª=400, 4ª=330, 6ª=0). '
+                                                          'La 5ª usa la tabla PersoneriaSMLVProgresion por vigencia.')
 
     class Meta:
         verbose_name = 'Tabla Concejo/Personería'
@@ -132,21 +170,80 @@ class TablaConcejoPersoneria(models.Model):
         ordering = ['categoria']
 
     def __str__(self):
-        return f'Cat. {self.get_categoria_display()} - Concejo: {self.limite_concejo_pct_icld}% / Personería: {self.limite_personeria_pct_icld}%'
+        return f'Cat. {self.get_categoria_display()}'
 
     def calcular_honorarios_concejo(self, valor_smlmv):
-        """Calcula honorarios totales del concejo = honorario * sesiones * concejales"""
+        """Vr Honorarios = valor_sesion × (ord + extra) × num_concejales.
+
+        Si valor_sesion_concejal está en 0 cae al cálculo legacy
+        (honorario_concejal_smlmv × valor_smlmv × sesiones × concejales).
+        """
         total_sesiones = self.sesiones_ordinarias + self.sesiones_extraordinarias
-        honorario_sesion = self.honorario_concejal_smlmv * valor_smlmv
-        return honorario_sesion * total_sesiones * self.num_concejales
+        if self.valor_sesion_concejal and self.valor_sesion_concejal > 0:
+            return self.valor_sesion_concejal * total_sesiones * self.num_concejales
+        return self.honorario_concejal_smlmv * valor_smlmv * total_sesiones * self.num_concejales
+
+    def calcular_transferencia_concejo(self, icld_total, valor_smlmv, pct_icld_adicional):
+        """Total Concejo = Vr Honorarios + ICLD × pct_icld_adicional.
+
+        pct_icld_adicional es el % adicional del Excel (0.015 = 1.5%).
+        """
+        honorarios = self.calcular_honorarios_concejo(valor_smlmv)
+        adicional = icld_total * (pct_icld_adicional or Decimal('0'))
+        return honorarios + adicional
+
+    def calcular_transferencia_personeria(self, vigencia, icld_total, valor_smlmv):
+        """Transferencia personería según la lógica del Anexo 6.
+
+        - Especial/1ª/2ª: ICLD × limite_personeria_pct_icld / 100
+        - 5ª (Puerto López): SMLV de PersoneriaSMLVProgresion(vigencia, categoria=5) × valor_smlmv
+        - 3ª/4ª/6ª: personeria_smlv_fijo × valor_smlmv
+        """
+        if self.categoria in (0, 1, 2):
+            return icld_total * self.limite_personeria_pct_icld / Decimal('100')
+
+        smlv = None
+        progresion = PersoneriaSMLVProgresion.objects.filter(
+            vigencia=vigencia, categoria=self.categoria
+        ).first()
+        if progresion:
+            smlv = progresion.smlv
+        elif self.personeria_smlv_fijo:
+            smlv = self.personeria_smlv_fijo
+
+        if smlv:
+            return Decimal(smlv) * valor_smlmv
+        return Decimal('0')
 
     def calcular_limite_concejo(self, icld_total):
-        """Calcula el límite presupuestal del Concejo"""
+        """Tope legal Ley 617 sobre el Concejo (referencia, no es el monto a transferir)."""
         return icld_total * self.limite_concejo_pct_icld / Decimal('100')
 
     def calcular_limite_personeria(self, icld_total):
-        """Calcula el límite presupuestal de la Personería"""
+        """Tope legal Ley 617 sobre la Personería (referencia)."""
         return icld_total * self.limite_personeria_pct_icld / Decimal('100')
+
+
+class PersoneriaSMLVProgresion(models.Model):
+    """Progresión anual de SMLV para Personería por categoría municipal.
+
+    La Ley 2461/2422 estableció una progresión para algunas categorías:
+    p. ej. categoría 5: 2025=210, 2026=220, 2027=230, 2028=240, 2029=250.
+    """
+    vigencia = models.IntegerField(verbose_name='Vigencia Fiscal')
+    categoria = models.IntegerField(choices=CategoriaConcejoChoices.choices,
+                                    verbose_name='Categoría Municipio')
+    smlv = models.IntegerField(verbose_name='SMLV',
+                                help_text='Número de salarios mínimos legales vigentes (Ej: 220)')
+
+    class Meta:
+        verbose_name = 'Progresión SMLV Personería'
+        verbose_name_plural = 'Progresiones SMLV Personería'
+        unique_together = ['vigencia', 'categoria']
+        ordering = ['categoria', 'vigencia']
+
+    def __str__(self):
+        return f'Cat. {self.get_categoria_display()} {self.vigencia}: {self.smlv} SMLV'
 
 
 class VigenciaFutura(models.Model):

@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.db.models import Sum, Count
 from decimal import Decimal
 from .forms import LoginForm, RegistroForm, ParametrosForm, TablaConcejoPersoneriaForm
-from .models import ParametrosSistema, TablaConcejoPersoneria
+from .models import ParametrosSistema, TablaConcejoPersoneria, PersoneriaSMLVProgresion
 
 
 def login_view(request):
@@ -132,6 +132,14 @@ def parametros_view(request):
     params = ParametrosSistema.objects.filter(activo=True).first()
     if not params:
         params = ParametrosSistema.objects.order_by('-vigencia').first()
+
+    # Autollenar ICLD si esta en 0 y hay cifras historicas
+    if params and (params.icld_calculado is None or params.icld_calculado == 0):
+        from gastos.utils import calcular_icld
+        icld_auto = calcular_icld(params.vigencia)
+        if icld_auto > 0:
+            params.icld_calculado = icld_auto
+
     if request.method == 'POST':
         form = ParametrosForm(request.POST, instance=params)
         if form.is_valid():
@@ -143,8 +151,10 @@ def parametros_view(request):
             from ingresos.utils import calcular_todos_ingresos
             from ingresos.models import RubroIngreso
             from gastos.models import RubroGasto
+            from gastos.utils import recalcular_rubros_metodo
             try:
                 calcular_todos_ingresos(params_saved.vigencia)
+                recalcular_rubros_metodo(params_saved.vigencia)
                 titulos_ing = RubroIngreso.objects.filter(
                     vigencia=params_saved.vigencia, es_titulo=True
                 ).order_by('-nivel')
@@ -180,18 +190,72 @@ def tabla_concejo_personeria(request):
     params = ParametrosSistema.objects.filter(activo=True).first()
     tabla_actual = None
     honorarios = Decimal('0')
-    limite_concejo = Decimal('0')
-    limite_personeria = Decimal('0')
+    transf_concejo = Decimal('0')
+    transf_personeria = Decimal('0')
+    icld = Decimal('0')
+    smlv_personeria = None
+    progresiones = []
     if params:
+        from gastos.utils import calcular_icld
+        icld = params.icld_calculado or Decimal('0')
+        if icld <= 0:
+            icld = calcular_icld(params.vigencia)
+
         tabla_actual = TablaConcejoPersoneria.objects.filter(categoria=params.categoria_municipio).first()
-        if tabla_actual and params.valor_smlmv > 0:
-            honorarios = tabla_actual.calcular_honorarios_concejo(params.valor_smlmv)
+        if tabla_actual:
+            honorarios = tabla_actual.calcular_honorarios_concejo(params.valor_smlmv or Decimal('0'))
+            transf_concejo = tabla_actual.calcular_transferencia_concejo(
+                icld, params.valor_smlmv or Decimal('0'),
+                params.pct_icld_adicional_concejo or Decimal('0'))
+            transf_personeria = tabla_actual.calcular_transferencia_personeria(
+                params.vigencia, icld, params.valor_smlmv or Decimal('0'))
+
+            prog = PersoneriaSMLVProgresion.objects.filter(
+                vigencia=params.vigencia, categoria=params.categoria_municipio
+            ).first()
+            if prog:
+                smlv_personeria = prog.smlv
+
+        progresiones = PersoneriaSMLVProgresion.objects.all().order_by('categoria', 'vigencia')
 
     return render(request, 'core/tabla_concejo.html', {
         'tablas': tablas, 'form': form, 'params': params,
         'tabla_actual': tabla_actual,
         'honorarios': honorarios,
+        'transf_concejo': transf_concejo,
+        'transf_personeria': transf_personeria,
+        'icld': icld,
+        'smlv_personeria': smlv_personeria,
+        'progresiones': progresiones,
     })
+
+
+@login_required
+def progresion_smlv_guardar(request):
+    if request.method == 'POST':
+        pk = request.POST.get('pk') or ''
+        vigencia = int(request.POST.get('vigencia') or 0)
+        categoria = int(request.POST.get('categoria') or 0)
+        smlv = int(request.POST.get('smlv') or 0)
+        if pk:
+            obj = get_object_or_404(PersoneriaSMLVProgresion, pk=pk)
+            obj.vigencia = vigencia
+            obj.categoria = categoria
+            obj.smlv = smlv
+            obj.save()
+        else:
+            PersoneriaSMLVProgresion.objects.update_or_create(
+                vigencia=vigencia, categoria=categoria,
+                defaults={'smlv': smlv})
+        messages.success(request, 'Progresión SMLV guardada')
+    return redirect('tabla_concejo_personeria')
+
+
+@login_required
+def progresion_smlv_eliminar(request, pk):
+    get_object_or_404(PersoneriaSMLVProgresion, pk=pk).delete()
+    messages.success(request, 'Progresión eliminada')
+    return redirect('tabla_concejo_personeria')
 
 
 @login_required

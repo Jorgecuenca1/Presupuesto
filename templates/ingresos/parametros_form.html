@@ -186,6 +186,30 @@
                         </small>
                     </div>
 
+                    <h6 class="text-muted mb-3 mt-4">Órganos de Control (Anexo 6)</h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">ICLD Vigencia Anterior ($)</label>
+                            {{ form.icld_calculado }}
+                            <small class="text-muted">
+                                Autollenado desde Cifras Históricas si está en 0. Editable.
+                            </small>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">% ICLD Adicional Concejo</label>
+                            {{ form.pct_icld_adicional_concejo }}
+                            <small class="text-muted">Ej: 0.015 = 1.5% (Anexo 6)</small>
+                        </div>
+                    </div>
+                    <div class="alert alert-light border py-2 mb-0 mt-2">
+                        <small>
+                            <i class="bi bi-info-circle"></i>
+                            <strong>Total Concejo = Valor sesión × (Ord+Extra) × Concejales + ICLD × % Adicional</strong>.
+                            La tabla por categoría se edita en
+                            <a href="{% url 'tabla_concejo_personeria' %}">Tablas Concejo/Personería</a>.
+                        </small>
+                    </div>
+
                     <h6 class="text-muted mb-3 mt-4">Datos Históricos Oleoductos / Gasoductos</h6>
                     <div class="row g-3">
                         <div class="col-md-4">

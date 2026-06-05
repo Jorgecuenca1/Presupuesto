@@ -63,6 +63,8 @@ class ParametrosForm(forms.ModelForm):
             'recaudo_oleoductos_anio_n3': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'recaudo_oleoductos_anio_n2': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'recaudo_oleoductos_anio_n1': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'icld_calculado': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'pct_icld_adicional_concejo': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001'}),
             'activo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
@@ -76,12 +78,14 @@ class TablaConcejoPersoneriaForm(forms.ModelForm):
         fields = '__all__'
         widgets = {
             'categoria': forms.Select(attrs={'class': W}),
+            'valor_sesion_concejal': forms.NumberInput(attrs={'class': W, 'step': '0.01'}),
             'honorario_concejal_smlmv': forms.NumberInput(attrs={'class': W, 'step': '0.01'}),
             'sesiones_ordinarias': forms.NumberInput(attrs={'class': W}),
             'sesiones_extraordinarias': forms.NumberInput(attrs={'class': W}),
             'num_concejales': forms.NumberInput(attrs={'class': W}),
             'limite_concejo_pct_icld': forms.NumberInput(attrs={'class': W, 'step': '0.01'}),
             'limite_personeria_pct_icld': forms.NumberInput(attrs={'class': W, 'step': '0.01'}),
+            'personeria_smlv_fijo': forms.NumberInput(attrs={'class': W}),
         }
 
 

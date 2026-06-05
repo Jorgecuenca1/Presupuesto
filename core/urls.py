@@ -10,4 +10,6 @@ urlpatterns = [
     path('tabla-concejo/', views.tabla_concejo_personeria, name='tabla_concejo_personeria'),
     path('tabla-concejo/guardar/', views.tabla_concejo_guardar, name='tabla_concejo_guardar'),
     path('tabla-concejo/<int:pk>/eliminar/', views.tabla_concejo_eliminar, name='tabla_concejo_eliminar'),
+    path('progresion-smlv/guardar/', views.progresion_smlv_guardar, name='progresion_smlv_guardar'),
+    path('progresion-smlv/<int:pk>/eliminar/', views.progresion_smlv_eliminar, name='progresion_smlv_eliminar'),
 ]

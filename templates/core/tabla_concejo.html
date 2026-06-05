@@ -1,37 +1,121 @@
 {% extends "base.html" %}
 {% load humanize %}
 
-{% block title %}Tabla Concejo y Personería{% endblock %}
+{% block title %}Anexo 6 - Órganos de Control{% endblock %}
 {% block breadcrumb %}
-<li class="breadcrumb-item active">Tabla Concejo / Personería</li>
+<li class="breadcrumb-item active">Anexo 6 - Órganos de Control</li>
 {% endblock %}
 
 {% block content %}
-<h4 class="mb-4">Tabla de Cálculo Concejo y Personería (Ley 617/2000)</h4>
+<h4 class="mb-4">Anexo 6 - Cálculo Órganos de Control (Leyes 617/2000, 2461 y 2422)</h4>
 
-{% if tabla_actual and params %}
+{% if params %}
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card border-primary">
+            <div class="card-header bg-primary text-white">
+                <i class="bi bi-building"></i> CONCEJO MUNICIPAL — Vigencia {{ params.vigencia }}
+            </div>
+            <div class="card-body">
+                <table class="table table-sm mb-0">
+                    <tr>
+                        <td>Categoría municipio</td>
+                        <td class="text-end"><strong>{{ params.get_categoria_municipio_display|default:params.categoria_municipio }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td>Valor sesión concejal</td>
+                        <td class="text-end">${{ tabla_actual.valor_sesion_concejal|floatformat:0|intcomma }}</td>
+                    </tr>
+                    <tr>
+                        <td>Sesiones (Ord + Extra) × Concejales</td>
+                        <td class="text-end">{{ tabla_actual.sesiones_ordinarias }} + {{ tabla_actual.sesiones_extraordinarias }} × {{ tabla_actual.num_concejales }}</td>
+                    </tr>
+                    <tr>
+                        <td>Vr Honorarios</td>
+                        <td class="text-end">${{ honorarios|floatformat:0|intcomma }}</td>
+                    </tr>
+                    <tr>
+                        <td>ICLD</td>
+                        <td class="text-end">${{ icld|floatformat:0|intcomma }}</td>
+                    </tr>
+                    <tr>
+                        <td>% ICLD Adicional</td>
+                        <td class="text-end">{{ params.pct_icld_adicional_concejo|floatformat:4 }}</td>
+                    </tr>
+                    <tr class="table-primary">
+                        <td><strong>TOTAL TRANSFERENCIA CONCEJO</strong></td>
+                        <td class="text-end"><strong class="fs-5">${{ transf_concejo|floatformat:0|intcomma }}</strong></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card border-success">
+            <div class="card-header bg-success text-white">
+                <i class="bi bi-shield-check"></i> PERSONERÍA — Vigencia {{ params.vigencia }}
+            </div>
+            <div class="card-body">
+                <table class="table table-sm mb-0">
+                    <tr>
+                        <td>Categoría municipio</td>
+                        <td class="text-end"><strong>{{ params.get_categoria_municipio_display|default:params.categoria_municipio }}</strong></td>
+                    </tr>
+                    {% if params.categoria_municipio == 0 or params.categoria_municipio == 1 or params.categoria_municipio == 2 %}
+                    <tr>
+                        <td>Fórmula</td>
+                        <td class="text-end">ICLD × {{ tabla_actual.limite_personeria_pct_icld }}%</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td>SMLV configurado</td>
+                        <td class="text-end">
+                            {% if smlv_personeria %}{{ smlv_personeria }} (progresión Ley 2461){% else %}{{ tabla_actual.personeria_smlv_fijo }} (fijo){% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Valor SMLMV</td>
+                        <td class="text-end">${{ params.valor_smlmv|floatformat:0|intcomma }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td>ICLD</td>
+                        <td class="text-end">${{ icld|floatformat:0|intcomma }}</td>
+                    </tr>
+                    <tr class="table-success">
+                        <td><strong>TOTAL TRANSFERENCIA PERSONERÍA</strong></td>
+                        <td class="text-end"><strong class="fs-5">${{ transf_personeria|floatformat:0|intcomma }}</strong></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="alert alert-info">
-    <strong>Municipio Categoría {{ params.categoria_municipio }}:</strong>
-    Honorarios Concejo = <strong>${{ honorarios|floatformat:0|intcomma }}</strong>
-    ({{ tabla_actual.honorario_concejal_smlmv }} SMLMV x {{ tabla_actual.sesiones_ordinarias }} ord + {{ tabla_actual.sesiones_extraordinarias }} ext x {{ tabla_actual.num_concejales }} concejales)
+    <i class="bi bi-info-circle"></i>
+    Estos valores se aplican automáticamente a los rubros de gasto que tengan método
+    <code>OCC</code> (Concejo) o <code>OCP</code> (Personería). Cambia los parámetros en
+    <a href="{% url 'parametros' %}">Parámetros del Sistema</a> y se recalcula al guardar.
 </div>
 {% endif %}
 
-<!-- Tabla existente -->
-{% if tablas %}
+<!-- Tabla por categoría -->
 <div class="card mb-4">
-    <div class="card-header bg-white"><i class="bi bi-building"></i> Tablas por Categoría</div>
+    <div class="card-header bg-white"><i class="bi bi-table"></i> Tabla por Categoría (Excel Anexo 6)</div>
     <div class="card-body table-responsive">
         <table class="table table-sm table-hover">
             <thead>
                 <tr>
                     <th>Categoría</th>
-                    <th class="text-end">Honorario (SMLMV)</th>
+                    <th class="text-end">Valor sesión ($)</th>
                     <th class="text-end">Ses. Ord.</th>
                     <th class="text-end">Ses. Ext.</th>
                     <th class="text-end">Concejales</th>
-                    <th class="text-end">Límite Concejo (% ICLD)</th>
-                    <th class="text-end">Límite Personería (% ICLD)</th>
+                    <th class="text-end">Límite Concejo (%ICLD)</th>
+                    <th class="text-end">Personería (%ICLD)</th>
+                    <th class="text-end">Personería SMLV fijo</th>
                     <th></th>
                 </tr>
             </thead>
@@ -39,12 +123,13 @@
                 {% for t in tablas %}
                 <tr {% if params and t.categoria == params.categoria_municipio %}class="table-warning fw-bold"{% endif %}>
                     <td>{{ t.get_categoria_display }}</td>
-                    <td class="text-end">{{ t.honorario_concejal_smlmv }}</td>
+                    <td class="text-end">${{ t.valor_sesion_concejal|floatformat:0|intcomma }}</td>
                     <td class="text-end">{{ t.sesiones_ordinarias }}</td>
                     <td class="text-end">{{ t.sesiones_extraordinarias }}</td>
                     <td class="text-end">{{ t.num_concejales }}</td>
                     <td class="text-end">{{ t.limite_concejo_pct_icld }}%</td>
                     <td class="text-end">{{ t.limite_personeria_pct_icld }}%</td>
+                    <td class="text-end">{{ t.personeria_smlv_fijo }}</td>
                     <td>
                         <a href="{% url 'tabla_concejo_eliminar' t.pk %}" class="btn btn-sm btn-outline-danger"
                            onclick="return confirm('Eliminar?')"><i class="bi bi-trash"></i></a>
@@ -55,45 +140,81 @@
         </table>
     </div>
 </div>
-{% endif %}
 
-<!-- Formulario -->
-<div class="card">
+<!-- Form alta/edición categoría -->
+<div class="card mb-4">
     <div class="card-header bg-white"><i class="bi bi-plus-circle"></i> Agregar/Editar Categoría</div>
     <div class="card-body">
         <form method="post" action="{% url 'tabla_concejo_guardar' %}">
             {% csrf_token %}
             <div class="row g-2">
-                <div class="col-md-2">
-                    <label class="form-label">Categoría</label>
-                    {{ form.categoria }}
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Honorario (SMLMV)</label>
-                    {{ form.honorario_concejal_smlmv }}
-                </div>
-                <div class="col-md-1">
-                    <label class="form-label">Ses. Ord.</label>
-                    {{ form.sesiones_ordinarias }}
-                </div>
-                <div class="col-md-1">
-                    <label class="form-label">Ses. Ext.</label>
-                    {{ form.sesiones_extraordinarias }}
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Concejales</label>
-                    {{ form.num_concejales }}
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Límite Concejo (%)</label>
-                    {{ form.limite_concejo_pct_icld }}
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Límite Personería (%)</label>
-                    {{ form.limite_personeria_pct_icld }}
-                </div>
+                <div class="col-md-2"><label class="form-label">Categoría</label>{{ form.categoria }}</div>
+                <div class="col-md-2"><label class="form-label">Valor sesión ($)</label>{{ form.valor_sesion_concejal }}</div>
+                <div class="col-md-1"><label class="form-label">Ses. Ord.</label>{{ form.sesiones_ordinarias }}</div>
+                <div class="col-md-1"><label class="form-label">Ses. Ext.</label>{{ form.sesiones_extraordinarias }}</div>
+                <div class="col-md-2"><label class="form-label">Concejales</label>{{ form.num_concejales }}</div>
+                <div class="col-md-2"><label class="form-label">Personería (%ICLD)</label>{{ form.limite_personeria_pct_icld }}</div>
+                <div class="col-md-2"><label class="form-label">Personería SMLV fijo</label>{{ form.personeria_smlv_fijo }}</div>
             </div>
             <button type="submit" class="btn btn-primary btn-sm mt-2"><i class="bi bi-save"></i> Guardar</button>
+        </form>
+    </div>
+</div>
+
+<!-- Progresión SMLV Personería -->
+<div class="card">
+    <div class="card-header bg-white">
+        <i class="bi bi-graph-up"></i> Progresión SMLV Personería (Ley 2461/2422 - 5ª categoría: 2025=210, 2026=220, 2027=230, 2028=240, 2029=250)
+    </div>
+    <div class="card-body table-responsive">
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Vigencia</th>
+                    <th>Categoría</th>
+                    <th>SMLV</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in progresiones %}
+                <tr {% if params and p.vigencia == params.vigencia and p.categoria == params.categoria_municipio %}class="table-warning"{% endif %}>
+                    <td>{{ p.vigencia }}</td>
+                    <td>{{ p.get_categoria_display }}</td>
+                    <td>{{ p.smlv }}</td>
+                    <td>
+                        <a href="{% url 'progresion_smlv_eliminar' p.pk %}" class="btn btn-sm btn-outline-danger"
+                           onclick="return confirm('Eliminar?')"><i class="bi bi-trash"></i></a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <form method="post" action="{% url 'progresion_smlv_guardar' %}" class="row g-2 mt-2">
+            {% csrf_token %}
+            <div class="col-md-3">
+                <label class="form-label">Vigencia</label>
+                <input type="number" name="vigencia" value="{{ params.vigencia|default:2026 }}" class="form-control" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Categoría</label>
+                <select name="categoria" class="form-control" required>
+                    <option value="0">Especial</option>
+                    <option value="1">Primera</option>
+                    <option value="2">Segunda</option>
+                    <option value="3">Tercera</option>
+                    <option value="4">Cuarta</option>
+                    <option value="5" selected>Quinta</option>
+                    <option value="6">Sexta</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">SMLV</label>
+                <input type="number" name="smlv" class="form-control" required>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-save"></i> Agregar SMLV</button>
+            </div>
         </form>
     </div>
 </div>

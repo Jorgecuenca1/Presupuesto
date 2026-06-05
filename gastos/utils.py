@@ -19,6 +19,63 @@ from .models import (
 )
 
 
+def calcular_icld(vigencia):
+    """Calcula el ICLD (Ingresos Corrientes de Libre Destinación) del año
+    anterior tomado de CifraHistoricaIngreso.
+
+    ICLD = suma de los rubros marcados como ICLD del último año disponible.
+    Si no hay datos retorna Decimal('0').
+    """
+    from ingresos.models import CifraHistoricaIngreso
+    cifras = CifraHistoricaIngreso.objects.filter(vigencia_calculo=vigencia)
+    ultimo_anio = cifras.values_list('anio', flat=True).order_by('-anio').first()
+    if not ultimo_anio:
+        return Decimal('0')
+    total = cifras.filter(anio=ultimo_anio, es_icld=True).aggregate(t=Sum('valor_recaudo'))['t'] or Decimal('0')
+    return total
+
+
+def calcular_transferencias_organos_control(vigencia, params):
+    """Aplica los métodos OCC (Concejo) y OCP (Personería) a los rubros con
+    esos métodos, usando la TablaConcejoPersoneria para la categoría del
+    municipio configurada en params.
+
+    Si el ICLD del param está en 0, intenta autollenarlo desde Cifras Históricas.
+    """
+    from core.models import TablaConcejoPersoneria
+    tabla = TablaConcejoPersoneria.objects.filter(categoria=params.categoria_municipio).first()
+    if not tabla:
+        return {'concejo': Decimal('0'), 'personeria': Decimal('0'),
+                'rubros_concejo': 0, 'rubros_personeria': 0}
+
+    icld = params.icld_calculado or Decimal('0')
+    if icld <= 0:
+        icld = calcular_icld(vigencia)
+
+    valor_smlmv = params.valor_smlmv or Decimal('0')
+    pct_adic = params.pct_icld_adicional_concejo or Decimal('0')
+
+    transf_concejo = tabla.calcular_transferencia_concejo(icld, valor_smlmv, pct_adic)
+    transf_personeria = tabla.calcular_transferencia_personeria(vigencia, icld, valor_smlmv)
+
+    rubros_c = RubroGasto.objects.filter(vigencia=vigencia, metodo_calculo='OCC')
+    rubros_p = RubroGasto.objects.filter(vigencia=vigencia, metodo_calculo='OCP')
+    for r in rubros_c:
+        r.valor_apropiacion = transf_concejo
+        r.save(update_fields=['valor_apropiacion'])
+    for r in rubros_p:
+        r.valor_apropiacion = transf_personeria
+        r.save(update_fields=['valor_apropiacion'])
+
+    return {
+        'concejo': transf_concejo,
+        'personeria': transf_personeria,
+        'rubros_concejo': rubros_c.count(),
+        'rubros_personeria': rubros_p.count(),
+        'icld': icld,
+    }
+
+
 def _suma_amortizaciones(vigencia, campo):
     """campo ∈ {capital_principal, intereses, intereses_tcr, total}."""
     qs = AmortizacionPagare.objects.filter(vigencia_pago=vigencia)
@@ -67,7 +124,19 @@ def recalcular_rubros_metodo(vigencia):
     pens = _suma_pensionados(vigencia)
 
     resumen = {k: {'rubros': 0, 'total_aplicado': Decimal('0')}
-               for k in ['DCAP', 'DINT', 'DTOT', 'PEN', 'CPS']}
+               for k in ['DCAP', 'DINT', 'DTOT', 'PEN', 'CPS', 'OCC', 'OCP']}
+
+    # Organos de control (Anexo 6): se calcula UNA vez por vigencia y se
+    # aplica a todos los rubros OCC/OCP.
+    from core.models import ParametrosSistema
+    p = (ParametrosSistema.objects.filter(vigencia=vigencia, activo=True).first()
+         or ParametrosSistema.objects.filter(vigencia=vigencia).first())
+    oc_concejo = Decimal('0')
+    oc_personeria = Decimal('0')
+    if p:
+        oc = calcular_transferencias_organos_control(vigencia, p)
+        oc_concejo = oc['concejo']
+        oc_personeria = oc['personeria']
 
     rubros = (RubroGasto.objects
               .filter(vigencia=vigencia, es_titulo=False)
@@ -85,6 +154,10 @@ def recalcular_rubros_metodo(vigencia):
             nuevo = pens
         elif r.metodo_calculo == 'CPS':
             nuevo = _suma_costo_personal_seccion(vigencia, r.seccion_id)
+        elif r.metodo_calculo == 'OCC':
+            nuevo = oc_concejo
+        elif r.metodo_calculo == 'OCP':
+            nuevo = oc_personeria
         if nuevo is None:
             continue
         r.valor_apropiacion = nuevo

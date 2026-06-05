@@ -15,6 +15,8 @@ class MetodoCalculoGasto(models.TextChoices):
     DEUDA_TOTAL = 'DTOT', 'Servicio Deuda - Total (Capital + Intereses + TCR)'
     PENSIONADOS = 'PEN', 'Costo total Pensionados (Fondo de Pensiones)'
     COSTO_PERSONAL_SECCION = 'CPS', 'Costo Personal por Sección (rubro = sección.cargo)'
+    ORGANO_CONCEJO = 'OCC', 'Transferencia al Concejo (Anexo 6)'
+    ORGANO_PERSONERIA = 'OCP', 'Transferencia a la Personería (Anexo 6)'
 
 
 class CifraHistoricaGasto(models.Model):

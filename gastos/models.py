@@ -203,6 +203,11 @@ class CostoPersonal(models.Model):
     aportes_sena = models.DecimalField(max_digits=14, decimal_places=2, default=0,
                                        verbose_name='Aportes SENA ($)')
     es_pensionado = models.BooleanField(default=False, verbose_name='¿Es pensionado?')
+    costo_total_anual_override = models.DecimalField(
+        max_digits=20, decimal_places=2, default=0,
+        verbose_name='Costo Total Anual Override ($)',
+        help_text='Si > 0 sobreescribe el costo total anual calculado desde los componentes. '
+                  'Útil para importar el Gran Total directo del Excel sin desglosarlo en cada concepto.')
     observaciones = models.TextField(blank=True)
 
     class Meta:
@@ -229,6 +234,8 @@ class CostoPersonal(models.Model):
 
     @property
     def costo_total_anual(self):
+        if self.costo_total_anual_override and self.costo_total_anual_override > 0:
+            return self.costo_total_anual_override
         return self.costo_salarial_anual + self.costo_prestaciones + self.costo_aportes
 
 

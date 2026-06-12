@@ -240,62 +240,58 @@ def importar_amortizacion(v):
     wb = load_workbook(EXCEL_PATH, data_only=True)
     ws = wb['Deuda Publica']
 
-    # Buscar el pagare en BD
     pagare = PagareCredito.objects.first()
     if not pagare:
         print('  ! No hay PagareCredito en BD. Saltando amortizacion.')
         return 0
 
-    # Limpiar amortizaciones existentes para este pagare
     eliminados = AmortizacionPagare.objects.filter(pagare=pagare).delete()
     print(f'Amortizaciones previas eliminadas: {eliminados[0]}')
 
-    # Tabla amortizacion inicia en R17 (cuota 1)
-    # A=Cuota, B=Capital (K), C=Intereses (I), D=K+I, E=Saldo, F=Fecha pago
-    # G/H son pago anio capital/intereses (subtotales)
-    n = 0
+    # AmortizacionPagare es POR VIGENCIA (no por cuota). Agrupamos las cuotas
+    # trimestrales por año fiscal y guardamos una sola fila por año.
+    # TCR se calcula como (intereses_sin_TCR) * factor TCR donde el factor
+    # del Excel es 0.921 sobre el interés sin TCR para totalizar 1.921x.
+    # Pero la columna C ya da intereses sin TCR puros. El sistema guarda
+    # intereses (sin TCR) e intereses_tcr (solo el componente TCR adicional).
+    TCR_FACTOR = Decimal('0.921')
+
+    # Agrupar
+    grupos = {}  # year -> {'capital': X, 'intereses': Y, 'cuotas': N}
     for r in range(17, ws.max_row + 1):
         cuota = ws.cell(row=r, column=1).value
         capital = ws.cell(row=r, column=2).value
         intereses = ws.cell(row=r, column=3).value
-        ki = ws.cell(row=r, column=4).value
-        saldo = ws.cell(row=r, column=5).value
         fecha = ws.cell(row=r, column=6).value
-
-        if not cuota or not fecha:
+        if not cuota or not fecha or not hasattr(fecha, 'year'):
             continue
         try:
-            cuota_int = int(cuota)
+            int(cuota)
         except Exception:
             continue
-        if not hasattr(fecha, 'year'):
-            continue
+        year = fecha.year
+        g = grupos.setdefault(year, {'capital': Decimal('0'),
+                                       'intereses': Decimal('0'),
+                                       'cuotas': 0})
+        g['capital'] += _safe_decimal(capital)
+        g['intereses'] += _safe_decimal(intereses)
+        g['cuotas'] += 1
 
-        fecha_date = fecha.date() if hasattr(fecha, 'date') else fecha
-        # Intereses con TCR: en Excel hoja Variables Macro se ve que TCR es 0.921
-        # Pero la columna C ya da intereses sin TCR. Por simplicidad guardamos
-        # intereses_tcr = 0 y dejamos solo intereses como en columna C.
+    n = 0
+    for year in sorted(grupos.keys()):
+        g = grupos[year]
+        tcr = (g['intereses'] * TCR_FACTOR).quantize(Decimal('0.01'))
         AmortizacionPagare.objects.create(
             pagare=pagare,
-            numero_cuota=cuota_int,
-            fecha_pago=fecha_date,
-            vigencia_pago=fecha_date.year,
-            capital_principal=_safe_decimal(capital),
-            intereses=_safe_decimal(intereses),
-            intereses_tcr=Decimal('0'),
-            saldo_capital=_safe_decimal(saldo),
+            vigencia_pago=year,
+            capital_principal=g['capital'],
+            intereses=g['intereses'],
+            intereses_tcr=tcr,
         )
         n += 1
-    print(f'  Cuotas importadas: {n}')
-
-    # Verificacion por vigencia
-    from django.db.models import Sum
-    for ano in [2026, 2027, 2028, 2029, 2030]:
-        agg = AmortizacionPagare.objects.filter(pagare=pagare, vigencia_pago=ano).aggregate(
-            c=Sum('capital_principal'), i=Sum('intereses'))
-        if agg['c'] or agg['i']:
-            print(f'  Anio {ano}: capital=${agg["c"] or 0:,.0f}  intereses=${agg["i"] or 0:,.0f}')
-
+        total = g['capital'] + g['intereses'] + tcr
+        print(f'  {year}: {g["cuotas"]} cuotas  K=${g["capital"]:,.0f}  '
+              f'I=${g["intereses"]:,.0f}  TCR=${tcr:,.0f}  Total=${total:,.0f}')
     return n
 
 

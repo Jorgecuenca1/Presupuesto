@@ -172,16 +172,18 @@ class TablaConcejoPersoneria(models.Model):
     def __str__(self):
         return f'Cat. {self.get_categoria_display()}'
 
-    def calcular_honorarios_concejo(self, valor_smlmv):
+    def calcular_honorarios_concejo(self, valor_smlmv=None, vigencia=None):
         """Vr Honorarios = valor_sesion × (ord + extra) × num_concejales.
 
-        Si valor_sesion_concejal está en 0 cae al cálculo legacy
-        (honorario_concejal_smlmv × valor_smlmv × sesiones × concejales).
+        Si valor_sesion_concejal está en 0 cae al cálculo legacy basado en SMLMV.
+        Si no se pasa valor_smlmv pero sí vigencia, se consulta VariableMacro.
         """
         total_sesiones = self.sesiones_ordinarias + self.sesiones_extraordinarias
         if self.valor_sesion_concejal and self.valor_sesion_concejal > 0:
             return self.valor_sesion_concejal * total_sesiones * self.num_concejales
-        return self.honorario_concejal_smlmv * valor_smlmv * total_sesiones * self.num_concejales
+        if not valor_smlmv and vigencia:
+            valor_smlmv = get_smlv(vigencia)
+        return self.honorario_concejal_smlmv * (valor_smlmv or Decimal('0')) * total_sesiones * self.num_concejales
 
     def calcular_transferencia_concejo(self, icld_total, valor_smlmv, pct_icld_adicional):
         """Total Concejo = Vr Honorarios + ICLD × pct_icld_adicional.
@@ -192,15 +194,21 @@ class TablaConcejoPersoneria(models.Model):
         adicional = icld_total * (pct_icld_adicional or Decimal('0'))
         return honorarios + adicional
 
-    def calcular_transferencia_personeria(self, vigencia, icld_total, valor_smlmv):
+    def calcular_transferencia_personeria(self, vigencia, icld_total, valor_smlmv=None):
         """Transferencia personería según la lógica del Anexo 6.
 
         - Especial/1ª/2ª: ICLD × limite_personeria_pct_icld / 100
-        - 5ª (Puerto López): SMLV de PersoneriaSMLVProgresion(vigencia, categoria=5) × valor_smlmv
-        - 3ª/4ª/6ª: personeria_smlv_fijo × valor_smlmv
+        - Cats con progresion SMLV (5ª, 6ª): SMLV de PersoneriaSMLVProgresion × SMLMV
+        - 3ª/4ª: personeria_smlv_fijo × SMLMV
+
+        Si valor_smlmv no se pasa o es 0/None, se consulta el SMLMV del año
+        en VariableMacro automaticamente.
         """
         if self.categoria in (0, 1, 2):
             return icld_total * self.limite_personeria_pct_icld / Decimal('100')
+
+        if not valor_smlmv:
+            valor_smlmv = get_smlv(vigencia)
 
         smlv = None
         progresion = PersoneriaSMLVProgresion.objects.filter(
@@ -211,8 +219,8 @@ class TablaConcejoPersoneria(models.Model):
         elif self.personeria_smlv_fijo:
             smlv = self.personeria_smlv_fijo
 
-        if smlv:
-            return Decimal(smlv) * valor_smlmv
+        if smlv and valor_smlmv:
+            return Decimal(smlv) * Decimal(valor_smlmv)
         return Decimal('0')
 
     def calcular_limite_concejo(self, icld_total):
@@ -244,6 +252,64 @@ class PersoneriaSMLVProgresion(models.Model):
 
     def __str__(self):
         return f'Cat. {self.get_categoria_display()} {self.vigencia}: {self.smlv} SMLV'
+
+
+class VariableMacro(models.Model):
+    """Variables macroeconomicas por año (Excel 'Variables Macro').
+
+    Permite que SMLMV, IPC, PIB, etc. se consulten por anio en lugar de
+    almacenarse como un solo valor en ParametrosSistema. Asi, cambiar la
+    vigencia activa toma automaticamente el valor proyectado/historico
+    correspondiente al ano.
+    """
+    TIPO_CHOICES = [
+        ('SMLV', 'Salario Mínimo Legal Vigente (SMLMV)'),
+        ('IPC', 'Inflación (IPC)'),
+        ('PIB', 'PIB Nacional ($ Corrientes)'),
+        ('PETROLEO', 'Precio Barril Petróleo (US$)'),
+        ('DTF', 'DTF (Tasa de interés)'),
+        ('TRM', 'TRM (Tasa Cambio)'),
+    ]
+    anio = models.IntegerField(verbose_name='Año')
+    tipo = models.CharField(max_length=10, choices=TIPO_CHOICES, verbose_name='Variable')
+    valor = models.DecimalField(max_digits=20, decimal_places=4, default=0,
+                                verbose_name='Valor')
+    pct_anual = models.DecimalField(max_digits=8, decimal_places=4, default=0,
+                                     verbose_name='% Crecimiento Anual',
+                                     help_text='Ej: 0.062 = 6.2%')
+    es_proyectado = models.BooleanField(default=False,
+                                         verbose_name='¿Es proyección?',
+                                         help_text='False = histórico real, True = proyección')
+
+    class Meta:
+        verbose_name = 'Variable Macro'
+        verbose_name_plural = 'Variables Macro'
+        unique_together = ['anio', 'tipo']
+        ordering = ['tipo', 'anio']
+
+    def __str__(self):
+        return f'{self.get_tipo_display()} {self.anio}: {self.valor}'
+
+
+def get_macro(anio, tipo):
+    """Helper: obtiene el valor de una variable macro para un año."""
+    obj = VariableMacro.objects.filter(anio=anio, tipo=tipo).first()
+    return obj.valor if obj else None
+
+
+def get_smlv(anio, fallback=None):
+    return get_macro(anio, 'SMLV') or fallback or Decimal('0')
+
+
+def get_ipc(anio, fallback=None):
+    obj = VariableMacro.objects.filter(anio=anio, tipo='IPC').first()
+    if obj:
+        return obj.pct_anual if obj.pct_anual else obj.valor
+    return fallback or Decimal('0')
+
+
+def get_pib(anio, fallback=None):
+    return get_macro(anio, 'PIB') or fallback or Decimal('0')
 
 
 class VigenciaFutura(models.Model):

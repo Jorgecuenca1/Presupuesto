@@ -84,6 +84,9 @@
         <a href="{% url 'tabla_concejo_personeria' %}" class="nav-link {% if request.resolver_match.url_name == 'tabla_concejo_personeria' %}active{% endif %}">
             <i class="bi bi-building"></i> Tabla Concejo/Personería
         </a>
+        <a href="{% url 'variables_macro' %}" class="nav-link {% if request.resolver_match.url_name == 'variables_macro' %}active{% endif %}">
+            <i class="bi bi-graph-up-arrow"></i> Variables Macroeconómicas
+        </a>
 
         <div class="nav-section">Ingresos - Cifras Históricas</div>
         <a href="{% url 'cifras_historicas_ingresos' %}" class="nav-link {% if request.resolver_match.url_name == 'cifras_historicas_ingresos' %}active{% endif %}">

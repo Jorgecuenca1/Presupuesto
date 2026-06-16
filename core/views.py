@@ -5,7 +5,10 @@ from django.contrib import messages
 from django.db.models import Sum, Count
 from decimal import Decimal
 from .forms import LoginForm, RegistroForm, ParametrosForm, TablaConcejoPersoneriaForm
-from .models import ParametrosSistema, TablaConcejoPersoneria, PersoneriaSMLVProgresion
+from .models import (
+    ParametrosSistema, TablaConcejoPersoneria, PersoneriaSMLVProgresion,
+    VariableMacro,
+)
 
 
 def login_view(request):
@@ -368,6 +371,102 @@ def progresion_smlv_eliminar(request, pk):
     get_object_or_404(PersoneriaSMLVProgresion, pk=pk).delete()
     messages.success(request, 'Progresión eliminada')
     return redirect('tabla_concejo_personeria')
+
+
+@login_required
+def variables_macro_view(request):
+    """Ventana de Variables Macroeconómicas: SMLV, IPC, PIB, etc. por año.
+
+    GET: muestra tabla editable con histórico (2010-2025) y proyecciones (2026+).
+    POST: guarda cambios + recalcula todos los rubros que dependen de macro.
+    """
+    params = ParametrosSistema.objects.filter(activo=True).first()
+
+    if request.method == 'POST':
+        try:
+            # Guardar cambios de cada variable
+            for v in VariableMacro.objects.all():
+                key_valor = f'var_{v.pk}_valor'
+                key_pct = f'var_{v.pk}_pct'
+                cambio = False
+                if key_valor in request.POST:
+                    nuevo = Decimal(request.POST[key_valor] or '0')
+                    if v.valor != nuevo:
+                        v.valor = nuevo
+                        cambio = True
+                if key_pct in request.POST:
+                    nuevo = Decimal(request.POST[key_pct] or '0')
+                    if v.pct_anual != nuevo:
+                        v.pct_anual = nuevo
+                        cambio = True
+                if cambio:
+                    v.save(update_fields=['valor', 'pct_anual'])
+
+            # Sincronizar valor_smlmv y tasa_ipc en ParametrosSistema con el ano vigente
+            if params:
+                from .models import get_smlv, get_ipc
+                smlv_vig = get_smlv(params.vigencia)
+                ipc_vig = get_ipc(params.vigencia)
+                if smlv_vig:
+                    params.valor_smlmv = smlv_vig
+                if ipc_vig:
+                    params.tasa_ipc = ipc_vig
+                params.save(update_fields=['valor_smlmv', 'tasa_ipc'])
+
+                # Recalcular todo
+                from ingresos.utils import calcular_todos_ingresos
+                from gastos.utils import recalcular_rubros_metodo
+                from ingresos.models import RubroIngreso
+                from gastos.models import RubroGasto
+                calcular_todos_ingresos(params.vigencia)
+                recalcular_rubros_metodo(params.vigencia)
+                for t in RubroIngreso.objects.filter(vigencia=params.vigencia, es_titulo=True).order_by('-nivel'):
+                    t.calcular_hijos()
+                for t in RubroGasto.objects.filter(vigencia=params.vigencia, es_titulo=True).order_by('-nivel'):
+                    t.calcular_hijos()
+            messages.success(request, 'Variables Macro actualizadas y rubros recalculados')
+        except Exception as e:
+            messages.error(request, f'Error: {e}')
+        return redirect('variables_macro')
+
+    # GET: agrupar por tipo
+    TIPOS = ['SMLV', 'IPC', 'PIB', 'PETROLEO', 'DTF', 'TRM']
+    grupos = []
+    for tipo in TIPOS:
+        vars = list(VariableMacro.objects.filter(tipo=tipo).order_by('anio'))
+        if vars:
+            label = vars[0].get_tipo_display()
+            grupos.append({'tipo': tipo, 'label': label, 'variables': vars})
+
+    return render(request, 'core/variables_macro.html', {
+        'params': params,
+        'grupos': grupos,
+        'anios_proyeccion': range(2026, 2037),
+    })
+
+
+@login_required
+def variable_macro_agregar(request):
+    """Agrega una variable macro nueva."""
+    if request.method == 'POST':
+        anio = int(request.POST.get('anio') or 0)
+        tipo = request.POST.get('tipo')
+        valor = Decimal(request.POST.get('valor') or '0')
+        pct = Decimal(request.POST.get('pct_anual') or '0')
+        es_proy = request.POST.get('es_proyectado') == 'on'
+        if anio and tipo:
+            VariableMacro.objects.update_or_create(
+                anio=anio, tipo=tipo,
+                defaults={'valor': valor, 'pct_anual': pct, 'es_proyectado': es_proy})
+            messages.success(request, f'Variable {tipo} {anio} agregada')
+    return redirect('variables_macro')
+
+
+@login_required
+def variable_macro_eliminar(request, pk):
+    get_object_or_404(VariableMacro, pk=pk).delete()
+    messages.success(request, 'Variable eliminada')
+    return redirect('variables_macro')
 
 
 @login_required

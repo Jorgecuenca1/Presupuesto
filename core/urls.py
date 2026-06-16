@@ -12,4 +12,7 @@ urlpatterns = [
     path('tabla-concejo/<int:pk>/eliminar/', views.tabla_concejo_eliminar, name='tabla_concejo_eliminar'),
     path('progresion-smlv/guardar/', views.progresion_smlv_guardar, name='progresion_smlv_guardar'),
     path('progresion-smlv/<int:pk>/eliminar/', views.progresion_smlv_eliminar, name='progresion_smlv_eliminar'),
+    path('variables-macro/', views.variables_macro_view, name='variables_macro'),
+    path('variables-macro/agregar/', views.variable_macro_agregar, name='variable_macro_agregar'),
+    path('variables-macro/<int:pk>/eliminar/', views.variable_macro_eliminar, name='variable_macro_eliminar'),
 ]

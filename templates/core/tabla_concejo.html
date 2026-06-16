@@ -10,128 +10,105 @@
 <h4 class="mb-4">Anexo 6 - Cálculo Órganos de Control (Leyes 617/2000, 2461 y 2422)</h4>
 
 {% if params %}
+<!-- Variables base -->
+<div class="card mb-3 border-info">
+    <div class="card-header bg-info text-white">
+        <i class="bi bi-sliders"></i> Variables base — Vigencia {{ vigencia_activa }}
+    </div>
+    <div class="card-body py-2">
+        <div class="row g-2 small">
+            <div class="col-md-3"><strong>Categoría municipio:</strong> {{ params.categoria_municipio }} ({{ params.get_categoria_municipio_display|default:"" }})</div>
+            <div class="col-md-3"><strong>ICLD:</strong> ${{ icld|floatformat:0|intcomma }}</div>
+            <div class="col-md-3"><strong>SMLMV:</strong> ${{ params.valor_smlmv|floatformat:0|intcomma }}</div>
+            <div class="col-md-3"><strong>% Adicional Concejo:</strong> {{ params.pct_icld_adicional_concejo|floatformat:4 }}</div>
+        </div>
+        <small class="text-muted">Cambiar estos valores en <a href="{% url 'parametros' %}">Parámetros del Sistema</a> recalcula automáticamente toda la tabla.</small>
+    </div>
+</div>
+
+<!-- Resumen categoría activa -->
 <div class="row g-3 mb-4">
     <div class="col-md-6">
         <div class="card border-primary">
             <div class="card-header bg-primary text-white">
-                <i class="bi bi-building"></i> CONCEJO MUNICIPAL — Vigencia {{ params.vigencia }}
+                <i class="bi bi-building"></i> CONCEJO MUNICIPAL — Categoría {{ params.categoria_municipio }}
             </div>
-            <div class="card-body">
-                <table class="table table-sm mb-0">
-                    <tr>
-                        <td>Categoría municipio</td>
-                        <td class="text-end"><strong>{{ params.get_categoria_municipio_display|default:params.categoria_municipio }}</strong></td>
-                    </tr>
-                    <tr>
-                        <td>Valor sesión concejal</td>
-                        <td class="text-end">${{ tabla_actual.valor_sesion_concejal|floatformat:0|intcomma }}</td>
-                    </tr>
-                    <tr>
-                        <td>Sesiones (Ord + Extra) × Concejales</td>
-                        <td class="text-end">{{ tabla_actual.sesiones_ordinarias }} + {{ tabla_actual.sesiones_extraordinarias }} × {{ tabla_actual.num_concejales }}</td>
-                    </tr>
-                    <tr>
-                        <td>Vr Honorarios</td>
-                        <td class="text-end">${{ honorarios|floatformat:0|intcomma }}</td>
-                    </tr>
-                    <tr>
-                        <td>ICLD</td>
-                        <td class="text-end">${{ icld|floatformat:0|intcomma }}</td>
-                    </tr>
-                    <tr>
-                        <td>% ICLD Adicional</td>
-                        <td class="text-end">{{ params.pct_icld_adicional_concejo|floatformat:4 }}</td>
-                    </tr>
-                    <tr class="table-primary">
-                        <td><strong>TOTAL TRANSFERENCIA CONCEJO</strong></td>
-                        <td class="text-end"><strong class="fs-5">${{ transf_concejo|floatformat:0|intcomma }}</strong></td>
-                    </tr>
+            <div class="card-body py-2">
+                <table class="table table-sm mb-0 small">
+                    <tr><td>Vr Honorarios</td><td class="text-end">${{ honorarios|floatformat:0|intcomma }}</td></tr>
+                    <tr><td>% ICLD Adicional</td><td class="text-end">${{ icld|floatformat:0|intcomma }} × {{ params.pct_icld_adicional_concejo }}</td></tr>
+                    <tr class="table-primary"><td><strong>TOTAL TRANSFERENCIA CONCEJO</strong></td><td class="text-end"><strong class="fs-5">${{ transf_concejo|floatformat:0|intcomma }}</strong></td></tr>
                 </table>
             </div>
         </div>
     </div>
-
     <div class="col-md-6">
         <div class="card border-success">
             <div class="card-header bg-success text-white">
-                <i class="bi bi-shield-check"></i> PERSONERÍA — Vigencia {{ params.vigencia }}
+                <i class="bi bi-shield-check"></i> PERSONERÍA — Categoría {{ params.categoria_municipio }}
             </div>
-            <div class="card-body">
-                <table class="table table-sm mb-0">
-                    <tr>
-                        <td>Categoría municipio</td>
-                        <td class="text-end"><strong>{{ params.get_categoria_municipio_display|default:params.categoria_municipio }}</strong></td>
-                    </tr>
+            <div class="card-body py-2">
+                <table class="table table-sm mb-0 small">
                     {% if params.categoria_municipio == 0 or params.categoria_municipio == 1 or params.categoria_municipio == 2 %}
-                    <tr>
-                        <td>Fórmula</td>
-                        <td class="text-end">ICLD × {{ tabla_actual.limite_personeria_pct_icld }}%</td>
-                    </tr>
+                    <tr><td>Fórmula</td><td class="text-end">ICLD × {{ tabla_actual.limite_personeria_pct_icld }}%</td></tr>
                     {% else %}
-                    <tr>
-                        <td>SMLV configurado</td>
-                        <td class="text-end">
-                            {% if smlv_personeria %}{{ smlv_personeria }} (progresión Ley 2461){% else %}{{ tabla_actual.personeria_smlv_fijo }} (fijo){% endif %}
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Valor SMLMV</td>
-                        <td class="text-end">${{ params.valor_smlmv|floatformat:0|intcomma }}</td>
-                    </tr>
+                    <tr><td>SMLV (vig {{ vigencia_activa }})</td><td class="text-end">{{ smlv_personeria|default:tabla_actual.personeria_smlv_fijo }} SMLV × ${{ params.valor_smlmv|floatformat:0|intcomma }}</td></tr>
                     {% endif %}
-                    <tr>
-                        <td>ICLD</td>
-                        <td class="text-end">${{ icld|floatformat:0|intcomma }}</td>
-                    </tr>
-                    <tr class="table-success">
-                        <td><strong>TOTAL TRANSFERENCIA PERSONERÍA</strong></td>
-                        <td class="text-end"><strong class="fs-5">${{ transf_personeria|floatformat:0|intcomma }}</strong></td>
-                    </tr>
+                    <tr class="table-success"><td><strong>TOTAL TRANSFERENCIA PERSONERÍA</strong></td><td class="text-end"><strong class="fs-5">${{ transf_personeria|floatformat:0|intcomma }}</strong></td></tr>
                 </table>
             </div>
         </div>
     </div>
 </div>
 
-<div class="alert alert-info">
-    <i class="bi bi-info-circle"></i>
-    Estos valores se aplican automáticamente a los rubros de gasto que tengan método
-    <code>OCC</code> (Concejo) o <code>OCP</code> (Personería). Cambia los parámetros en
-    <a href="{% url 'parametros' %}">Parámetros del Sistema</a> y se recalcula al guardar.
-</div>
-{% endif %}
-
-<!-- Tabla por categoría -->
+<!-- Tabla integral por categoria -->
 <div class="card mb-4">
-    <div class="card-header bg-white"><i class="bi bi-table"></i> Tabla por Categoría (Excel Anexo 6)</div>
-    <div class="card-body table-responsive">
-        <table class="table table-sm table-hover">
-            <thead>
-                <tr>
-                    <th>Categoría</th>
-                    <th class="text-end">Valor sesión ($)</th>
-                    <th class="text-end">Ses. Ord.</th>
-                    <th class="text-end">Ses. Ext.</th>
-                    <th class="text-end">Concejales</th>
-                    <th class="text-end">Límite Concejo (%ICLD)</th>
-                    <th class="text-end">Personería (%ICLD)</th>
-                    <th class="text-end">Personería SMLV fijo</th>
-                    <th></th>
+    <div class="card-header bg-dark text-white">
+        <i class="bi bi-table"></i> Cálculo por Categoría Municipal (vigencia {{ vigencia_activa }})
+        <small class="float-end">Fila resaltada = categoría actual del municipio</small>
+    </div>
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-sm table-bordered mb-0" style="font-size:.78rem;">
+            <thead class="table-light">
+                <tr class="text-center">
+                    <th rowspan="2" style="vertical-align:middle">Cat.</th>
+                    <th colspan="6" class="bg-primary text-white">CONCEJO</th>
+                    <th colspan="3" class="bg-success text-white">PERSONERÍA</th>
+                    <th rowspan="2" style="vertical-align:middle">Acción</th>
+                </tr>
+                <tr class="text-center">
+                    <th>Valor sesión</th>
+                    <th>Ses. Ord.</th>
+                    <th>Ses. Ext.</th>
+                    <th>Concejales</th>
+                    <th>Vr Honorarios</th>
+                    <th>TOTAL Concejo<br><small>(Hon. + ICLD·{{ params.pct_icld_adicional_concejo }})</small></th>
+                    <th>% ICLD ó SMLV</th>
+                    <th>SMLV efectivo</th>
+                    <th>TOTAL Personería</th>
                 </tr>
             </thead>
             <tbody>
-                {% for t in tablas %}
-                <tr {% if params and t.categoria == params.categoria_municipio %}class="table-warning fw-bold"{% endif %}>
-                    <td>{{ t.get_categoria_display }}</td>
-                    <td class="text-end">${{ t.valor_sesion_concejal|floatformat:0|intcomma }}</td>
-                    <td class="text-end">{{ t.sesiones_ordinarias }}</td>
-                    <td class="text-end">{{ t.sesiones_extraordinarias }}</td>
-                    <td class="text-end">{{ t.num_concejales }}</td>
-                    <td class="text-end">{{ t.limite_concejo_pct_icld }}%</td>
-                    <td class="text-end">{{ t.limite_personeria_pct_icld }}%</td>
-                    <td class="text-end">{{ t.personeria_smlv_fijo }}</td>
-                    <td>
-                        <a href="{% url 'tabla_concejo_eliminar' t.pk %}" class="btn btn-sm btn-outline-danger"
+                {% for f in filas_categoria %}
+                <tr class="{% if f.es_actual %}table-warning fw-bold{% endif %}">
+                    <td class="text-center"><strong>{{ f.tabla.get_categoria_display }}</strong></td>
+                    <td class="text-end">${{ f.tabla.valor_sesion_concejal|floatformat:0|intcomma }}</td>
+                    <td class="text-center">{{ f.tabla.sesiones_ordinarias }}</td>
+                    <td class="text-center">{{ f.tabla.sesiones_extraordinarias }}</td>
+                    <td class="text-center">{{ f.tabla.num_concejales }}</td>
+                    <td class="text-end">${{ f.vr_honorarios|floatformat:0|intcomma }}</td>
+                    <td class="text-end fw-bold text-primary">${{ f.total_concejo|floatformat:0|intcomma }}</td>
+                    <td class="text-center">
+                        {% if f.tabla.limite_personeria_pct_icld %}
+                            {{ f.tabla.limite_personeria_pct_icld }}% ICLD
+                        {% else %}
+                            <span class="text-muted">{{ f.origen_smlv }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">{% if f.smlv_efectivo %}{{ f.smlv_efectivo }}{% else %}—{% endif %}</td>
+                    <td class="text-end fw-bold text-success">${{ f.total_personeria|floatformat:0|intcomma }}</td>
+                    <td class="text-center">
+                        <a href="{% url 'tabla_concejo_eliminar' f.tabla.pk %}" class="btn btn-sm btn-outline-danger"
                            onclick="return confirm('Eliminar?')"><i class="bi bi-trash"></i></a>
                     </td>
                 </tr>
@@ -141,9 +118,18 @@
     </div>
 </div>
 
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i>
+    Estos valores se aplican automáticamente a los rubros de gasto con método
+    <code>OCC</code> (Concejo) o <code>OCP</code> (Personería). Cambiar la
+    <strong>categoría municipio</strong> en <a href="{% url 'parametros' %}">Parámetros del Sistema</a>
+    cambia la fila resaltada y aplica los valores de esa categoría a los rubros.
+</div>
+{% endif %}
+
 <!-- Form alta/edición categoría -->
 <div class="card mb-4">
-    <div class="card-header bg-white"><i class="bi bi-plus-circle"></i> Agregar/Editar Categoría</div>
+    <div class="card-header bg-white"><i class="bi bi-plus-circle"></i> Agregar / Editar parámetros por categoría</div>
     <div class="card-body">
         <form method="post" action="{% url 'tabla_concejo_guardar' %}">
             {% csrf_token %}
@@ -157,6 +143,7 @@
                 <div class="col-md-2"><label class="form-label">Personería SMLV fijo</label>{{ form.personeria_smlv_fijo }}</div>
             </div>
             <button type="submit" class="btn btn-primary btn-sm mt-2"><i class="bi bi-save"></i> Guardar</button>
+            <small class="text-muted ms-2">Si la categoría usa progresión SMLV (Ley 2461), deje "Personería SMLV fijo" en 0 y registre el SMLV abajo.</small>
         </form>
     </div>
 </div>
@@ -164,7 +151,7 @@
 <!-- Progresión SMLV Personería -->
 <div class="card">
     <div class="card-header bg-white">
-        <i class="bi bi-graph-up"></i> Progresión SMLV Personería (Ley 2461/2422 - 5ª categoría: 2025=210, 2026=220, 2027=230, 2028=240, 2029=250)
+        <i class="bi bi-graph-up"></i> Progresión SMLV Personería (Ley 2461/2422 — para categorías 5 y 6)
     </div>
     <div class="card-body table-responsive">
         <table class="table table-sm">
@@ -173,6 +160,7 @@
                     <th>Vigencia</th>
                     <th>Categoría</th>
                     <th>SMLV</th>
+                    <th>Valor Personería (= SMLV × SMLMV)</th>
                     <th></th>
                 </tr>
             </thead>
@@ -182,6 +170,7 @@
                     <td>{{ p.vigencia }}</td>
                     <td>{{ p.get_categoria_display }}</td>
                     <td>{{ p.smlv }}</td>
+                    <td class="text-end">${{ p.smlv|floatformat:0 }} × ${{ params.valor_smlmv|floatformat:0|intcomma }} = ${{ p.smlv|floatformat:0 }}<small class="text-muted"> × SMLMV</small></td>
                     <td>
                         <a href="{% url 'progresion_smlv_eliminar' p.pk %}" class="btn btn-sm btn-outline-danger"
                            onclick="return confirm('Eliminar?')"><i class="bi bi-trash"></i></a>
@@ -194,7 +183,7 @@
             {% csrf_token %}
             <div class="col-md-3">
                 <label class="form-label">Vigencia</label>
-                <input type="number" name="vigencia" value="{{ params.vigencia|default:2026 }}" class="form-control" required>
+                <input type="number" name="vigencia" value="{{ params.vigencia|default:2027 }}" class="form-control" required>
             </div>
             <div class="col-md-3">
                 <label class="form-label">Categoría</label>

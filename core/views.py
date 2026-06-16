@@ -184,48 +184,99 @@ def parametros_view(request):
 
 @login_required
 def tabla_concejo_personeria(request):
-    tablas = TablaConcejoPersoneria.objects.all()
-    form = TablaConcejoPersoneriaForm()
+    """Anexo 6 - Organos de Control.
 
+    Muestra una tabla integral por categoria municipal con valores calculados:
+    - Vr Honorarios = valor_sesion x (ord+extra) x concejales
+    - %ICLD Adicional = ICLD x pct_icld_adicional_concejo
+    - Total Concejo  = Vr Honorarios + %ICLD Adicional
+    - SMLV efectivo  = de la progresion vigente (o smlv_fijo si no hay progresion)
+    - Total Personeria segun categoria (ICLD%, SMLV fijo, o SMLV progresion).
+    """
+    form = TablaConcejoPersoneriaForm()
     params = ParametrosSistema.objects.filter(activo=True).first()
+
+    icld = Decimal('0')
+    valor_smlmv = Decimal('0')
+    pct_adic = Decimal('0')
+    vigencia_activa = None
     tabla_actual = None
     honorarios = Decimal('0')
     transf_concejo = Decimal('0')
     transf_personeria = Decimal('0')
-    icld = Decimal('0')
     smlv_personeria = None
+    filas_categoria = []
     progresiones = []
+
     if params:
         from gastos.utils import calcular_icld
         icld = params.icld_calculado or Decimal('0')
         if icld <= 0:
             icld = calcular_icld(params.vigencia)
+        valor_smlmv = params.valor_smlmv or Decimal('0')
+        pct_adic = params.pct_icld_adicional_concejo or Decimal('0')
+        vigencia_activa = params.vigencia
+        adicional_icld = icld * pct_adic  # mismo para todas las categorias
 
+        # Cards de la categoria activa
         tabla_actual = TablaConcejoPersoneria.objects.filter(categoria=params.categoria_municipio).first()
         if tabla_actual:
-            honorarios = tabla_actual.calcular_honorarios_concejo(params.valor_smlmv or Decimal('0'))
-            transf_concejo = tabla_actual.calcular_transferencia_concejo(
-                icld, params.valor_smlmv or Decimal('0'),
-                params.pct_icld_adicional_concejo or Decimal('0'))
-            transf_personeria = tabla_actual.calcular_transferencia_personeria(
-                params.vigencia, icld, params.valor_smlmv or Decimal('0'))
-
+            honorarios = tabla_actual.calcular_honorarios_concejo(valor_smlmv)
+            transf_concejo = tabla_actual.calcular_transferencia_concejo(icld, valor_smlmv, pct_adic)
+            transf_personeria = tabla_actual.calcular_transferencia_personeria(vigencia_activa, icld, valor_smlmv)
             prog = PersoneriaSMLVProgresion.objects.filter(
-                vigencia=params.vigencia, categoria=params.categoria_municipio
+                vigencia=vigencia_activa, categoria=params.categoria_municipio
             ).first()
             if prog:
                 smlv_personeria = prog.smlv
 
+        # Tabla integral por categoria con valores calculados
+        for t in TablaConcejoPersoneria.objects.all().order_by('categoria'):
+            vr_hon = t.calcular_honorarios_concejo(valor_smlmv)
+            total_c = vr_hon + adicional_icld
+
+            # SMLV efectivo para esta categoria en la vigencia activa
+            prog_cat = PersoneriaSMLVProgresion.objects.filter(
+                vigencia=vigencia_activa, categoria=t.categoria).first()
+            smlv_efectivo = None
+            origen_smlv = ''
+            if t.categoria in (0, 1, 2):
+                origen_smlv = f'{t.limite_personeria_pct_icld}% ICLD'
+            else:
+                if prog_cat:
+                    smlv_efectivo = prog_cat.smlv
+                    origen_smlv = f'{prog_cat.smlv} SMLV (Ley 2461)'
+                elif t.personeria_smlv_fijo:
+                    smlv_efectivo = t.personeria_smlv_fijo
+                    origen_smlv = f'{t.personeria_smlv_fijo} SMLV (fijo)'
+                else:
+                    origen_smlv = '0'
+
+            total_p = t.calcular_transferencia_personeria(vigencia_activa, icld, valor_smlmv)
+
+            filas_categoria.append({
+                'tabla': t,
+                'es_actual': t.categoria == params.categoria_municipio,
+                'vr_honorarios': vr_hon,
+                'adicional_icld': adicional_icld,
+                'total_concejo': total_c,
+                'smlv_efectivo': smlv_efectivo,
+                'origen_smlv': origen_smlv,
+                'total_personeria': total_p,
+            })
+
         progresiones = PersoneriaSMLVProgresion.objects.all().order_by('categoria', 'vigencia')
 
     return render(request, 'core/tabla_concejo.html', {
-        'tablas': tablas, 'form': form, 'params': params,
+        'form': form, 'params': params,
         'tabla_actual': tabla_actual,
         'honorarios': honorarios,
         'transf_concejo': transf_concejo,
         'transf_personeria': transf_personeria,
         'icld': icld,
         'smlv_personeria': smlv_personeria,
+        'filas_categoria': filas_categoria,
+        'vigencia_activa': vigencia_activa,
         'progresiones': progresiones,
     })
 

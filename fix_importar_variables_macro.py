@@ -80,9 +80,10 @@ def run():
             pct = safe_num(ws[f'{col_pct}{r}'].value) if col_pct else Decimal('0')
 
             if tipo == 'IPC':
-                # Para IPC, K es el %. Lo guardamos como pct_anual y valor=0.
-                valor_final = pct or Decimal('0')
-                pct_final = pct or Decimal('0')
+                # Para IPC, la columna K contiene el % directamente.
+                # Guardamos en ambos campos para que get_ipc() lo encuentre.
+                valor_final = valor or Decimal('0')
+                pct_final = valor or Decimal('0')
             else:
                 valor_final = valor or Decimal('0')
                 pct_final = pct or Decimal('0')

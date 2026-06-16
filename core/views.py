@@ -186,15 +186,74 @@ def parametros_view(request):
 def tabla_concejo_personeria(request):
     """Anexo 6 - Organos de Control.
 
-    Muestra una tabla integral por categoria municipal con valores calculados:
-    - Vr Honorarios = valor_sesion x (ord+extra) x concejales
-    - %ICLD Adicional = ICLD x pct_icld_adicional_concejo
-    - Total Concejo  = Vr Honorarios + %ICLD Adicional
-    - SMLV efectivo  = de la progresion vigente (o smlv_fijo si no hay progresion)
-    - Total Personeria segun categoria (ICLD%, SMLV fijo, o SMLV progresion).
+    GET: Tabla integral editable por categoria municipal con valores calculados.
+    POST: Guarda los cambios de Variables base + Tabla por categoria + Progresion
+          SMLV, y recalcula todos los rubros automaticos (OCC, OCP, CPS, PEN, etc.).
     """
     form = TablaConcejoPersoneriaForm()
     params = ParametrosSistema.objects.filter(activo=True).first()
+
+    if request.method == 'POST' and params:
+        try:
+            # 1. Variables base (ParametrosSistema)
+            if 'valor_smlmv' in request.POST:
+                params.valor_smlmv = Decimal(request.POST['valor_smlmv'] or '0')
+            if 'icld_calculado' in request.POST:
+                params.icld_calculado = Decimal(request.POST['icld_calculado'] or '0')
+            if 'pct_icld_adicional_concejo' in request.POST:
+                params.pct_icld_adicional_concejo = Decimal(
+                    request.POST['pct_icld_adicional_concejo'] or '0')
+            if 'categoria_municipio' in request.POST:
+                params.categoria_municipio = int(request.POST['categoria_municipio'] or 5)
+            params.save()
+
+            # 2. TablaConcejoPersoneria por categoria
+            for t in TablaConcejoPersoneria.objects.all():
+                pref = f'cat_{t.categoria}_'
+                campos_dec = ['valor_sesion_concejal', 'limite_personeria_pct_icld']
+                campos_int = ['sesiones_ordinarias', 'sesiones_extraordinarias',
+                              'num_concejales', 'personeria_smlv_fijo']
+                cambios = []
+                for f in campos_dec:
+                    if pref + f in request.POST:
+                        val = Decimal(request.POST[pref + f] or '0')
+                        if getattr(t, f) != val:
+                            setattr(t, f, val)
+                            cambios.append(f)
+                for f in campos_int:
+                    if pref + f in request.POST:
+                        val = int(request.POST[pref + f] or 0)
+                        if getattr(t, f) != val:
+                            setattr(t, f, val)
+                            cambios.append(f)
+                if cambios:
+                    t.save(update_fields=cambios)
+
+            # 3. PersoneriaSMLVProgresion
+            for p in PersoneriaSMLVProgresion.objects.all():
+                key = f'prog_{p.pk}_smlv'
+                if key in request.POST:
+                    val = int(request.POST[key] or 0)
+                    if p.smlv != val:
+                        p.smlv = val
+                        p.save(update_fields=['smlv'])
+
+            # 4. Recalcular todo
+            from ingresos.utils import calcular_todos_ingresos
+            from gastos.utils import recalcular_rubros_metodo
+            from ingresos.models import RubroIngreso
+            from gastos.models import RubroGasto
+            calcular_todos_ingresos(params.vigencia)
+            recalcular_rubros_metodo(params.vigencia)
+            # Propagar titulos
+            for t in RubroIngreso.objects.filter(vigencia=params.vigencia, es_titulo=True).order_by('-nivel'):
+                t.calcular_hijos()
+            for t in RubroGasto.objects.filter(vigencia=params.vigencia, es_titulo=True).order_by('-nivel'):
+                t.calcular_hijos()
+            messages.success(request, 'Anexo 6 actualizado y rubros recalculados')
+        except Exception as e:
+            messages.error(request, f'Error al guardar: {e}')
+        return redirect('tabla_concejo_personeria')
 
     icld = Decimal('0')
     valor_smlmv = Decimal('0')
@@ -267,6 +326,7 @@ def tabla_concejo_personeria(request):
 
         progresiones = PersoneriaSMLVProgresion.objects.all().order_by('categoria', 'vigencia')
 
+    from .models import CategoriaConcejoChoices
     return render(request, 'core/tabla_concejo.html', {
         'form': form, 'params': params,
         'tabla_actual': tabla_actual,
@@ -278,6 +338,7 @@ def tabla_concejo_personeria(request):
         'filas_categoria': filas_categoria,
         'vigencia_activa': vigencia_activa,
         'progresiones': progresiones,
+        'cat_choices': CategoriaConcejoChoices.choices,
     })
 
 

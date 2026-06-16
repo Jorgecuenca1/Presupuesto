@@ -165,7 +165,15 @@ def _regenerar_costo_personal(params):
         cp.vacaciones = sal_anual * _D('0.0417')
         cp.cesantias = sal_anual * (params.pct_cesantias or 0)
         cp.intereses_cesantias = cp.cesantias * (params.pct_intereses_cesantias or 0)
-        cp.bonif_servicios_prestados = sal_mes * (params.pct_bonif_servicios_prestados or 0)
+        # BSP (Bonificacion por Servicios Prestados) - Dto 1042/78 art. 45:
+        # - Si salario_mensual <= umbral × SMLMV: BSP = 50% del sueldo (sueldo bajo)
+        # - Si salario_mensual >  umbral × SMLMV: BSP = 35% del sueldo (sueldo alto)
+        umbral_bsp = (params.umbral_smlmv_bsp or _D('2.0')) * (params.valor_smlmv or _D('0'))
+        if sal_mes <= umbral_bsp:
+            pct_bsp = params.pct_bonif_servicios_prestados or _D('0.50')
+        else:
+            pct_bsp = params.pct_bonif_servicios_prestados_alto or _D('0.35')
+        cp.bonif_servicios_prestados = sal_mes * pct_bsp
         cp.bonif_recreacion = sal_anual * (params.pct_bonif_recreacion or 0)
         # Aportes seguridad social
         cp.aportes_pension = sal_anual * (params.pct_aporte_pension or 0)

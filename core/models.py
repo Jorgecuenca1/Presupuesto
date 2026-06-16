@@ -120,9 +120,9 @@ class ParametrosSistema(models.Model):
                                                     verbose_name='% Intereses Cesantías',
                                                     help_text='Ley 52/1975. Default 12% anual sobre cesantías')
     # Prestaciones Sociales
-    pct_prima_servicios = models.DecimalField(max_digits=6, decimal_places=4, default=Decimal('0.0833'),
+    pct_prima_servicios = models.DecimalField(max_digits=6, decimal_places=4, default=Decimal('0.0417'),
                                                 verbose_name='% Prima de Servicios',
-                                                help_text='CST art. 306. Default 8.33% = 1 mes/año')
+                                                help_text='Sector público: 15 días = 4.17% (Dto 1042/78 art. 58). Sector privado: 8.33% = 1 mes.')
     pct_prima_navidad = models.DecimalField(max_digits=6, decimal_places=4, default=Decimal('0.0833'),
                                               verbose_name='% Prima de Navidad',
                                               help_text='Ley 41/1975. Default 8.33% = 1 mes/año')
@@ -130,8 +130,14 @@ class ParametrosSistema(models.Model):
                                                  verbose_name='% Prima de Vacaciones',
                                                  help_text='Ley 4/1992. Default 4.17% = 15 días/año')
     pct_bonif_servicios_prestados = models.DecimalField(max_digits=6, decimal_places=4, default=Decimal('0.50'),
-                                                          verbose_name='% Bonif. Servicios Prestados',
-                                                          help_text='Decreto 1042/1978 art. 45. Default 50% del salario mensual')
+                                                          verbose_name='% BSP Sueldo Bajo (≤ umbral)',
+                                                          help_text='Decreto 1042/1978 art. 45 + Dto 330/2018. Default 50% para sueldos ≤ 2 SMLMV')
+    pct_bonif_servicios_prestados_alto = models.DecimalField(max_digits=6, decimal_places=4, default=Decimal('0.35'),
+                                                               verbose_name='% BSP Sueldo Alto (> umbral)',
+                                                               help_text='Decreto 1042/1978 art. 45 + Dto 330/2018. Default 35% para sueldos > 2 SMLMV')
+    umbral_smlmv_bsp = models.DecimalField(max_digits=4, decimal_places=2, default=Decimal('2.00'),
+                                             verbose_name='Umbral SMLMV para BSP',
+                                             help_text='Si salario_mensual ≤ umbral × SMLMV → BSP bajo; sino BSP alto. Dto 1042/78.')
     pct_bonif_recreacion = models.DecimalField(max_digits=6, decimal_places=4, default=Decimal('0.0139'),
                                                  verbose_name='% Bonificación Recreación',
                                                  help_text='Decreto 451/1984. Default ~2 días salario (1.39%)')

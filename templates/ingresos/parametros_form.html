@@ -231,8 +231,16 @@
                     <div class="col-md-3"><label class="form-label">% Prima Vacaciones</label>{{ form.pct_prima_vacaciones }}<small class="text-muted">Ley 4/1992. 4.17%</small></div>
                 </div>
                 <div class="row g-3 mt-1">
-                    <div class="col-md-3"><label class="form-label">% Bonif. Servicios Prestados</label>{{ form.pct_bonif_servicios_prestados }}<small class="text-muted">Dto 1042/78. 50%</small></div>
                     <div class="col-md-3"><label class="form-label">% Bonif. Recreación</label>{{ form.pct_bonif_recreacion }}<small class="text-muted">Dto 451/84</small></div>
+                </div>
+
+                <hr class="my-3">
+                <p class="small mb-2"><strong>Bonificación por Servicios Prestados (BSP)</strong> — Decreto 1042/1978 art. 45 + Dto 330/2018:
+                    Si salario ≤ umbral × SMLMV → BSP bajo; sino → BSP alto.</p>
+                <div class="row g-3">
+                    <div class="col-md-3"><label class="form-label">% BSP Sueldo Bajo</label>{{ form.pct_bonif_servicios_prestados }}<small class="text-muted">≤ umbral: 50%</small></div>
+                    <div class="col-md-3"><label class="form-label">% BSP Sueldo Alto</label>{{ form.pct_bonif_servicios_prestados_alto }}<small class="text-muted">&gt; umbral: 35%</small></div>
+                    <div class="col-md-3"><label class="form-label">Umbral (en SMLMV)</label>{{ form.umbral_smlmv_bsp }}<small class="text-muted">Default 2 SMLMV</small></div>
                 </div>
             </div>
         </div>

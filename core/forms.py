@@ -77,6 +77,8 @@ class ParametrosForm(forms.ModelForm):
             'pct_prima_navidad': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001'}),
             'pct_prima_vacaciones': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001'}),
             'pct_bonif_servicios_prestados': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001'}),
+            'pct_bonif_servicios_prestados_alto': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001'}),
+            'umbral_smlmv_bsp': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'pct_bonif_recreacion': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001'}),
             'pct_aporte_sena': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001'}),
             'pct_aporte_icbf': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001'}),

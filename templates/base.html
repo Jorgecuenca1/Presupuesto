@@ -145,8 +145,11 @@
         </a>
 
         <div class="nav-section">Gastos - Cálculos</div>
+        <a href="{% url 'plantas_personal' %}" class="nav-link {% if request.resolver_match.url_name == 'plantas_personal' %}active{% endif %}">
+            <i class="bi bi-people-fill"></i> Plantas de Personal
+        </a>
         <a href="{% url 'costo_personal_list' %}" class="nav-link {% if request.resolver_match.url_name == 'costo_personal_list' %}active{% endif %}">
-            <i class="bi bi-people"></i> Costo de Personal
+            <i class="bi bi-people"></i> Costo de Personal (legacy)
         </a>
         <a href="{% url 'deuda_contratos_list' %}" class="nav-link {% if 'deuda' in request.resolver_match.url_name %}active{% endif %}">
             <i class="bi bi-bank"></i> Deuda Pública

@@ -545,6 +545,151 @@ def limpiar_gastos(request):
     })
 
 
+# ─── PLANTAS DE PERSONAL ─────────────────────────────────────────
+@login_required
+def plantas_personal_view(request):
+    """Visualización tipo Excel CALCULO_GASTOS.xlsx — hojas de planta por sección.
+
+    Cada sección (Concejo, Personería, Despacho/Administración Central, Comisaría,
+    Salud, Pensionados) se muestra como una pestaña con su tabla de CostoPersonal.
+    Editable inline. Conectado al Anexo 2 y a Parámetros del Sistema.
+    """
+    vigencia = _vigencia()
+    params = ParametrosSistema.objects.filter(vigencia=vigencia).first()
+
+    # Pestañas: una por sección con CostoPersonal cargado
+    pestanas = []
+    secciones = SeccionGasto.objects.all().order_by('codigo')
+    for sec in secciones:
+        # Personal activo (no pensionados) y pensionados se separan
+        activos = list(CostoPersonal.objects.filter(
+            vigencia=vigencia, seccion=sec, es_pensionado=False
+        ).order_by('cargo'))
+        pensionados = list(CostoPersonal.objects.filter(
+            vigencia=vigencia, seccion=sec, es_pensionado=True
+        ).order_by('cargo'))
+        if not activos and not pensionados:
+            continue
+
+        total_activos = sum(cp.costo_total_anual for cp in activos)
+        total_pens = sum(cp.costo_total_anual for cp in pensionados)
+        # Buscar rubro 2.1.1.01 (Planta de Personal) de esta sección
+        rubro_planta = RubroGasto.objects.filter(
+            vigencia=vigencia, seccion=sec, codigo='2.1.1.01').first()
+        pestanas.append({
+            'seccion': sec,
+            'activos': activos,
+            'pensionados': pensionados,
+            'total_activos': total_activos,
+            'total_pensionados': total_pens,
+            'rubro_planta': rubro_planta,
+            'metodo_planta': rubro_planta.metodo_calculo if rubro_planta else 'MAN',
+        })
+
+    return render(request, 'gastos/plantas_personal.html', {
+        'vigencia': vigencia,
+        'params': params,
+        'pestanas': pestanas,
+    })
+
+
+@login_required
+def plantas_personal_guardar(request):
+    """Guarda cambios inline en CostoPersonal y recalcula gastos."""
+    if request.method == 'POST':
+        try:
+            vigencia = _vigencia()
+            for cp in CostoPersonal.objects.filter(vigencia=vigencia):
+                cargo_key = f'cp_{cp.pk}_cargo'
+                grado_key = f'cp_{cp.pk}_grado'
+                cant_key = f'cp_{cp.pk}_cantidad'
+                sal_key = f'cp_{cp.pk}_salario_basico'
+                tot_key = f'cp_{cp.pk}_costo_total_anual_override'
+                cambios = []
+                if cargo_key in request.POST:
+                    cp.cargo = request.POST[cargo_key][:200]; cambios.append('cargo')
+                if grado_key in request.POST:
+                    cp.grado = request.POST[grado_key][:20]; cambios.append('grado')
+                if cant_key in request.POST:
+                    cp.cantidad = int(request.POST[cant_key] or 0); cambios.append('cantidad')
+                if sal_key in request.POST:
+                    cp.salario_basico = Decimal(request.POST[sal_key] or '0'); cambios.append('salario_basico')
+                if tot_key in request.POST:
+                    cp.costo_total_anual_override = Decimal(request.POST[tot_key] or '0'); cambios.append('costo_total_anual_override')
+                if cambios:
+                    cp.save(update_fields=cambios)
+
+            # Recalcular
+            resumen = recalcular_rubros_metodo(vigencia)
+            for t in RubroGasto.objects.filter(vigencia=vigencia, es_titulo=True).order_by('-nivel'):
+                t.calcular_hijos()
+            messages.success(request, f'Plantas guardadas. CPS: {resumen.get("CPS",{}).get("rubros",0)} rubros recalculados.')
+        except Exception as e:
+            messages.error(request, f'Error: {e}')
+    return redirect('plantas_personal')
+
+
+@login_required
+def plantas_personal_recalcular(request):
+    """Recalcula prestaciones/aportes desde Parámetros del Sistema (ley).
+
+    Para cada CostoPersonal activo (no pensionado), aplica los % de ParametrosSistema
+    a salario_basico para regenerar prima_navidad, aportes_salud, etc. Luego
+    recalcula los rubros con método CPS.
+    """
+    if request.method == 'POST':
+        try:
+            vigencia = _vigencia()
+            p = ParametrosSistema.objects.filter(vigencia=vigencia).first()
+            if not p:
+                messages.warning(request, 'No hay ParametrosSistema para esta vigencia')
+                return redirect('plantas_personal')
+
+            n = 0
+            for cp in CostoPersonal.objects.filter(vigencia=vigencia, es_pensionado=False):
+                sal_anual = cp.salario_basico * 12
+                # Prestaciones (anuales)
+                cp.prima_navidad = sal_anual * p.pct_prima_navidad
+                cp.prima_vacaciones = sal_anual * p.pct_prima_vacaciones
+                cp.prima_servicios = sal_anual * p.pct_prima_servicios
+                cp.cesantias = sal_anual * p.pct_cesantias
+                cp.intereses_cesantias = cp.cesantias * p.pct_intereses_cesantias
+                cp.vacaciones = sal_anual * Decimal('0.0417')
+                # Aportes (anuales)
+                cp.aportes_salud = sal_anual * p.pct_aporte_salud
+                cp.aportes_pension = sal_anual * p.pct_aporte_pension
+                cp.aportes_arl = sal_anual * p.pct_aporte_arl
+                cp.aportes_caja = sal_anual * p.pct_aporte_caja
+                cp.aportes_icbf = sal_anual * p.pct_aporte_icbf
+                cp.aportes_sena = sal_anual * p.pct_aporte_sena
+                # Limpiamos el override para usar la suma calculada
+                cp.costo_total_anual_override = Decimal('0')
+                cp.save()
+                n += 1
+
+            # Pensionados: aplicar incremento IPC sobre mesada
+            n_pens = 0
+            for cp in CostoPersonal.objects.filter(vigencia=vigencia, es_pensionado=True):
+                # Si tiene override, lo dejamos. Si no, recalculamos con incremento
+                if not cp.costo_total_anual_override or cp.costo_total_anual_override <= 0:
+                    incremento = Decimal('1') + p.pct_incremento_pensionados
+                    cp.salario_basico = cp.salario_basico * incremento
+                    cp.costo_total_anual_override = cp.salario_basico * 14
+                    cp.save(update_fields=['salario_basico', 'costo_total_anual_override'])
+                n_pens += 1
+
+            # Recalcular
+            resumen = recalcular_rubros_metodo(vigencia)
+            for t in RubroGasto.objects.filter(vigencia=vigencia, es_titulo=True).order_by('-nivel'):
+                t.calcular_hijos()
+            messages.success(request,
+                f'Recalculado desde Parámetros: {n} cargos activos + {n_pens} pensionados. '
+                f'CPS: ${resumen.get("CPS",{}).get("total_aplicado", 0):,.0f}')
+        except Exception as e:
+            messages.error(request, f'Error: {e}')
+    return redirect('plantas_personal')
+
+
 # ─── REPORTE ANEXO 2 ─────────────────────────────────────────────
 @login_required
 def reporte_gastos(request):

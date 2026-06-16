@@ -26,6 +26,11 @@ urlpatterns = [
     path('ejecucion/', views.ejecucion_gastos, name='ejecucion_gastos'),
     path('ejecucion/<int:pk>/editar/', views.ejecucion_editar, name='ejecucion_editar'),
 
+    # Plantas de Personal (visualizacion/edicion de CostoPersonal por seccion)
+    path('plantas-personal/', views.plantas_personal_view, name='plantas_personal'),
+    path('plantas-personal/guardar/', views.plantas_personal_guardar, name='plantas_personal_guardar'),
+    path('plantas-personal/recalcular/', views.plantas_personal_recalcular, name='plantas_personal_recalcular'),
+
     # Recalcular
     path('recalcular/', views.recalcular_gastos, name='recalcular_gastos'),
 

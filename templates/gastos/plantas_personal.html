@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% load humanize l10n %}
+
+{% block title %}Plantas de Personal{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'reporte_gastos' %}">Gastos</a></li>
+<li class="breadcrumb-item active">Plantas de Personal</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="bi bi-people-fill"></i> Plantas de Personal — Vigencia {{ vigencia }}</h4>
+    <div>
+        <form method="post" action="{% url 'plantas_personal_recalcular' %}" class="d-inline"
+              onsubmit="return confirm('Recalcular prestaciones y aportes desde los % en Parámetros del Sistema? Esto sobreescribe los valores actuales.');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-warning btn-sm">
+                <i class="bi bi-arrow-clockwise"></i> Recalcular desde Parámetros
+            </button>
+        </form>
+        <button type="submit" form="form-plantas" class="btn btn-success">
+            <i class="bi bi-save"></i> Guardar cambios
+        </button>
+    </div>
+</div>
+
+<div class="alert alert-info py-2 small mb-3">
+    <i class="bi bi-info-circle"></i>
+    Esta vista replica las hojas de Excel <code>Costo planta XXX</code> del archivo CALCULO_GASTOS.xlsx.
+    Cada pestaña corresponde a una sección. Los totales alimentan automáticamente el
+    <a href="{% url 'reporte_gastos' %}">Anexo 2 (rubro 2.1.1.01)</a> vía el método <code>CPS</code>.
+    El botón "Recalcular desde Parámetros" usa los porcentajes legales de
+    <a href="{% url 'parametros' %}">Parámetros del Sistema</a> para regenerar prestaciones y aportes.
+</div>
+
+<!-- Tabs por sección -->
+<ul class="nav nav-tabs" id="tabs-plantas" role="tablist">
+    {% for p in pestanas %}
+    <li class="nav-item">
+        <button class="nav-link {% if forloop.first %}active{% endif %}" data-bs-toggle="tab"
+                data-bs-target="#tab-sec-{{ p.seccion.codigo }}" type="button">
+            <strong>{{ p.seccion.codigo }}</strong>
+            <small class="text-muted">{{ p.seccion.nombre|truncatechars:25 }}</small>
+            <span class="badge bg-secondary">{{ p.activos|length|add:p.pensionados|length }}</span>
+        </button>
+    </li>
+    {% endfor %}
+</ul>
+
+<form method="post" action="{% url 'plantas_personal_guardar' %}" id="form-plantas">
+{% csrf_token %}
+
+<div class="tab-content border border-top-0 rounded-bottom">
+{% for p in pestanas %}
+<div class="tab-pane fade {% if forloop.first %}show active{% endif %}" id="tab-sec-{{ p.seccion.codigo }}">
+    <div class="p-3">
+        <div class="row align-items-center mb-3">
+            <div class="col-md-8">
+                <h5 class="mb-0">
+                    Unidad Ejecutora {{ p.seccion.codigo }} — {{ p.seccion.nombre }}
+                </h5>
+                <small class="text-muted">
+                    Rubro destino: <code>{{ p.rubro_planta.codigo|default:"2.1.1.01" }}</code>
+                    {% if p.rubro_planta %}
+                        Método: <span class="badge bg-info">{{ p.metodo_planta }}</span>
+                        Valor actual: <strong>${{ p.rubro_planta.valor_apropiacion|floatformat:0|intcomma }}</strong>
+                    {% endif %}
+                </small>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="border rounded p-2 bg-light">
+                    <div class="small text-muted">TOTAL PLANTA (activos)</div>
+                    <h4 class="mb-0 text-primary">${{ p.total_activos|floatformat:0|intcomma }}</h4>
+                    {% if p.total_pensionados %}
+                    <small class="text-muted">+ Pensionados: ${{ p.total_pensionados|floatformat:0|intcomma }}</small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% if p.activos %}
+        <div class="table-responsive">
+            <table class="table table-sm table-bordered align-middle" style="font-size:.78rem;">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:30%">Cargo</th>
+                        <th style="width:8%">Grado</th>
+                        <th style="width:8%">Cant.</th>
+                        <th style="width:15%">Salario Básico Mensual</th>
+                        <th style="width:18%">Costo Total Anual (override)</th>
+                        <th style="width:15%">Costo Anual Calculado</th>
+                        <th style="width:6%"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cp in p.activos %}
+                    <tr>
+                        <td><input type="text" name="cp_{{ cp.pk }}_cargo" value="{{ cp.cargo }}" class="form-control form-control-sm"></td>
+                        <td><input type="text" name="cp_{{ cp.pk }}_grado" value="{{ cp.grado }}" class="form-control form-control-sm"></td>
+                        <td><input type="number" name="cp_{{ cp.pk }}_cantidad" value="{{ cp.cantidad }}" class="form-control form-control-sm text-center"></td>
+                        <td><input type="number" step="0.01" name="cp_{{ cp.pk }}_salario_basico" value="{{ cp.salario_basico|unlocalize }}" class="form-control form-control-sm text-end"></td>
+                        <td><input type="number" step="0.01" name="cp_{{ cp.pk }}_costo_total_anual_override" value="{{ cp.costo_total_anual_override|unlocalize }}" class="form-control form-control-sm text-end"></td>
+                        <td class="text-end fw-bold">${{ cp.costo_total_anual|floatformat:0|intcomma }}</td>
+                        <td></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-light">
+                    <tr>
+                        <td colspan="5" class="text-end fw-bold">TOTAL ACTIVOS</td>
+                        <td class="text-end fw-bold text-primary">${{ p.total_activos|floatformat:0|intcomma }}</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        {% endif %}
+
+        {% if p.pensionados %}
+        <h6 class="mt-3"><i class="bi bi-person-badge"></i> Pensionados</h6>
+        <div class="table-responsive">
+            <table class="table table-sm table-bordered align-middle" style="font-size:.78rem;">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:45%">Pensionado / Beneficiario</th>
+                        <th style="width:18%">Mesada Mensual</th>
+                        <th style="width:22%">Total Anual (×14)</th>
+                        <th style="width:15%">Observaciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cp in p.pensionados %}
+                    <tr>
+                        <td><input type="text" name="cp_{{ cp.pk }}_cargo" value="{{ cp.cargo }}" class="form-control form-control-sm"></td>
+                        <td><input type="number" step="0.01" name="cp_{{ cp.pk }}_salario_basico" value="{{ cp.salario_basico|unlocalize }}" class="form-control form-control-sm text-end"></td>
+                        <td><input type="number" step="0.01" name="cp_{{ cp.pk }}_costo_total_anual_override" value="{{ cp.costo_total_anual_override|unlocalize }}" class="form-control form-control-sm text-end"></td>
+                        <td><small class="text-muted">{{ cp.observaciones|truncatechars:50 }}</small></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-light">
+                    <tr>
+                        <td colspan="2" class="text-end fw-bold">TOTAL PENSIONADOS</td>
+                        <td class="text-end fw-bold text-primary">${{ p.total_pensionados|floatformat:0|intcomma }}</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endfor %}
+</div>
+
+<div class="d-flex justify-content-end mt-3">
+    <button type="submit" class="btn btn-success btn-lg">
+        <i class="bi bi-save"></i> Guardar y recalcular Anexo 2
+    </button>
+</div>
+</form>
+
+{% if not pestanas %}
+<div class="alert alert-warning mt-3">
+    No hay datos de planta de personal cargados para la vigencia {{ vigencia }}.
+    Ejecute el script <code>fix_importar_calculo_gastos.py</code> para importar el Excel.
+</div>
+{% endif %}
+{% endblock %}

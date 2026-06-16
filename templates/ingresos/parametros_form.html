@@ -1,261 +1,384 @@
 {% extends "base.html" %}
+{% load humanize %}
 {% block title %}Parámetros del Sistema{% endblock %}
 {% block breadcrumb %}<li class="breadcrumb-item active">Parámetros</li>{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-10">
-        <div class="card">
-            <div class="card-header bg-white">
-                <i class="bi bi-gear"></i> Parámetros del Sistema - Vigencia Fiscal
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="bi bi-gear"></i> Parámetros del Sistema — Vigencia {{ params.vigencia }}</h4>
+    <button type="submit" form="form-parametros" class="btn btn-primary">
+        <i class="bi bi-save"></i> Guardar y recalcular
+    </button>
+</div>
+
+<form method="post" id="form-parametros">
+    {% csrf_token %}
+
+    <ul class="nav nav-tabs mb-3" id="tabs-params" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-ingresos" type="button" role="tab">
+                <i class="bi bi-arrow-down-circle text-success"></i> INGRESOS
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-gastos" type="button" role="tab">
+                <i class="bi bi-arrow-up-circle text-danger"></i> GASTOS
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-generales" type="button" role="tab">
+                <i class="bi bi-globe text-info"></i> GENERALES
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+    <!-- =============== INGRESOS =============== -->
+    <div class="tab-pane fade show active" id="tab-ingresos" role="tabpanel">
+
+        <!-- 1. Tasas e Indicadores -->
+        <div class="card mb-3">
+            <div class="card-header bg-success text-white py-2">
+                <i class="bi bi-percent"></i> 1. Tasas e Indicadores Macroeconómicos
+                <small class="float-end">Editables en <a href="{% url 'variables_macro' %}" class="text-white text-decoration-underline">Variables Macro</a></small>
             </div>
-            <div class="card-body">
-                <form method="post">
-                    {% csrf_token %}
-                    <h6 class="text-muted mb-3">Datos Generales</h6>
-                    <div class="row g-3">
-                        <div class="col-md-3">
-                            <label class="form-label">Vigencia Fiscal</label>
-                            {{ form.vigencia }}
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Valor UVT ($)</label>
-                            {{ form.valor_uvt }}
-                            <small class="text-muted">2026: $52.374</small>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Valor SMLMV ($)</label>
-                            {{ form.valor_smlmv }}
-                            <small class="text-muted">2026: $1.423.500</small>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Categoría Municipio (0-6)</label>
-                            {{ form.categoria_municipio }}
-                            <small class="text-muted">0=Especial, 6=Sexta</small>
-                        </div>
+            <div class="card-body py-2">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Tasa IPC</label>
+                        {{ form.tasa_ipc }}
+                        <small class="text-muted">Ej: 0.04 = 4% (2027)</small>
                     </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Tasa ICN</label>
+                        {{ form.tasa_icn }}
+                        <small class="text-muted">Ingresos Corrientes Nación</small>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Tasa PIB Nominal</label>
+                        {{ form.tasa_pib_nominal }}
+                        <small class="text-muted">Para proyección ICA</small>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">POAI Total Inversión</label>
+                        {{ form.poai_total_inversion }}
+                        <small class="text-muted">Sin Educ/Viv/Salud</small>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-                    <h6 class="text-muted mb-3 mt-4">Tasas e Indicadores</h6>
-                    <div class="row g-3">
-                        <div class="col-md-3">
-                            <label class="form-label">Tasa IPC</label>
-                            {{ form.tasa_ipc }}
-                            <small class="text-muted">Ej: 0.051 = 5.1%</small>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Tasa Crecimiento ICN</label>
-                            {{ form.tasa_icn }}
-                            <small class="text-muted">Ej: 0.08 = 8%</small>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Tasa PIB Nominal</label>
-                            {{ form.tasa_pib_nominal }}
-                            <small class="text-muted">Ej: 0.062 = 6.2%</small>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">POAI Total Inversión</label>
-                            {{ form.poai_total_inversion }}
-                            <small class="text-muted">Sin Educación, Vivienda, Salud</small>
-                        </div>
+        <!-- 2. Predial -->
+        <div class="card mb-3">
+            <div class="card-header bg-success text-white py-2">
+                <i class="bi bi-house"></i> 2. Predial (Ley 44/1990, Ley 1066/2006)
+            </div>
+            <div class="card-body py-2">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">% Eficiencia Recaudo</label>
+                        {{ form.pct_eficiencia_recaudo }}
+                        <small class="text-muted">Ej: 70.00 = 70%</small>
                     </div>
+                    <div class="col-md-4">
+                        <label class="form-label">% Crecimiento Viviendas (UV)</label>
+                        {{ form.pct_crecimiento_viviendas }}
+                        <small class="text-muted">Solo Urbano Vivienda</small>
+                    </div>
+                </div>
+                <div class="row g-3 mt-1">
+                    <div class="col-md-4">
+                        <label class="form-label">% Base Cartera</label>
+                        {{ form.pct_cartera_base }}
+                        <small class="text-muted">Vigencias anteriores</small>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">% Cartera Urbano</label>
+                        {{ form.pct_cartera_urbano }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">% Cartera Rural</label>
+                        {{ form.pct_cartera_rural }}
+                    </div>
+                </div>
+            </div>
+        </div>
 
-                    <h6 class="text-muted mb-3 mt-4">TCPA (Calculados automáticamente)</h6>
-                    <div class="row g-3">
-                        <div class="col-md-3">
-                            <label class="form-label">TCPA Ingresos</label>
-                            {{ form.tcpa_ingresos }}
-                            <small class="text-muted">Se calcula desde Cifras Históricas</small>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">TCPA Gastos</label>
-                            {{ form.tcpa_gastos }}
-                            <small class="text-muted">Se calcula desde Cifras Históricas</small>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">% Promedio Pagos/Aprob.</label>
-                            {{ form.pct_promedio_pagos }}
-                            <small class="text-muted">Para cálculo estampillas (global)</small>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">% Pagos Despacho y Secretarías</label>
-                            {{ form.pct_pagos_despacho }}
-                            <small class="text-muted">Ej: 0.80 = 80% (peso despacho)</small>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">% Pagos Fondo de Pensiones</label>
-                            {{ form.pct_pagos_pensiones }}
-                            <small class="text-muted">Ej: 0.20 = 20% (peso pensiones)</small>
-                        </div>
-                    </div>
+        <!-- 3. Estampillas -->
+        <div class="card mb-3">
+            <div class="card-header bg-success text-white py-2">
+                <i class="bi bi-bookmark-check"></i> 3. Estampillas (Ley 100/1993 art. 47 — 80/20)
+            </div>
+            <div class="card-body py-2">
+                <div class="row g-3">
+                    <div class="col-md-3"><label class="form-label">% Despacho/Secretarías</label>{{ form.pct_pagos_despacho }}<small class="text-muted">0.80 = 80%</small></div>
+                    <div class="col-md-3"><label class="form-label">% Fondo Pensiones</label>{{ form.pct_pagos_pensiones }}<small class="text-muted">0.20 = 20%</small></div>
+                    <div class="col-md-3"><label class="form-label">% Promedio Pagos</label>{{ form.pct_promedio_pagos }}</div>
+                </div>
+                <div class="row g-3 mt-1">
+                    <div class="col-md-3"><label class="form-label">% Pagos sin SGR</label>{{ form.pct_pagos_sin_sgr }}<small class="text-muted">0.8483 = 84.83%</small></div>
+                    <div class="col-md-3"><label class="form-label">% Pagos SGR</label>{{ form.pct_pagos_sgr }}<small class="text-muted">0.3480 = 34.80%</small></div>
+                </div>
+                <hr>
+                <div class="row g-3">
+                    <div class="col-md-4"><label class="form-label">Gasto SEV Ppto NC ($)</label>{{ form.gasto_sev_ppto_nc }}</div>
+                    <div class="col-md-4"><label class="form-label">Presupuesto SGR ($)</label>{{ form.sgr_presupuesto }}</div>
+                    <div class="col-md-4"><label class="form-label">Gasto SEV SGR ($)</label>{{ form.gasto_sev_sgr }}</div>
+                </div>
+                <div class="row g-3 mt-1">
+                    <div class="col-md-4"><label class="form-label">Reservas NC ($)</label>{{ form.reservas_presupuestales_nc }}</div>
+                    <div class="col-md-4"><label class="form-label">Cuentas x Pagar NC ($)</label>{{ form.cuentas_por_pagar_nc }}</div>
+                    <div class="col-md-4"><label class="form-label">Superávit Fiscal ($)</label>{{ form.superavit_fiscal }}</div>
+                </div>
+            </div>
+        </div>
 
-                    <h6 class="text-muted mb-3 mt-4">Crecimiento Viviendas (Predial Urbano Vivienda)</h6>
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <label class="form-label">% Crecimiento Viviendas</label>
-                            {{ form.pct_crecimiento_viviendas }}
-                            <small class="text-muted">
-                                Ej: 0.015 = 1.5%. Se aplica a proyección efectiva = Proyección × (1 + %).
-                                Solo afecta categoría UV (Urbano Vivienda).
-                            </small>
-                        </div>
+        <!-- 4. Anexo 6 Órganos de Control -->
+        <div class="card mb-3">
+            <div class="card-header bg-success text-white py-2">
+                <i class="bi bi-shield-check"></i> 4. Anexo 6 Órganos de Control (Ley 617/2000, Ley 2461/2025)
+            </div>
+            <div class="card-body py-2">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">ICLD Vigencia Anterior ($)</label>
+                        {{ form.icld_calculado }}
+                        <small class="text-muted">Autocalculado desde Cifras Históricas. Base para Concejo y Personería.</small>
                     </div>
+                    <div class="col-md-3">
+                        <label class="form-label">% ICLD Adicional Concejo</label>
+                        {{ form.pct_icld_adicional_concejo }}
+                        <small class="text-muted">Decreto 1955/2024. Default 1.5%</small>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-                    <h6 class="text-muted mb-3 mt-4">Eficiencia de Recaudo (Predial Vigencia Actual)</h6>
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <label class="form-label">% Eficiencia Recaudo</label>
-                            {{ form.pct_eficiencia_recaudo }}
-                            <small class="text-muted">
-                                Ej: 70.00 = 70%. Se aplica al recaudo potencial:
-                                Proyección = Avalúo × Tarifa × % Eficiencia.
-                            </small>
-                        </div>
-                    </div>
+        <!-- 5. Oleoductos -->
+        <div class="card mb-3">
+            <div class="card-header bg-success text-white py-2">
+                <i class="bi bi-droplet"></i> 5. Oleoductos / Gasoductos (Ley 141/1994 — Promedio 3 años)
+            </div>
+            <div class="card-body py-2">
+                <div class="row g-3">
+                    <div class="col-md-4"><label class="form-label">Recaudo {{ params.vigencia|add:"-3" }}</label>{{ form.recaudo_oleoductos_anio_n3 }}</div>
+                    <div class="col-md-4"><label class="form-label">Recaudo {{ params.vigencia|add:"-2" }}</label>{{ form.recaudo_oleoductos_anio_n2 }}</div>
+                    <div class="col-md-4"><label class="form-label">Recaudo {{ params.vigencia|add:"-1" }}</label>{{ form.recaudo_oleoductos_anio_n1 }}</div>
+                </div>
+            </div>
+        </div>
 
-                    <h6 class="text-muted mb-3 mt-4">Predial Vigencias Anteriores (Cartera)</h6>
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <label class="form-label">% Base Recaudo Cartera</label>
-                            {{ form.pct_cartera_base }}
-                            <small class="text-muted">Ej: 40.00 = 40%. Factor base aplicado al valor de cartera.</small>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">% Urbano (de Cartera)</label>
-                            {{ form.pct_cartera_urbano }}
-                            <small class="text-muted">Ej: 10.00 = 10% de la cartera para urbano.</small>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">% Rural (de Cartera)</label>
-                            {{ form.pct_cartera_rural }}
-                            <small class="text-muted">Ej: 90.00 = 90% de la cartera para rural.</small>
-                        </div>
-                    </div>
-                    <div class="alert alert-light border py-2 mb-0">
-                        <small>
-                            <i class="bi bi-info-circle"></i>
-                            Fórmula: <strong>Proyección = Valor Cartera × (% Base/100) × (% Urbano o Rural/100)</strong>.
-                            Al guardar parámetros se recalculan los ingresos con estos porcentajes.
-                        </small>
-                    </div>
+    </div>
 
-                    <h6 class="text-muted mb-3 mt-4">Cálculo de Estampillas</h6>
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <label class="form-label">Gasto SEV Ppto NC ($)</label>
-                            {{ form.gasto_sev_ppto_nc }}
-                            <small class="text-muted">Gasto apropiado en Salud, Educación y Vivienda (presupuesto NC)</small>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Presupuesto SGR ($)</label>
-                            {{ form.sgr_presupuesto }}
-                            <small class="text-muted">Sistema General de Regalías</small>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Gasto SEV SGR ($)</label>
-                            {{ form.gasto_sev_sgr }}
-                            <small class="text-muted">Gasto SEV sobre SGR</small>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">% Promedio Pagos sin SGR</label>
-                            {{ form.pct_pagos_sin_sgr }}
-                            <small class="text-muted">Ej: 0.8483 = 84.83%</small>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">% Promedio Pagos SGR</label>
-                            {{ form.pct_pagos_sgr }}
-                            <small class="text-muted">Ej: 0.3480 = 34.80%</small>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Reservas Ppto NC ($)</label>
-                            {{ form.reservas_presupuestales_nc }}
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Cuentas por Pagar NC ($)</label>
-                            {{ form.cuentas_por_pagar_nc }}
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Superávit Fiscal Estimado ($)</label>
-                            {{ form.superavit_fiscal }}
-                        </div>
-                    </div>
-                    <div class="alert alert-light border py-2 mb-0 mt-2">
-                        <small>
-                            <i class="bi bi-info-circle"></i>
-                            <strong>Base = (POAI − Gasto SEV) × % pagos sin SGR + (Saldo + SGR − Gasto SEV SGR) × % pagos SGR + Reservas + Ctas x Pagar + Superávit.</strong>
-                            La proyección de cada estampilla = Base × Tarifa.
-                        </small>
-                    </div>
+    <!-- =============== GASTOS =============== -->
+    <div class="tab-pane fade" id="tab-gastos" role="tabpanel">
 
-                    <h6 class="text-muted mb-3 mt-4">Órganos de Control (Anexo 6)</h6>
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">ICLD Vigencia Anterior ($)</label>
-                            {{ form.icld_calculado }}
-                            <small class="text-muted">
-                                Autollenado desde Cifras Históricas si está en 0. Editable.
-                            </small>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">% ICLD Adicional Concejo</label>
-                            {{ form.pct_icld_adicional_concejo }}
-                            <small class="text-muted">Ej: 0.015 = 1.5% (Anexo 6)</small>
-                        </div>
-                    </div>
-                    <div class="alert alert-light border py-2 mb-0 mt-2">
-                        <small>
-                            <i class="bi bi-info-circle"></i>
-                            <strong>Total Concejo = Valor sesión × (Ord+Extra) × Concejales + ICLD × % Adicional</strong>.
-                            La tabla por categoría se edita en
-                            <a href="{% url 'tabla_concejo_personeria' %}">Tablas Concejo/Personería</a>.
-                        </small>
-                    </div>
+        <div class="alert alert-info py-2 small">
+            <i class="bi bi-info-circle"></i>
+            Parámetros del <strong>Anexo 2 (Gastos)</strong>. Estos valores se aplican automáticamente en el
+            cálculo de planta de personal (CostoPersonal), pensionados, deuda pública y proyecciones.
+            Todas las cifras son <strong>recursivas</strong> en todo el sistema.
+        </div>
 
-                    <h6 class="text-muted mb-3 mt-4">Datos Históricos Oleoductos / Gasoductos</h6>
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <label class="form-label">Recaudo Oleoductos {{ params.vigencia|add:"-3" }} ($)</label>
-                            {{ form.recaudo_oleoductos_anio_n3 }}
-                            <small class="text-muted">Recaudo real hace 3 años</small>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Recaudo Oleoductos {{ params.vigencia|add:"-2" }} ($)</label>
-                            {{ form.recaudo_oleoductos_anio_n2 }}
-                            <small class="text-muted">Recaudo real hace 2 años</small>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Recaudo Oleoductos {{ params.vigencia|add:"-1" }} ($)</label>
-                            {{ form.recaudo_oleoductos_anio_n1 }}
-                            <small class="text-muted">Recaudo real del año anterior</small>
-                        </div>
+        <!-- 1. Personal -->
+        <div class="card mb-3">
+            <div class="card-header bg-danger text-white py-2">
+                <i class="bi bi-people"></i> 1. Personal y Salarios (Ley 4/1992, Decreto Salarial Anual)
+            </div>
+            <div class="card-body py-2">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">% Incremento Salarial Anual</label>
+                        {{ form.pct_incremento_salarial }}
+                        <small class="text-muted">Decreto salarial. 0.081 = 8.1% (proy 2027)</small>
                     </div>
-                    <div class="alert alert-light border py-2 mb-0 mt-2">
-                        <small>
-                            <i class="bi bi-info-circle"></i>
-                            <strong>Proyección Oleoductos = (Año-3 + Año-2 + Año-1) / 3</strong>.
-                            Se aplica a rubros con método "Promedio últimos 3 años (Oleoductos)".
-                            Si los 3 valores están en 0, se conserva el valor actual del rubro.
-                        </small>
+                    <div class="col-md-4">
+                        <label class="form-label">Subsidio Transporte Mensual ($)</label>
+                        {{ form.subsidio_transporte_mensual }}
+                        <small class="text-muted">Empleados ≤ 2 SMLMV. 2027: $274,000</small>
                     </div>
+                </div>
+            </div>
+        </div>
 
-                    <div class="mt-3">
+        <!-- 2. Seguridad Social -->
+        <div class="card mb-3">
+            <div class="card-header bg-danger text-white py-2">
+                <i class="bi bi-shield"></i> 2. Aportes Seguridad Social (Ley 100/1993)
+            </div>
+            <div class="card-body py-2">
+                <div class="row g-3">
+                    <div class="col-md-3"><label class="form-label">% Pensión Empleador</label>{{ form.pct_aporte_pension }}<small class="text-muted">Art. 22. 12%</small></div>
+                    <div class="col-md-3"><label class="form-label">% Salud Empleador</label>{{ form.pct_aporte_salud }}<small class="text-muted">Art. 204. 8.5%</small></div>
+                    <div class="col-md-3"><label class="form-label">% ARL</label>{{ form.pct_aporte_arl }}<small class="text-muted">Dto. 1295/94. 0.522% clase I</small></div>
+                </div>
+                <div class="row g-3 mt-1">
+                    <div class="col-md-3"><label class="form-label">% Cesantías</label>{{ form.pct_cesantias }}<small class="text-muted">Ley 50/1990. 8.33%</small></div>
+                    <div class="col-md-3"><label class="form-label">% Intereses Cesantías</label>{{ form.pct_intereses_cesantias }}<small class="text-muted">Ley 52/1975. 12%</small></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Prestaciones -->
+        <div class="card mb-3">
+            <div class="card-header bg-danger text-white py-2">
+                <i class="bi bi-gift"></i> 3. Prestaciones Sociales (CST, Ley 4/1992)
+            </div>
+            <div class="card-body py-2">
+                <div class="row g-3">
+                    <div class="col-md-3"><label class="form-label">% Prima Servicios</label>{{ form.pct_prima_servicios }}<small class="text-muted">CST 306. 8.33%</small></div>
+                    <div class="col-md-3"><label class="form-label">% Prima Navidad</label>{{ form.pct_prima_navidad }}<small class="text-muted">Ley 41/1975. 8.33%</small></div>
+                    <div class="col-md-3"><label class="form-label">% Prima Vacaciones</label>{{ form.pct_prima_vacaciones }}<small class="text-muted">Ley 4/1992. 4.17%</small></div>
+                </div>
+                <div class="row g-3 mt-1">
+                    <div class="col-md-3"><label class="form-label">% Bonif. Servicios Prestados</label>{{ form.pct_bonif_servicios_prestados }}<small class="text-muted">Dto 1042/78. 50%</small></div>
+                    <div class="col-md-3"><label class="form-label">% Bonif. Recreación</label>{{ form.pct_bonif_recreacion }}<small class="text-muted">Dto 451/84</small></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Parafiscales -->
+        <div class="card mb-3">
+            <div class="card-header bg-danger text-white py-2">
+                <i class="bi bi-bank"></i> 4. Aportes Parafiscales (Ley 21/1982, Ley 7/1979)
+            </div>
+            <div class="card-body py-2">
+                <div class="row g-3">
+                    <div class="col-md-3"><label class="form-label">% SENA</label>{{ form.pct_aporte_sena }}<small class="text-muted">Ley 21/82. 2%</small></div>
+                    <div class="col-md-3"><label class="form-label">% ICBF</label>{{ form.pct_aporte_icbf }}<small class="text-muted">Ley 7/79. 3%</small></div>
+                    <div class="col-md-3"><label class="form-label">% Caja Compensación</label>{{ form.pct_aporte_caja }}<small class="text-muted">Ley 21/82. 4%</small></div>
+                </div>
+                <div class="row g-3 mt-1">
+                    <div class="col-md-3"><label class="form-label">% ESAP</label>{{ form.pct_aporte_esap }}<small class="text-muted">0.5%</small></div>
+                    <div class="col-md-3"><label class="form-label">% Escuelas Industriales</label>{{ form.pct_aporte_escuelas }}<small class="text-muted">1%</small></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. Pensionados -->
+        <div class="card mb-3">
+            <div class="card-header bg-danger text-white py-2">
+                <i class="bi bi-person-badge"></i> 5. Pensionados (Ley 100/1993 art. 14)
+            </div>
+            <div class="card-body py-2">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">% Incremento Mesada</label>
+                        {{ form.pct_incremento_pensionados }}
+                        <small class="text-muted">Igual al IPC del año anterior</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. Servicio Deuda -->
+        <div class="card mb-3">
+            <div class="card-header bg-danger text-white py-2">
+                <i class="bi bi-bank2"></i> 6. Servicio de Deuda Pública (Ley 358/1997)
+            </div>
+            <div class="card-body py-2">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Tasa Cobertura Riesgo (TCR)</label>
+                        {{ form.tcr_deuda }}
+                        <small class="text-muted">Default 0.921</small>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">% Límite Intereses/Ahorro Op.</label>
+                        {{ form.pct_limite_intereses_ley358 }}
+                        <small class="text-muted">Ley 358 art. 6. Max 40%</small>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">% Límite Saldo Deuda/IC</label>
+                        {{ form.pct_limite_saldo_deuda_ley358 }}
+                        <small class="text-muted">Ley 358 art. 6. Max 80%</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 7. Ley 617 -->
+        <div class="card mb-3">
+            <div class="card-header bg-danger text-white py-2">
+                <i class="bi bi-clipboard-check"></i> 7. Límites Ley 617/2000
+            </div>
+            <div class="card-body py-2">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">% Límite Gastos Funcionamiento</label>
+                        {{ form.pct_limite_funcionamiento_ley617 }}
+                        <small class="text-muted">Esp=50, 1=55, 2-3=60, 4-5=75, 6=80</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- =============== GENERALES =============== -->
+    <div class="tab-pane fade" id="tab-generales" role="tabpanel">
+        <div class="card mb-3">
+            <div class="card-header bg-info text-white py-2">
+                <i class="bi bi-globe"></i> Datos Generales del Sistema
+            </div>
+            <div class="card-body py-2">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Vigencia Fiscal</label>
+                        {{ form.vigencia }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Valor UVT ($)</label>
+                        {{ form.valor_uvt }}
+                        <small class="text-muted">2026: $52.374</small>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Valor SMLMV ($)</label>
+                        {{ form.valor_smlmv }}
+                        <small class="text-muted">Se sincroniza desde Variables Macro</small>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Categoría Municipio (0-6)</label>
+                        {{ form.categoria_municipio }}
+                        <small class="text-muted">0=Especial, 6=Sexta</small>
+                    </div>
+                </div>
+                <div class="row g-3 mt-2">
+                    <div class="col-md-6">
                         <div class="form-check">
                             {{ form.activo }}
                             <label class="form-check-label">Vigencia activa</label>
                         </div>
                     </div>
-                    <div class="alert alert-info mt-4 mb-0 py-2">
-                        <i class="bi bi-info-circle"></i>
-                        Al guardar, se recalculan automáticamente los rubros de ingresos
-                        (IPC, ICN, POAI, Predial por UVT, ICA por PIB) y los títulos de gastos
-                        para la vigencia indicada.
-                    </div>
-                    <div class="mt-3">
-                        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Guardar y recalcular</button>
-                        <a href="{% url 'dashboard' %}" class="btn btn-secondary">Cancelar</a>
-                    </div>
-                </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header bg-secondary text-white py-2">
+                <i class="bi bi-calculator"></i> TCPA (Calculados automáticamente desde Cifras Históricas)
+            </div>
+            <div class="card-body py-2">
+                <div class="row g-3">
+                    <div class="col-md-3"><label class="form-label">TCPA Ingresos</label>{{ form.tcpa_ingresos }}</div>
+                    <div class="col-md-3"><label class="form-label">TCPA Gastos</label>{{ form.tcpa_gastos }}</div>
+                </div>
             </div>
         </div>
     </div>
-</div>
+
+    </div>  <!-- tab-content -->
+
+    <div class="alert alert-info py-2 mt-3">
+        <i class="bi bi-info-circle"></i>
+        Al guardar, se recalculan automáticamente todos los rubros de ingresos (Predial, ICA, IPC, POAI, Estampillas, Oleoductos)
+        y de gastos (Anexo 6 Órganos de Control, CPS planta, PEN pensionados, DCAP/DINT deuda) para la vigencia indicada.
+    </div>
+
+    <div class="d-flex justify-content-end mb-4">
+        <button type="submit" class="btn btn-success btn-lg">
+            <i class="bi bi-save"></i> Guardar y recalcular todo
+        </button>
+    </div>
+</form>
 {% endblock %}

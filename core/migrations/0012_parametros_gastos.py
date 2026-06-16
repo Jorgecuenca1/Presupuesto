@@ -1,0 +1,86 @@
+from decimal import Decimal
+from django.db import migrations, models
+
+
+def _dec_field(default, decimal_places=4, max_digits=6, verbose='', help=''):
+    return models.DecimalField(
+        decimal_places=decimal_places, default=Decimal(default),
+        help_text=help, max_digits=max_digits, verbose_name=verbose,
+    )
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ("core", "0011_variablemacro"),
+    ]
+
+    operations = [
+        migrations.AddField(model_name="parametrossistema", name="pct_incremento_salarial",
+            field=_dec_field('0.081', verbose='% Incremento Salarial Anual',
+                             help='Decreto salarial anual del Gobierno. Ej: 0.081 = 8.1%')),
+        migrations.AddField(model_name="parametrossistema", name="subsidio_transporte_mensual",
+            field=models.DecimalField(decimal_places=2, default=Decimal('274000'), max_digits=12,
+                                       help_text='Aplica a empleados con sueldo ≤ 2 SMLMV.',
+                                       verbose_name='Subsidio Transporte Mensual ($)')),
+        migrations.AddField(model_name="parametrossistema", name="pct_aporte_pension",
+            field=_dec_field('0.12', verbose='% Aporte Pensión Empleador',
+                             help='Ley 100/1993 art. 22. Default 12%')),
+        migrations.AddField(model_name="parametrossistema", name="pct_aporte_salud",
+            field=_dec_field('0.085', verbose='% Aporte Salud Empleador',
+                             help='Ley 100/1993 art. 204. Default 8.5%')),
+        migrations.AddField(model_name="parametrossistema", name="pct_aporte_arl",
+            field=_dec_field('0.00522', verbose='% Aporte ARL',
+                             help='Decreto 1295/1994. Default 0.522% (clase I)')),
+        migrations.AddField(model_name="parametrossistema", name="pct_cesantias",
+            field=_dec_field('0.0833', verbose='% Cesantías',
+                             help='Ley 50/1990 art. 99. Default 8.33%')),
+        migrations.AddField(model_name="parametrossistema", name="pct_intereses_cesantias",
+            field=_dec_field('0.12', verbose='% Intereses Cesantías',
+                             help='Ley 52/1975. Default 12% anual sobre cesantías')),
+        migrations.AddField(model_name="parametrossistema", name="pct_prima_servicios",
+            field=_dec_field('0.0833', verbose='% Prima de Servicios',
+                             help='CST art. 306. Default 8.33% = 1 mes/año')),
+        migrations.AddField(model_name="parametrossistema", name="pct_prima_navidad",
+            field=_dec_field('0.0833', verbose='% Prima de Navidad',
+                             help='Ley 41/1975. Default 8.33% = 1 mes/año')),
+        migrations.AddField(model_name="parametrossistema", name="pct_prima_vacaciones",
+            field=_dec_field('0.0417', verbose='% Prima de Vacaciones',
+                             help='Ley 4/1992. Default 4.17% = 15 días/año')),
+        migrations.AddField(model_name="parametrossistema", name="pct_bonif_servicios_prestados",
+            field=_dec_field('0.50', verbose='% Bonif. Servicios Prestados',
+                             help='Decreto 1042/1978 art. 45. Default 50%')),
+        migrations.AddField(model_name="parametrossistema", name="pct_bonif_recreacion",
+            field=_dec_field('0.0139', verbose='% Bonificación Recreación',
+                             help='Decreto 451/1984. Default ~2 días salario (1.39%)')),
+        migrations.AddField(model_name="parametrossistema", name="pct_aporte_sena",
+            field=_dec_field('0.02', verbose='% Aporte SENA',
+                             help='Ley 21/1982 art. 7. Default 2%')),
+        migrations.AddField(model_name="parametrossistema", name="pct_aporte_icbf",
+            field=_dec_field('0.03', verbose='% Aporte ICBF',
+                             help='Ley 7/1979 art. 2. Default 3%')),
+        migrations.AddField(model_name="parametrossistema", name="pct_aporte_caja",
+            field=_dec_field('0.04', verbose='% Aporte Caja Compensación',
+                             help='Ley 21/1982 art. 7. Default 4%')),
+        migrations.AddField(model_name="parametrossistema", name="pct_aporte_esap",
+            field=_dec_field('0.005', verbose='% Aporte ESAP',
+                             help='Ley 21/1982 art. 7. Default 0.5%')),
+        migrations.AddField(model_name="parametrossistema", name="pct_aporte_escuelas",
+            field=_dec_field('0.01', verbose='% Aporte Escuelas Industriales',
+                             help='Ley 21/1982 art. 7. Default 1%')),
+        migrations.AddField(model_name="parametrossistema", name="pct_incremento_pensionados",
+            field=_dec_field('0.040', verbose='% Incremento Mesada Pensionados',
+                             help='Ley 100/1993 art. 14: incremento igual al IPC.')),
+        migrations.AddField(model_name="parametrossistema", name="tcr_deuda",
+            field=_dec_field('0.921', verbose='Tasa Cobertura Riesgo (TCR)',
+                             help='Factor multiplicador de intereses. Default 0.921')),
+        migrations.AddField(model_name="parametrossistema", name="pct_limite_intereses_ley358",
+            field=_dec_field('40.00', decimal_places=2, verbose='% Límite Intereses/Ahorro Operacional (Ley 358)',
+                             help='Ley 358/1997 art. 6. Max 40%')),
+        migrations.AddField(model_name="parametrossistema", name="pct_limite_saldo_deuda_ley358",
+            field=_dec_field('80.00', decimal_places=2, verbose='% Límite Saldo Deuda/Ingresos Corrientes (Ley 358)',
+                             help='Ley 358/1997 art. 6. Max 80%')),
+        migrations.AddField(model_name="parametrossistema", name="pct_limite_funcionamiento_ley617",
+            field=_dec_field('80.00', decimal_places=2, verbose='% Límite Gastos Funcionamiento (Ley 617)',
+                             help='% máximo sobre ICLD por categoría')),
+    ]

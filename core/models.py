@@ -95,6 +95,81 @@ class ParametrosSistema(models.Model):
                                                        help_text='% sobre ICLD para sumar al Vr Honorarios del Concejo. '
                                                                  'Ej: 0.015 = 1.5% (Excel Anexo 6).')
 
+    # ===== GASTOS: Personal y Prestaciones (Ley 100/1993, Ley 4/1992, CST) =====
+    pct_incremento_salarial = models.DecimalField(max_digits=6, decimal_places=4, default=Decimal('0.081'),
+                                                    verbose_name='% Incremento Salarial Anual',
+                                                    help_text='Decreto salarial anual del Gobierno. Ej: 0.081 = 8.1% (proy 2027)')
+    subsidio_transporte_mensual = models.DecimalField(max_digits=12, decimal_places=2,
+                                                        default=Decimal('274000'),
+                                                        verbose_name='Subsidio Transporte Mensual ($)',
+                                                        help_text='Aplica a empleados con sueldo ≤ 2 SMLMV. Decreto SMLMV anual.')
+    # Aportes Seguridad Social (Ley 100/1993)
+    pct_aporte_pension = models.DecimalField(max_digits=6, decimal_places=4, default=Decimal('0.12'),
+                                               verbose_name='% Aporte Pensión Empleador',
+                                               help_text='Ley 100/1993 art. 22. Default 12%')
+    pct_aporte_salud = models.DecimalField(max_digits=6, decimal_places=4, default=Decimal('0.085'),
+                                             verbose_name='% Aporte Salud Empleador',
+                                             help_text='Ley 100/1993 art. 204. Default 8.5%')
+    pct_aporte_arl = models.DecimalField(max_digits=6, decimal_places=4, default=Decimal('0.00522'),
+                                           verbose_name='% Aporte ARL',
+                                           help_text='Decreto 1295/1994. Varía por clase de riesgo. Default 0.522% (clase I)')
+    pct_cesantias = models.DecimalField(max_digits=6, decimal_places=4, default=Decimal('0.0833'),
+                                          verbose_name='% Cesantías',
+                                          help_text='Ley 50/1990 art. 99. Default 8.33%')
+    pct_intereses_cesantias = models.DecimalField(max_digits=6, decimal_places=4, default=Decimal('0.12'),
+                                                    verbose_name='% Intereses Cesantías',
+                                                    help_text='Ley 52/1975. Default 12% anual sobre cesantías')
+    # Prestaciones Sociales
+    pct_prima_servicios = models.DecimalField(max_digits=6, decimal_places=4, default=Decimal('0.0833'),
+                                                verbose_name='% Prima de Servicios',
+                                                help_text='CST art. 306. Default 8.33% = 1 mes/año')
+    pct_prima_navidad = models.DecimalField(max_digits=6, decimal_places=4, default=Decimal('0.0833'),
+                                              verbose_name='% Prima de Navidad',
+                                              help_text='Ley 41/1975. Default 8.33% = 1 mes/año')
+    pct_prima_vacaciones = models.DecimalField(max_digits=6, decimal_places=4, default=Decimal('0.0417'),
+                                                 verbose_name='% Prima de Vacaciones',
+                                                 help_text='Ley 4/1992. Default 4.17% = 15 días/año')
+    pct_bonif_servicios_prestados = models.DecimalField(max_digits=6, decimal_places=4, default=Decimal('0.50'),
+                                                          verbose_name='% Bonif. Servicios Prestados',
+                                                          help_text='Decreto 1042/1978 art. 45. Default 50% del salario mensual')
+    pct_bonif_recreacion = models.DecimalField(max_digits=6, decimal_places=4, default=Decimal('0.0139'),
+                                                 verbose_name='% Bonificación Recreación',
+                                                 help_text='Decreto 451/1984. Default ~2 días salario (1.39%)')
+    # Aportes Parafiscales (Ley 21/1982)
+    pct_aporte_sena = models.DecimalField(max_digits=6, decimal_places=4, default=Decimal('0.02'),
+                                            verbose_name='% Aporte SENA',
+                                            help_text='Ley 21/1982 art. 7. Default 2%')
+    pct_aporte_icbf = models.DecimalField(max_digits=6, decimal_places=4, default=Decimal('0.03'),
+                                            verbose_name='% Aporte ICBF',
+                                            help_text='Ley 7/1979 art. 2. Default 3%')
+    pct_aporte_caja = models.DecimalField(max_digits=6, decimal_places=4, default=Decimal('0.04'),
+                                            verbose_name='% Aporte Caja Compensación',
+                                            help_text='Ley 21/1982 art. 7. Default 4%')
+    pct_aporte_esap = models.DecimalField(max_digits=6, decimal_places=4, default=Decimal('0.005'),
+                                            verbose_name='% Aporte ESAP',
+                                            help_text='Ley 21/1982 art. 7. Default 0.5%')
+    pct_aporte_escuelas = models.DecimalField(max_digits=6, decimal_places=4, default=Decimal('0.01'),
+                                                verbose_name='% Aporte Escuelas Industriales',
+                                                help_text='Ley 21/1982 art. 7. Default 1%')
+    # Pensionados (Ley 100/1993 art. 14)
+    pct_incremento_pensionados = models.DecimalField(max_digits=6, decimal_places=4, default=Decimal('0.040'),
+                                                       verbose_name='% Incremento Mesada Pensionados',
+                                                       help_text='Ley 100/1993 art. 14: incremento igual al IPC del año anterior.')
+    # Servicio Deuda (Ley 358/1997)
+    tcr_deuda = models.DecimalField(max_digits=6, decimal_places=4, default=Decimal('0.921'),
+                                      verbose_name='Tasa Cobertura Riesgo (TCR)',
+                                      help_text='Factor multiplicador de intereses para cubrir riesgo. Default 0.921')
+    pct_limite_intereses_ley358 = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal('40.00'),
+                                                        verbose_name='% Límite Intereses/Ahorro Operacional (Ley 358)',
+                                                        help_text='Ley 358/1997 art. 6. Max 40%')
+    pct_limite_saldo_deuda_ley358 = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal('80.00'),
+                                                          verbose_name='% Límite Saldo Deuda/Ingresos Corrientes (Ley 358)',
+                                                          help_text='Ley 358/1997 art. 6. Max 80%')
+    # Ley 617/2000 - Limite Gastos Funcionamiento
+    pct_limite_funcionamiento_ley617 = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal('80.00'),
+                                                             verbose_name='% Límite Gastos Funcionamiento (Ley 617)',
+                                                             help_text='% máximo sobre ICLD. Categorías: Esp=50, 1=55, 2-3=60, 4-5=75, 6=80')
+
     activo = models.BooleanField(default=True)
 
     class Meta:

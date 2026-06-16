@@ -595,31 +595,46 @@ def plantas_personal_view(request):
 
 @login_required
 def plantas_personal_guardar(request):
-    """Guarda cambios inline en CostoPersonal y recalcula gastos."""
+    """Guarda cambios inline en CostoPersonal y recalcula gastos.
+
+    Para el salario:
+      - Si el usuario edita salario_anterior y %, se recalcula salario_basico actual.
+      - Si edita salario_basico directamente, se respeta y % se recomputa.
+    """
     if request.method == 'POST':
         try:
             vigencia = _vigencia()
             for cp in CostoPersonal.objects.filter(vigencia=vigencia):
-                cargo_key = f'cp_{cp.pk}_cargo'
-                grado_key = f'cp_{cp.pk}_grado'
-                cant_key = f'cp_{cp.pk}_cantidad'
-                sal_key = f'cp_{cp.pk}_salario_basico'
-                tot_key = f'cp_{cp.pk}_costo_total_anual_override'
+                kp = lambda f: f'cp_{cp.pk}_{f}'
                 cambios = []
-                if cargo_key in request.POST:
-                    cp.cargo = request.POST[cargo_key][:200]; cambios.append('cargo')
-                if grado_key in request.POST:
-                    cp.grado = request.POST[grado_key][:20]; cambios.append('grado')
-                if cant_key in request.POST:
-                    cp.cantidad = int(request.POST[cant_key] or 0); cambios.append('cantidad')
-                if sal_key in request.POST:
-                    cp.salario_basico = Decimal(request.POST[sal_key] or '0'); cambios.append('salario_basico')
-                if tot_key in request.POST:
-                    cp.costo_total_anual_override = Decimal(request.POST[tot_key] or '0'); cambios.append('costo_total_anual_override')
+                if kp('cargo') in request.POST:
+                    cp.cargo = request.POST[kp('cargo')][:200]; cambios.append('cargo')
+                if kp('grado') in request.POST:
+                    cp.grado = request.POST[kp('grado')][:20]; cambios.append('grado')
+                if kp('cantidad') in request.POST:
+                    cp.cantidad = int(request.POST[kp('cantidad')] or 0); cambios.append('cantidad')
+
+                # Salario: leer los 3 campos, decidir cual prevalece
+                sal_ant = Decimal(request.POST.get(kp('salario_basico_anterior'), '0') or '0')
+                pct = Decimal(request.POST.get(kp('pct_incremento'), '0') or '0')
+                sal_act = Decimal(request.POST.get(kp('salario_basico'), '0') or '0')
+
+                # Si hay sal_ant y pct, recalcular sal_act
+                if sal_ant > 0:
+                    sal_act_calc = (sal_ant * (Decimal('1') + pct)).quantize(Decimal('0.01'))
+                    cp.salario_basico_anterior = sal_ant; cambios.append('salario_basico_anterior')
+                    cp.pct_incremento = pct; cambios.append('pct_incremento')
+                    cp.salario_basico = sal_act_calc; cambios.append('salario_basico')
+                elif sal_act > 0:
+                    cp.salario_basico = sal_act; cambios.append('salario_basico')
+
+                if kp('costo_total_anual_override') in request.POST:
+                    cp.costo_total_anual_override = Decimal(
+                        request.POST[kp('costo_total_anual_override')] or '0')
+                    cambios.append('costo_total_anual_override')
                 if cambios:
                     cp.save(update_fields=cambios)
 
-            # Recalcular
             resumen = recalcular_rubros_metodo(vigencia)
             for t in RubroGasto.objects.filter(vigencia=vigencia, es_titulo=True).order_by('-nivel'):
                 t.calcular_hijos()

@@ -132,14 +132,14 @@ def importar_planta(v):
             cargo = ws.cell(row=r, column=2).value or ''
             cod = ws.cell(row=r, column=3).value
             grado = ws.cell(row=r, column=4).value
-            asign_2027 = ws.cell(row=r, column=6).value  # F
+            asign_2026 = ws.cell(row=r, column=5).value  # E (año anterior)
+            asign_2027 = ws.cell(row=r, column=6).value  # F (vigencia actual)
             cantidad = ws.cell(row=r, column=7).value     # G
             gran_total = ws.cell(row=r, column=48).value  # AV
 
             cargo_s = str(cargo).strip() if cargo else ''
             nivel_s = str(nivel).strip().upper() if nivel else ''
 
-            # Skip filas vacias o totales
             if not cargo_s or 'TOTAL' in cargo_s.upper() or 'TOTAL' in nivel_s:
                 continue
             if 'PERSONAL DE' in nivel_s or 'RESUMEN' in nivel_s:
@@ -147,14 +147,17 @@ def importar_planta(v):
             if not cantidad or cantidad == 0:
                 continue
 
-            # Datos del Excel son por toda la planta (subtotales).
-            # Modelo guarda valor unitario y al consultar multiplica por cantidad.
-            # Para que la propiedad costo_total_anual de el valor correcto,
-            # usamos el override.
             try:
                 cantidad_int = int(cantidad)
             except Exception:
                 continue
+
+            sal_ant = _safe_decimal(asign_2026)
+            sal_act = _safe_decimal(asign_2027)
+            # Calcular % incremento si tenemos ambos
+            pct_incr = Decimal('0')
+            if sal_ant > 0 and sal_act > 0:
+                pct_incr = ((sal_act - sal_ant) / sal_ant).quantize(Decimal('0.0001'))
 
             CostoPersonal.objects.create(
                 vigencia=v,
@@ -162,8 +165,9 @@ def importar_planta(v):
                 cargo=cargo_s[:200],
                 grado=str(grado or '')[:20],
                 cantidad=cantidad_int,
-                salario_basico=_safe_decimal(asign_2027),
-                # Override con el gran total del Excel
+                salario_basico_anterior=sal_ant,
+                pct_incremento=pct_incr,
+                salario_basico=sal_act,
                 costo_total_anual_override=_safe_decimal(gran_total),
                 es_pensionado=False,
                 observaciones=f'Codigo cargo: {cod or ""}; Importado desde {hoja}',
@@ -200,7 +204,8 @@ def importar_pensionados(v):
     # Filas 3-9 son los 7 pensionados (B=cc pensionado, C=nombre, D=cc beneficiario,
     # E=beneficiario, F=mesada).
     # Total anual = mesada × 14 (incluye prima junio + prima diciembre)
-    incremento = Decimal('1.07')  # Excel: 7% de incremento aprox
+    pct_incr_pens = Decimal('0.07')  # ~7% (≈IPC)
+    incremento = Decimal('1') + pct_incr_pens
     n = 0
     for r in range(3, 10):
         cc = ws.cell(row=r, column=2).value
@@ -210,7 +215,6 @@ def importar_pensionados(v):
         if not nombre or not mesada:
             continue
         mesada_d = _safe_decimal(mesada)
-        # Aplicar incremento como en el Excel y multiplicar por 14
         mesada_incr = (mesada_d * incremento).quantize(Decimal('0.01'))
         total_anual = (mesada_incr * 14).quantize(Decimal('0.01'))
 
@@ -221,6 +225,8 @@ def importar_pensionados(v):
             cargo=f'PENSIONADO {str(nombre).strip()[:120]}',
             grado='',
             cantidad=1,
+            salario_basico_anterior=mesada_d,
+            pct_incremento=pct_incr_pens,
             salario_basico=mesada_incr,
             costo_total_anual_override=total_anual,
             es_pensionado=True,

@@ -176,8 +176,15 @@ class CostoPersonal(models.Model):
     cargo = models.CharField(max_length=200, verbose_name='Cargo')
     grado = models.CharField(max_length=20, blank=True, verbose_name='Grado')
     cantidad = models.IntegerField(default=1, verbose_name='Cantidad')
+    salario_basico_anterior = models.DecimalField(max_digits=14, decimal_places=2, default=0,
+                                         verbose_name='Salario Básico Mensual Año Anterior ($)',
+                                         help_text='Salario del año anterior. Base para calcular el incremento.')
+    pct_incremento = models.DecimalField(max_digits=6, decimal_places=4, default=0,
+                                          verbose_name='% Incremento sobre año anterior',
+                                          help_text='Ej: 0.10 = 10%. Si vacío usa pct_incremento_salarial de Parámetros.')
     salario_basico = models.DecimalField(max_digits=14, decimal_places=2, default=0,
-                                         verbose_name='Salario Básico Mensual ($)')
+                                         verbose_name='Salario Básico Mensual ($) (Vigencia Actual)',
+                                         help_text='= Salario anterior × (1 + % incremento). Se autocalcula al guardar si hay anterior.')
     prima_navidad = models.DecimalField(max_digits=14, decimal_places=2, default=0,
                                         verbose_name='Prima de Navidad ($)')
     prima_vacaciones = models.DecimalField(max_digits=14, decimal_places=2, default=0,

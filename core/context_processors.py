@@ -1,0 +1,13 @@
+"""Context processors para inyectar variables globales en todos los templates."""
+from .models import ParametrosSistema
+
+
+def vigencia_global(request):
+    """Inyecta `vigencia_activa` y `params_global` para uso en base.html
+    y otras vistas que no tienen acceso directo al params actual.
+    """
+    p = ParametrosSistema.objects.filter(activo=True).first()
+    return {
+        'vigencia_activa': p.vigencia if p else None,
+        'params_global': p,
+    }

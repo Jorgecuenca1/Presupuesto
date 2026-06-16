@@ -196,7 +196,7 @@
                     {% block breadcrumb %}{% endblock %}
                 </ol>
             </nav>
-            <span class="text-muted" style="font-size:.82rem;">Vigencia {% block vigencia_display %}2026{% endblock %}</span>
+            <span class="text-muted" style="font-size:.82rem;">Vigencia {% block vigencia_display %}{{ vigencia_activa|default:"--" }}{% endblock %}</span>
         </div>
 
         <div class="main-content">

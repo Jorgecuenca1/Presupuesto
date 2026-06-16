@@ -203,6 +203,15 @@ def _regenerar_costo_personal(params):
             cp.costo_total_anual_override = (cp.salario_basico * 14).quantize(_D('0.01'))
             cp.save(update_fields=['salario_basico', 'pct_incremento', 'costo_total_anual_override'])
 
+    # Deuda: recomputar intereses_tcr de TODAS las amortizaciones con el nuevo TCR
+    from gastos.models import AmortizacionPagare
+    tcr = params.tcr_deuda or _D('0.921')
+    for a in AmortizacionPagare.objects.all():
+        nuevo_tcr = (a.intereses * tcr).quantize(_D('0.01'))
+        if a.intereses_tcr != nuevo_tcr:
+            a.intereses_tcr = nuevo_tcr
+            a.save(update_fields=['intereses_tcr'])
+
 
 @login_required
 def parametros_view(request):

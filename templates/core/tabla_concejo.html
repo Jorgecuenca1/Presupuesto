@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load humanize %}
+{% load humanize l10n %}
 
 {% block title %}Anexo 6 - Órganos de Control{% endblock %}
 {% block breadcrumb %}
@@ -36,15 +36,15 @@
             </div>
             <div class="col-md-3">
                 <label class="form-label small mb-0">ICLD ($)</label>
-                <input type="number" step="0.01" name="icld_calculado" value="{{ params.icld_calculado|floatformat:2 }}" class="form-control form-control-sm">
+                <input type="number" step="0.01" name="icld_calculado" value="{{ params.icld_calculado|unlocalize }}" class="form-control form-control-sm">
             </div>
             <div class="col-md-3">
                 <label class="form-label small mb-0">SMLMV ($)</label>
-                <input type="number" step="0.01" name="valor_smlmv" value="{{ params.valor_smlmv|floatformat:2 }}" class="form-control form-control-sm">
+                <input type="number" step="0.01" name="valor_smlmv" value="{{ params.valor_smlmv|unlocalize }}" class="form-control form-control-sm">
             </div>
             <div class="col-md-3">
                 <label class="form-label small mb-0">% Adicional Concejo (decimal)</label>
-                <input type="number" step="0.0001" name="pct_icld_adicional_concejo" value="{{ params.pct_icld_adicional_concejo }}" class="form-control form-control-sm">
+                <input type="number" step="0.0001" name="pct_icld_adicional_concejo" value="{{ params.pct_icld_adicional_concejo|unlocalize }}" class="form-control form-control-sm">
             </div>
         </div>
     </div>
@@ -85,11 +85,13 @@
     </div>
 </div>
 
-<!-- Tabla integral editable por categoria -->
+<!-- Tabla integral por categoria (solo lectura - parametros por ley) -->
 <div class="card mb-4">
     <div class="card-header bg-dark text-white">
-        <i class="bi bi-table"></i> Cálculo por Categoría Municipal — Editable
-        <small class="float-end">Modifique los valores en azul; los totales recalculan al guardar</small>
+        <i class="bi bi-table"></i> Cálculo por Categoría Municipal
+        <small class="float-end">
+            <i class="bi bi-lock-fill"></i> Parámetros fijos por Ley (1551/2012, 617/2000, 1368/2009)
+        </small>
     </div>
     <div class="card-body p-0 table-responsive">
         <table class="table table-sm table-bordered mb-0 align-middle" style="font-size:.78rem;">
@@ -100,14 +102,14 @@
                     <th colspan="3" class="bg-success text-white">PERSONERÍA</th>
                 </tr>
                 <tr class="text-center">
-                    <th class="bg-light">Valor sesión</th>
-                    <th class="bg-light">Ses. Ord.</th>
-                    <th class="bg-light">Ses. Ext.</th>
-                    <th class="bg-light">Concejales</th>
+                    <th>Valor sesión</th>
+                    <th>Ses. Ord.</th>
+                    <th>Ses. Ext.</th>
+                    <th>Concejales</th>
                     <th>Vr Honorarios</th>
                     <th>TOTAL Concejo</th>
-                    <th class="bg-light">% ICLD</th>
-                    <th class="bg-light">SMLV fijo</th>
+                    <th>% ICLD</th>
+                    <th>SMLV (vig {{ vigencia_activa }})</th>
                     <th>TOTAL Personería</th>
                 </tr>
             </thead>
@@ -115,14 +117,18 @@
                 {% for f in filas_categoria %}
                 <tr class="{% if f.es_actual %}table-warning fw-bold{% endif %}">
                     <td class="text-center"><strong>{{ f.tabla.get_categoria_display }}</strong></td>
-                    <td><input type="number" step="0.01" name="cat_{{ f.tabla.categoria }}_valor_sesion_concejal" value="{{ f.tabla.valor_sesion_concejal|floatformat:2 }}" class="form-control form-control-sm text-end"></td>
-                    <td><input type="number" name="cat_{{ f.tabla.categoria }}_sesiones_ordinarias" value="{{ f.tabla.sesiones_ordinarias }}" class="form-control form-control-sm text-center"></td>
-                    <td><input type="number" name="cat_{{ f.tabla.categoria }}_sesiones_extraordinarias" value="{{ f.tabla.sesiones_extraordinarias }}" class="form-control form-control-sm text-center"></td>
-                    <td><input type="number" name="cat_{{ f.tabla.categoria }}_num_concejales" value="{{ f.tabla.num_concejales }}" class="form-control form-control-sm text-center"></td>
+                    <td class="text-end">${{ f.tabla.valor_sesion_concejal|floatformat:0|intcomma }}</td>
+                    <td class="text-center">{{ f.tabla.sesiones_ordinarias }}</td>
+                    <td class="text-center">{{ f.tabla.sesiones_extraordinarias }}</td>
+                    <td class="text-center">{{ f.tabla.num_concejales }}</td>
                     <td class="text-end">${{ f.vr_honorarios|floatformat:0|intcomma }}</td>
                     <td class="text-end fw-bold text-primary">${{ f.total_concejo|floatformat:0|intcomma }}</td>
-                    <td><input type="number" step="0.01" name="cat_{{ f.tabla.categoria }}_limite_personeria_pct_icld" value="{{ f.tabla.limite_personeria_pct_icld|floatformat:2 }}" class="form-control form-control-sm text-end"></td>
-                    <td><input type="number" name="cat_{{ f.tabla.categoria }}_personeria_smlv_fijo" value="{{ f.tabla.personeria_smlv_fijo }}" class="form-control form-control-sm text-center"></td>
+                    <td class="text-center">
+                        {% if f.tabla.limite_personeria_pct_icld %}{{ f.tabla.limite_personeria_pct_icld }}%{% else %}—{% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if f.smlv_efectivo %}{{ f.smlv_efectivo }} SMLV{% else %}—{% endif %}
+                    </td>
                     <td class="text-end fw-bold text-success">${{ f.total_personeria|floatformat:0|intcomma }}</td>
                 </tr>
                 {% endfor %}
@@ -152,7 +158,7 @@
                 <tr {% if params and p.vigencia == params.vigencia and p.categoria == params.categoria_municipio %}class="table-warning fw-bold"{% endif %}>
                     <td>{{ p.vigencia }}</td>
                     <td>{{ p.get_categoria_display }}</td>
-                    <td><input type="number" name="prog_{{ p.pk }}_smlv" value="{{ p.smlv }}" class="form-control form-control-sm text-center"></td>
+                    <td><input type="number" name="prog_{{ p.pk }}_smlv" value="{{ p.smlv|unlocalize }}" class="form-control form-control-sm text-center"></td>
                     <td class="text-end">${{ p.smlv|floatformat:0|intcomma }} × ${{ params.valor_smlmv|floatformat:0|intcomma }}</td>
                     <td>
                         <a href="{% url 'progresion_smlv_eliminar' p.pk %}" class="btn btn-sm btn-outline-danger"

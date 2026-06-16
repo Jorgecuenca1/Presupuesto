@@ -209,6 +209,21 @@ class CostoPersonal(models.Model):
                                        verbose_name='Aportes ICBF ($)')
     aportes_sena = models.DecimalField(max_digits=14, decimal_places=2, default=0,
                                        verbose_name='Aportes SENA ($)')
+    # Campos adicionales del Excel CALCULO_GASTOS (Costo planta)
+    bonif_servicios_prestados = models.DecimalField(max_digits=14, decimal_places=2, default=0,
+                                                     verbose_name='Bonif. Servicios Prestados ($)')
+    bonif_recreacion = models.DecimalField(max_digits=14, decimal_places=2, default=0,
+                                            verbose_name='Bonif. Recreación ($)')
+    bonif_direccion = models.DecimalField(max_digits=14, decimal_places=2, default=0,
+                                           verbose_name='Bonif. Dirección ($)')
+    bonif_territorial = models.DecimalField(max_digits=14, decimal_places=2, default=0,
+                                             verbose_name='Bonif. Territorial ($)')
+    aportes_esap = models.DecimalField(max_digits=14, decimal_places=2, default=0,
+                                        verbose_name='Aporte ESAP ($)')
+    aportes_escuelas = models.DecimalField(max_digits=14, decimal_places=2, default=0,
+                                            verbose_name='Aporte Escuelas Industriales ($)')
+    subsidio_transporte_anual = models.DecimalField(max_digits=14, decimal_places=2, default=0,
+                                                      verbose_name='Subsidio Transporte Anual ($)')
     es_pensionado = models.BooleanField(default=False, verbose_name='¿Es pensionado?')
     costo_total_anual_override = models.DecimalField(
         max_digits=20, decimal_places=2, default=0,
@@ -239,10 +254,73 @@ class CostoPersonal(models.Model):
         return (self.aportes_salud + self.aportes_pension + self.aportes_arl +
                 self.aportes_caja + self.aportes_icbf + self.aportes_sena) * self.cantidad
 
+    def factor_costo_total(self, params):
+        """Factor multiplicador del salario anual segun ParametrosSistema.
+
+        Incluye prestaciones sociales + aportes seguridad social + parafiscales.
+        Resultado tipico ~ 1.68 (68% sobre salario base).
+        """
+        if not params:
+            return Decimal('1.0')
+        factor = Decimal('1.0')
+        # Prestaciones (CST + Ley 4/1992)
+        factor += params.pct_prima_servicios or 0
+        factor += params.pct_prima_navidad or 0
+        factor += params.pct_prima_vacaciones or 0
+        factor += Decimal('0.0417')  # vacaciones (15 dias/360)
+        factor += params.pct_cesantias or 0
+        factor += (params.pct_cesantias or 0) * (params.pct_intereses_cesantias or 0)
+        factor += (params.pct_bonif_servicios_prestados or 0) / 12  # 50% anual = 4.17% mensual
+        factor += params.pct_bonif_recreacion or 0
+        # Aportes seguridad social (Ley 100)
+        factor += params.pct_aporte_pension or 0
+        factor += params.pct_aporte_salud or 0
+        factor += params.pct_aporte_arl or 0
+        # Parafiscales (Ley 21/1982)
+        factor += params.pct_aporte_sena or 0
+        factor += params.pct_aporte_icbf or 0
+        factor += params.pct_aporte_caja or 0
+        factor += params.pct_aporte_esap or 0
+        factor += params.pct_aporte_escuelas or 0
+        return factor
+
+    def costo_total_calculado(self, params):
+        """Costo total anual del cargo aplicando todos los % de ley.
+
+        = salario_anual × factor × cantidad + subsidio_transporte (si aplica)
+        """
+        if not params:
+            return self.costo_salarial_anual
+        salario_anual = self.salario_basico * 12
+        factor = self.factor_costo_total(params)
+        costo = salario_anual * factor * self.cantidad
+
+        # Subsidio transporte (Ley 15/1959) - solo si salario <= 2 SMLMV
+        if params.subsidio_transporte_mensual and params.valor_smlmv:
+            if self.salario_basico <= (2 * params.valor_smlmv):
+                costo += params.subsidio_transporte_mensual * 12 * self.cantidad
+        return costo
+
     @property
     def costo_total_anual(self):
+        """Costo total anual.
+
+        Prioridad:
+          1. costo_total_anual_override si > 0 (valor manual o importado)
+          2. Cálculo dinámico desde ParametrosSistema activa (recursivo)
+          3. Suma de componentes almacenados (legacy)
+        """
         if self.costo_total_anual_override and self.costo_total_anual_override > 0:
             return self.costo_total_anual_override
+        try:
+            from core.models import ParametrosSistema
+            params = ParametrosSistema.objects.filter(vigencia=self.vigencia, activo=True).first()
+            if not params:
+                params = ParametrosSistema.objects.filter(vigencia=self.vigencia).first()
+            if params:
+                return self.costo_total_calculado(params)
+        except Exception:
+            pass
         return self.costo_salarial_anual + self.costo_prestaciones + self.costo_aportes
 
 

@@ -130,6 +130,72 @@ def dashboard(request):
     return render(request, 'core/dashboard.html', context)
 
 
+def _regenerar_costo_personal(params):
+    """Regenera prestaciones, aportes y parafiscales de CostoPersonal usando los
+    porcentajes legales de ParametrosSistema.
+
+    Aplica a cada cargo NO pensionado:
+      salario_anual = salario_basico × 12
+      prima_navidad = salario_anual × pct_prima_navidad
+      ... (todas las prestaciones, aportes, parafiscales)
+      override = suma de todos + salario_anual
+      todo × cantidad
+
+    A pensionados: aplica incremento_pensionados sobre mesada_anterior.
+    """
+    from decimal import Decimal as _D
+    from gastos.models import CostoPersonal
+    vig = params.vigencia
+    for cp in CostoPersonal.objects.filter(vigencia=vig, es_pensionado=False):
+        sal_mes = cp.salario_basico or _D('0')
+        sal_anual = sal_mes * 12
+        cant = _D(cp.cantidad)
+        # Prestaciones (anual por persona)
+        cp.prima_servicios = sal_anual * (params.pct_prima_servicios or 0)
+        cp.prima_navidad = sal_anual * (params.pct_prima_navidad or 0)
+        cp.prima_vacaciones = sal_anual * (params.pct_prima_vacaciones or 0)
+        cp.vacaciones = sal_anual * _D('0.0417')
+        cp.cesantias = sal_anual * (params.pct_cesantias or 0)
+        cp.intereses_cesantias = cp.cesantias * (params.pct_intereses_cesantias or 0)
+        cp.bonif_servicios_prestados = sal_mes * (params.pct_bonif_servicios_prestados or 0)
+        cp.bonif_recreacion = sal_anual * (params.pct_bonif_recreacion or 0)
+        # Aportes seguridad social
+        cp.aportes_pension = sal_anual * (params.pct_aporte_pension or 0)
+        cp.aportes_salud = sal_anual * (params.pct_aporte_salud or 0)
+        cp.aportes_arl = sal_anual * (params.pct_aporte_arl or 0)
+        # Parafiscales
+        cp.aportes_sena = sal_anual * (params.pct_aporte_sena or 0)
+        cp.aportes_icbf = sal_anual * (params.pct_aporte_icbf or 0)
+        cp.aportes_caja = sal_anual * (params.pct_aporte_caja or 0)
+        cp.aportes_esap = sal_anual * (params.pct_aporte_esap or 0)
+        cp.aportes_escuelas = sal_anual * (params.pct_aporte_escuelas or 0)
+        # Subsidio transporte (Ley 15/1959) si salario <= 2 SMLMV
+        if params.valor_smlmv and sal_mes <= (2 * params.valor_smlmv):
+            cp.subsidio_transporte_anual = (params.subsidio_transporte_mensual or 0) * 12
+        else:
+            cp.subsidio_transporte_anual = _D('0')
+
+        suma_componentes = (sal_anual + cp.prima_servicios + cp.prima_navidad +
+                            cp.prima_vacaciones + cp.vacaciones + cp.cesantias +
+                            cp.intereses_cesantias + cp.bonif_servicios_prestados +
+                            cp.bonif_recreacion + cp.bonif_direccion + cp.bonif_territorial +
+                            cp.aportes_pension + cp.aportes_salud + cp.aportes_arl +
+                            cp.aportes_sena + cp.aportes_icbf + cp.aportes_caja +
+                            cp.aportes_esap + cp.aportes_escuelas +
+                            cp.subsidio_transporte_anual)
+        cp.costo_total_anual_override = suma_componentes * cant
+        cp.save()
+
+    # Pensionados: aplicar incremento mesada
+    for cp in CostoPersonal.objects.filter(vigencia=vig, es_pensionado=True):
+        if cp.salario_basico_anterior and cp.salario_basico_anterior > 0:
+            incr = _D('1') + (params.pct_incremento_pensionados or _D('0'))
+            cp.salario_basico = (cp.salario_basico_anterior * incr).quantize(_D('0.01'))
+            cp.pct_incremento = params.pct_incremento_pensionados or _D('0')
+            cp.costo_total_anual_override = (cp.salario_basico * 14).quantize(_D('0.01'))
+            cp.save(update_fields=['salario_basico', 'pct_incremento', 'costo_total_anual_override'])
+
+
 @login_required
 def parametros_view(request):
     params = ParametrosSistema.objects.filter(activo=True).first()
@@ -153,10 +219,12 @@ def parametros_view(request):
             # Recalcular ingresos y gastos con los nuevos parámetros
             from ingresos.utils import calcular_todos_ingresos
             from ingresos.models import RubroIngreso
-            from gastos.models import RubroGasto
+            from gastos.models import RubroGasto, CostoPersonal
             from gastos.utils import recalcular_rubros_metodo
             try:
                 calcular_todos_ingresos(params_saved.vigencia)
+                # Regenerar CostoPersonal con los % nuevos de Parametros (recursivo)
+                _regenerar_costo_personal(params_saved)
                 recalcular_rubros_metodo(params_saved.vigencia)
                 titulos_ing = RubroIngreso.objects.filter(
                     vigencia=params_saved.vigencia, es_titulo=True

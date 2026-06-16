@@ -648,9 +648,9 @@ def plantas_personal_guardar(request):
 def plantas_personal_recalcular(request):
     """Recalcula prestaciones/aportes desde Parámetros del Sistema (ley).
 
-    Para cada CostoPersonal activo (no pensionado), aplica los % de ParametrosSistema
-    a salario_basico para regenerar prima_navidad, aportes_salud, etc. Luego
-    recalcula los rubros con método CPS.
+    Reutiliza la misma logica que parametros_view: aplica los % de
+    ParametrosSistema a salario_basico para regenerar prima_navidad,
+    aportes_salud, etc. en cada CostoPersonal. Luego recalcula los rubros CPS.
     """
     if request.method == 'POST':
         try:
@@ -660,45 +660,16 @@ def plantas_personal_recalcular(request):
                 messages.warning(request, 'No hay ParametrosSistema para esta vigencia')
                 return redirect('plantas_personal')
 
-            n = 0
-            for cp in CostoPersonal.objects.filter(vigencia=vigencia, es_pensionado=False):
-                sal_anual = cp.salario_basico * 12
-                # Prestaciones (anuales)
-                cp.prima_navidad = sal_anual * p.pct_prima_navidad
-                cp.prima_vacaciones = sal_anual * p.pct_prima_vacaciones
-                cp.prima_servicios = sal_anual * p.pct_prima_servicios
-                cp.cesantias = sal_anual * p.pct_cesantias
-                cp.intereses_cesantias = cp.cesantias * p.pct_intereses_cesantias
-                cp.vacaciones = sal_anual * Decimal('0.0417')
-                # Aportes (anuales)
-                cp.aportes_salud = sal_anual * p.pct_aporte_salud
-                cp.aportes_pension = sal_anual * p.pct_aporte_pension
-                cp.aportes_arl = sal_anual * p.pct_aporte_arl
-                cp.aportes_caja = sal_anual * p.pct_aporte_caja
-                cp.aportes_icbf = sal_anual * p.pct_aporte_icbf
-                cp.aportes_sena = sal_anual * p.pct_aporte_sena
-                # Limpiamos el override para usar la suma calculada
-                cp.costo_total_anual_override = Decimal('0')
-                cp.save()
-                n += 1
+            from core.views import _regenerar_costo_personal
+            _regenerar_costo_personal(p)
 
-            # Pensionados: aplicar incremento IPC sobre mesada
-            n_pens = 0
-            for cp in CostoPersonal.objects.filter(vigencia=vigencia, es_pensionado=True):
-                # Si tiene override, lo dejamos. Si no, recalculamos con incremento
-                if not cp.costo_total_anual_override or cp.costo_total_anual_override <= 0:
-                    incremento = Decimal('1') + p.pct_incremento_pensionados
-                    cp.salario_basico = cp.salario_basico * incremento
-                    cp.costo_total_anual_override = cp.salario_basico * 14
-                    cp.save(update_fields=['salario_basico', 'costo_total_anual_override'])
-                n_pens += 1
-
-            # Recalcular
+            n_act = CostoPersonal.objects.filter(vigencia=vigencia, es_pensionado=False).count()
+            n_pens = CostoPersonal.objects.filter(vigencia=vigencia, es_pensionado=True).count()
             resumen = recalcular_rubros_metodo(vigencia)
             for t in RubroGasto.objects.filter(vigencia=vigencia, es_titulo=True).order_by('-nivel'):
                 t.calcular_hijos()
             messages.success(request,
-                f'Recalculado desde Parámetros: {n} cargos activos + {n_pens} pensionados. '
+                f'Recalculado desde Parámetros: {n_act} cargos activos + {n_pens} pensionados. '
                 f'CPS: ${resumen.get("CPS",{}).get("total_aplicado", 0):,.0f}')
         except Exception as e:
             messages.error(request, f'Error: {e}')

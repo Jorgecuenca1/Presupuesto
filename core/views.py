@@ -146,7 +146,15 @@ def _regenerar_costo_personal(params):
     from decimal import Decimal as _D
     from gastos.models import CostoPersonal
     vig = params.vigencia
+    pct_incr_salarial = params.pct_incremento_salarial or _D('0')
+
     for cp in CostoPersonal.objects.filter(vigencia=vig, es_pensionado=False):
+        # 1) PRIMERO: actualizar salario_basico desde anterior × (1 + % incremento)
+        # para que el cambio en pct_incremento_salarial se propague automaticamente.
+        if cp.salario_basico_anterior and cp.salario_basico_anterior > 0:
+            cp.pct_incremento = pct_incr_salarial
+            cp.salario_basico = (cp.salario_basico_anterior * (_D('1') + pct_incr_salarial)).quantize(_D('0.01'))
+
         sal_mes = cp.salario_basico or _D('0')
         sal_anual = sal_mes * 12
         cant = _D(cp.cantidad)

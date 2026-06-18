@@ -600,13 +600,23 @@ def plantas_personal_guardar(request):
     Para el salario:
       - Si el usuario edita salario_anterior y %, se recalcula salario_basico actual.
       - Si edita salario_basico directamente, se respeta y % se recomputa.
+
+    DESPUES de guardar el nuevo salario, REGENERA el override (costo_total_anual)
+    desde el nuevo sueldo × factor de ley (prestaciones + aportes + parafiscales).
+    Asi, cambiar el % en Plantas SI actualiza el reporte de gastos.
     """
     if request.method == 'POST':
         try:
             vigencia = _vigencia()
+            params = ParametrosSistema.objects.filter(vigencia=vigencia, activo=True).first()
+            from core.views import _regenerar_componentes_cargo
+
+            cargos_modificados = []
             for cp in CostoPersonal.objects.filter(vigencia=vigencia):
                 kp = lambda f: f'cp_{cp.pk}_{f}'
                 cambios = []
+                salario_cambio = False
+
                 if kp('cargo') in request.POST:
                     cp.cargo = request.POST[kp('cargo')][:200]; cambios.append('cargo')
                 if kp('grado') in request.POST:
@@ -614,31 +624,39 @@ def plantas_personal_guardar(request):
                 if kp('cantidad') in request.POST:
                     cp.cantidad = int(request.POST[kp('cantidad')] or 0); cambios.append('cantidad')
 
-                # Salario: leer los 3 campos, decidir cual prevalece
                 sal_ant = Decimal(request.POST.get(kp('salario_basico_anterior'), '0') or '0')
                 pct = Decimal(request.POST.get(kp('pct_incremento'), '0') or '0')
                 sal_act = Decimal(request.POST.get(kp('salario_basico'), '0') or '0')
 
-                # Si hay sal_ant y pct, recalcular sal_act
                 if sal_ant > 0:
                     sal_act_calc = (sal_ant * (Decimal('1') + pct)).quantize(Decimal('0.01'))
+                    if cp.salario_basico_anterior != sal_ant or cp.pct_incremento != pct or cp.salario_basico != sal_act_calc:
+                        salario_cambio = True
                     cp.salario_basico_anterior = sal_ant; cambios.append('salario_basico_anterior')
                     cp.pct_incremento = pct; cambios.append('pct_incremento')
                     cp.salario_basico = sal_act_calc; cambios.append('salario_basico')
                 elif sal_act > 0:
+                    if cp.salario_basico != sal_act:
+                        salario_cambio = True
                     cp.salario_basico = sal_act; cambios.append('salario_basico')
 
-                if kp('costo_total_anual_override') in request.POST:
-                    cp.costo_total_anual_override = Decimal(
-                        request.POST[kp('costo_total_anual_override')] or '0')
-                    cambios.append('costo_total_anual_override')
                 if cambios:
                     cp.save(update_fields=cambios)
+                if salario_cambio:
+                    cargos_modificados.append(cp)
+
+            # Para cada cargo con salario cambiado: regenerar componentes y override
+            # usando los % legales de Parámetros (sin tocar pct_incremento ya guardado).
+            if params:
+                for cp in cargos_modificados:
+                    _regenerar_componentes_cargo(cp, params, actualizar_salario=False)
 
             resumen = recalcular_rubros_metodo(vigencia)
             for t in RubroGasto.objects.filter(vigencia=vigencia, es_titulo=True).order_by('-nivel'):
                 t.calcular_hijos()
-            messages.success(request, f'Plantas guardadas. CPS: {resumen.get("CPS",{}).get("rubros",0)} rubros recalculados.')
+            messages.success(request,
+                f'Plantas guardadas. {len(cargos_modificados)} cargos con sueldo recalculado. '
+                f'CPS: {resumen.get("CPS",{}).get("rubros",0)} rubros recalculados.')
         except Exception as e:
             messages.error(request, f'Error: {e}')
     return redirect('plantas_personal')

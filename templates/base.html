@@ -230,25 +230,45 @@
         if (!s) return '';
         return s.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
     }
-    function applyFormat(el) {
-        // Quitar .00 trailing si viene de Django (e.g. "35000000000.00")
-        var v = String(el.value || '').replace(/[,.]\d{0,2}$/, '').replace(/[^0-9]/g, '');
-        el.value = fmt(v);
+    function toIntegerString(raw) {
+        var s = String(raw || '').trim();
+        if (!s) return '';
+        // Si tiene punto o coma con decimales (e.g., "515000.0000", "1750905.00", "1,5"),
+        // parsear como float (formato ingles) o reemplazar coma → punto.
+        // En Django con DecimalField, el value siempre viene como "N.NNNN" estilo ingles.
+        if (/^-?\d+\.\d+$/.test(s)) {
+            var n = parseFloat(s);
+            if (!isNaN(n)) return String(Math.round(n));
+            return '';
+        }
+        // Si solo tiene comas (formato locale es-co "1.234,56"), tomar la parte entera
+        if (s.indexOf(',') > -1) {
+            var beforeComma = s.split(',')[0];
+            return beforeComma.replace(/[^0-9]/g, '');
+        }
+        // Sin puntos ni comas o solo dígitos
+        return s.replace(/[^0-9]/g, '');
+    }
+    function applyInitial(el) {
+        el.value = fmt(toIntegerString(el.value));
+    }
+    function applyTyping(el) {
+        // Durante typing, solo nos quedamos con dígitos (los puntos los pone fmt)
+        el.value = fmt(el.value.replace(/[^0-9]/g, ''));
     }
     document.addEventListener('DOMContentLoaded', function() {
         var inputs = document.querySelectorAll('.cop-format, input[data-monetary="1"]');
         inputs.forEach(function(inp) {
-            applyFormat(inp);
+            applyInitial(inp);
             inp.addEventListener('input', function(e) {
                 var cursor = e.target.selectionStart;
                 var oldLen = e.target.value.length;
-                applyFormat(e.target);
+                applyTyping(e.target);
                 var newLen = e.target.value.length;
                 try {
                     e.target.selectionStart = e.target.selectionEnd = Math.max(0, cursor + (newLen - oldLen));
                 } catch(err) {}
             });
-            // Antes de submit, quitar puntos del form padre
             var f = inp.form;
             if (f && !f.dataset.copCleaned) {
                 f.dataset.copCleaned = '1';

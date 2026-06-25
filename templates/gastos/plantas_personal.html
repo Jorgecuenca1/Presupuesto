@@ -17,10 +17,8 @@
             <button type="submit" class="btn btn-warning btn-sm">
                 <i class="bi bi-arrow-clockwise"></i> Recalcular desde Parámetros
             </button>
-        </form>
-        <button type="submit" form="form-plantas" class="btn btn-success">
-            <i class="bi bi-save"></i> Guardar cambios
-        </button>
+        
+        
     </div>
 </div>
 
@@ -47,8 +45,7 @@
     {% endfor %}
 </ul>
 
-<form method="post" action="{% url 'plantas_personal_guardar' %}" id="form-plantas">
-{% csrf_token %}
+
 
 <div class="tab-content border border-top-0 rounded-bottom">
 {% for p in pestanas %}
@@ -95,26 +92,14 @@
                 </thead>
                 <tbody>
                     {% for cp in p.activos %}
-                    <tr data-row="{{ cp.pk }}">
-                        <td><input type="text" name="cp_{{ cp.pk }}_cargo" value="{{ cp.cargo }}" class="form-control form-control-sm"></td>
-                        <td><input type="text" name="cp_{{ cp.pk }}_grado" value="{{ cp.grado }}" class="form-control form-control-sm"></td>
-                        <td><input type="number" name="cp_{{ cp.pk }}_cantidad" value="{{ cp.cantidad }}" class="form-control form-control-sm text-center"></td>
-                        <td><input type="number" step="1" min="0" name="cp_{{ cp.pk }}_salario_basico_anterior"
-                                   value="{{ cp.salario_basico_anterior|unlocalize }}"
-                                   class="form-control form-control-sm text-end sal-anterior"
-                                   data-row="{{ cp.pk }}"></td>
-                        <td><input type="number" step="0.0001" name="cp_{{ cp.pk }}_pct_incremento"
-                                   value="{{ cp.pct_incremento|unlocalize }}"
-                                   class="form-control form-control-sm text-end pct-incr"
-                                   data-row="{{ cp.pk }}"
-                                   placeholder="0.081"></td>
-                        <td><input type="number" step="1" min="0" name="cp_{{ cp.pk }}_salario_basico"
-                                   value="{{ cp.salario_basico|unlocalize }}"
-                                   class="form-control form-control-sm text-end fw-bold bg-light sal-actual"
-                                   data-row="{{ cp.pk }}" readonly></td>
-                        <td><input type="number" step="1" min="0" name="cp_{{ cp.pk }}_costo_total_anual_override"
-                                   value="{{ cp.costo_total_anual_override|unlocalize }}"
-                                   class="form-control form-control-sm text-end"></td>
+                    <tr>
+                        <td>{{ cp.cargo }}</td>
+                        <td class="text-center">{{ cp.grado }}</td>
+                        <td class="text-center">{{ cp.cantidad }}</td>
+                        <td class="text-end">${{ cp.salario_basico_anterior|floatformat:0|intcomma }}</td>
+                        <td class="text-end">{{ cp.pct_incremento|floatformat:4 }}</td>
+                        <td class="text-end fw-bold bg-light">${{ cp.salario_basico|floatformat:0|intcomma }}</td>
+                        <td class="text-end">${{ cp.costo_total_anual_override|floatformat:0|intcomma }}</td>
                         <td class="text-end fw-bold">${{ cp.costo_total_anual|floatformat:0|intcomma }}</td>
                     </tr>
                     {% endfor %}
@@ -145,24 +130,12 @@
                 </thead>
                 <tbody>
                     {% for cp in p.pensionados %}
-                    <tr data-row="{{ cp.pk }}">
-                        <td><input type="text" name="cp_{{ cp.pk }}_cargo" value="{{ cp.cargo }}" class="form-control form-control-sm"></td>
-                        <td><input type="number" step="1" min="0" name="cp_{{ cp.pk }}_salario_basico_anterior"
-                                   value="{{ cp.salario_basico_anterior|unlocalize }}"
-                                   class="form-control form-control-sm text-end sal-anterior"
-                                   data-row="{{ cp.pk }}"></td>
-                        <td><input type="number" step="0.0001" name="cp_{{ cp.pk }}_pct_incremento"
-                                   value="{{ cp.pct_incremento|unlocalize }}"
-                                   class="form-control form-control-sm text-end pct-incr"
-                                   data-row="{{ cp.pk }}"
-                                   placeholder="0.04"></td>
-                        <td><input type="number" step="1" min="0" name="cp_{{ cp.pk }}_salario_basico"
-                                   value="{{ cp.salario_basico|unlocalize }}"
-                                   class="form-control form-control-sm text-end fw-bold bg-light sal-actual"
-                                   data-row="{{ cp.pk }}" readonly></td>
-                        <td><input type="number" step="1" min="0" name="cp_{{ cp.pk }}_costo_total_anual_override"
-                                   value="{{ cp.costo_total_anual_override|unlocalize }}"
-                                   class="form-control form-control-sm text-end"></td>
+                    <tr>
+                        <td>{{ cp.cargo }}</td>
+                        <td class="text-end">${{ cp.salario_basico_anterior|floatformat:0|intcomma }}</td>
+                        <td class="text-end">{{ cp.pct_incremento|floatformat:4 }}</td>
+                        <td class="text-end fw-bold bg-light">${{ cp.salario_basico|floatformat:0|intcomma }}</td>
+                        <td class="text-end">${{ cp.costo_total_anual_override|floatformat:0|intcomma }}</td>
                         <td><small class="text-muted">{{ cp.observaciones|truncatechars:40 }}</small></td>
                     </tr>
                     {% endfor %}
@@ -182,27 +155,9 @@
 {% endfor %}
 </div>
 
-<script>
-// Auto-cálculo: Salario actual = Salario anterior × (1 + % incremento)
-document.querySelectorAll('.sal-anterior, .pct-incr').forEach(input => {
-    input.addEventListener('input', (e) => {
-        const rowId = e.target.dataset.row;
-        const ant = parseFloat(document.querySelector(`input.sal-anterior[data-row="${rowId}"]`).value) || 0;
-        const pct = parseFloat(document.querySelector(`input.pct-incr[data-row="${rowId}"]`).value) || 0;
-        const nuevo = (ant * (1 + pct)).toFixed(2);
-        const target = document.querySelector(`input.sal-actual[data-row="${rowId}"]`);
-        if (target && ant > 0) {
-            target.value = nuevo;
-        }
-    });
-});
-</script>
 
-<div class="d-flex justify-content-end mt-3">
-    <button type="submit" class="btn btn-success btn-lg">
-        <i class="bi bi-save"></i> Guardar y recalcular Anexo 2
-    </button>
-</div>
+
+
 </form>
 
 {% if not pestanas %}
@@ -263,6 +218,7 @@ document.querySelectorAll('.sal-anterior, .pct-incr').forEach(input => {
 (function() {
     var forms = document.querySelectorAll('form[method="post"], form:not([method])');
     forms.forEach(function(f) {
+        // Solo formularios que tengan un submit con texto "Guardar" o "Recalcular"
         var btns = f.querySelectorAll('button[type="submit"], input[type="submit"]');
         var hasRecalc = false;
         btns.forEach(function(b) {

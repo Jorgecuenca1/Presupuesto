@@ -390,3 +390,70 @@
     </div>
 </form>
 {% endblock %}
+
+{% block extra_css %}
+<style>
+#loading-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.65);
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    color: white;
+}
+#loading-overlay.active { display: flex; }
+#loading-overlay .spinner-border {
+    width: 5rem; height: 5rem;
+    border-width: .5rem;
+}
+#loading-overlay .loading-text {
+    font-size: 1.4rem;
+    margin-top: 1.5rem;
+    font-weight: 500;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+#loading-overlay .loading-sub {
+    font-size: 0.95rem;
+    margin-top: .5rem;
+    opacity: 0.85;
+    max-width: 600px;
+    text-align: center;
+    padding: 0 1rem;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<div id="loading-overlay">
+    <div class="spinner-border text-light" role="status">
+        <span class="visually-hidden">Cargando...</span>
+    </div>
+    <div class="loading-text"><i class="bi bi-gear-fill"></i> Guardando y recalculando…</div>
+    <div class="loading-sub">
+        Se están propagando los nuevos parámetros a todos los rubros del Anexo 1 y Anexo 2.
+        Esto puede tardar unos segundos. Por favor espera y no cierres la ventana.
+    </div>
+</div>
+<script>
+(function() {
+    var forms = document.querySelectorAll('form[method="post"], form:not([method])');
+    forms.forEach(function(f) {
+        var btns = f.querySelectorAll('button[type="submit"], input[type="submit"]');
+        var hasRecalc = false;
+        btns.forEach(function(b) {
+            var txt = (b.innerText || b.value || '').toLowerCase();
+            if (txt.indexOf('guardar') >= 0 || txt.indexOf('recalcul') >= 0) hasRecalc = true;
+        });
+        if (!hasRecalc) return;
+        f.addEventListener('submit', function() {
+            document.getElementById('loading-overlay').classList.add('active');
+            btns.forEach(function(b) { b.disabled = true; });
+        });
+    });
+})();
+</script>
+{% endblock %}
+

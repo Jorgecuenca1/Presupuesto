@@ -221,5 +221,46 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     {% block extra_js %}{% endblock %}
+
+<script>
+// Formato peso colombiano (punto como separador de miles) en inputs .cop-format
+(function() {
+    function fmt(s) {
+        s = String(s).replace(/[^0-9]/g, '');
+        if (!s) return '';
+        return s.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    }
+    function applyFormat(el) {
+        // Quitar .00 trailing si viene de Django (e.g. "35000000000.00")
+        var v = String(el.value || '').replace(/[,.]\d{0,2}$/, '').replace(/[^0-9]/g, '');
+        el.value = fmt(v);
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+        var inputs = document.querySelectorAll('.cop-format, input[data-monetary="1"]');
+        inputs.forEach(function(inp) {
+            applyFormat(inp);
+            inp.addEventListener('input', function(e) {
+                var cursor = e.target.selectionStart;
+                var oldLen = e.target.value.length;
+                applyFormat(e.target);
+                var newLen = e.target.value.length;
+                try {
+                    e.target.selectionStart = e.target.selectionEnd = Math.max(0, cursor + (newLen - oldLen));
+                } catch(err) {}
+            });
+            // Antes de submit, quitar puntos del form padre
+            var f = inp.form;
+            if (f && !f.dataset.copCleaned) {
+                f.dataset.copCleaned = '1';
+                f.addEventListener('submit', function() {
+                    f.querySelectorAll('.cop-format, input[data-monetary="1"]').forEach(function(i) {
+                        i.value = i.value.replace(/\./g, '');
+                    });
+                });
+            }
+        });
+    });
+})();
+</script>
 </body>
 </html>

@@ -304,6 +304,7 @@ def _recalcular_titulos_por_codigo(vigencia):
             t.valor_apropiacion = suma
             t.save(update_fields=['valor_apropiacion'])
 
+
 def _distribuir_componentes_rubros(vigencia):
     """Distribuye componentes de CostoPersonal a los rubros CUIPO detalle del Anexo 2.
 
@@ -340,6 +341,18 @@ def _distribuir_componentes_rubros(vigencia):
                 vigencia=vigencia, seccion=sec, codigo=codigo, es_titulo=False
             ).update(valor_apropiacion=valor)
 
+def _limpiar_cop(post_data, campos):
+    """Quita puntos de campos monetarios para parsearlos como Decimal."""
+    if not hasattr(post_data, '_mutable'):
+        return post_data
+    post_data._mutable = True
+    for campo in campos:
+        if campo in post_data and post_data[campo]:
+            post_data[campo] = post_data[campo].replace('.', '').replace(',', '.')
+    post_data._mutable = False
+    return post_data
+
+
 @never_cache
 @login_required
 def parametros_view(request):
@@ -355,6 +368,13 @@ def parametros_view(request):
             params.icld_calculado = icld_auto
 
     if request.method == 'POST':
+        _MONETARIOS_PARAMS = [
+            'icld_calculado','valor_smlmv','valor_uvt','subsidio_transporte_mensual',
+            'poai_total_inversion','gasto_sev_ppto_nc','sgr_presupuesto','gasto_sev_sgr',
+            'reservas_presupuestales_nc','cuentas_por_pagar_nc','superavit_fiscal',
+            'recaudo_oleoductos_anio_n3','recaudo_oleoductos_anio_n2','recaudo_oleoductos_anio_n1',
+        ]
+        _limpiar_cop(request.POST, _MONETARIOS_PARAMS)
         form = ParametrosForm(request.POST, instance=params)
         if form.is_valid():
             params_saved = form.save(commit=False)

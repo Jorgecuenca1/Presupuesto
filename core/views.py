@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.cache import never_cache
 from django.contrib import messages
 from django.db.models import Sum, Count
 from decimal import Decimal
@@ -321,6 +322,7 @@ def _distribuir_componentes_rubros(vigencia):
                 vigencia=vigencia, seccion=sec, codigo=codigo, es_titulo=False
             ).update(valor_apropiacion=valor)
 
+@never_cache
 @login_required
 def parametros_view(request):
     params = ParametrosSistema.objects.filter(activo=True).first()
@@ -379,6 +381,7 @@ def parametros_view(request):
     return render(request, 'ingresos/parametros_form.html', {'form': form, 'params': params})
 
 
+@never_cache
 @login_required
 def tabla_concejo_personeria(request):
     """Anexo 6 - Organos de Control.
@@ -567,6 +570,7 @@ def progresion_smlv_eliminar(request, pk):
     return redirect('tabla_concejo_personeria')
 
 
+@never_cache
 @login_required
 def variables_macro_view(request):
     """Ventana de Variables Macroeconómicas: SMLV, IPC, PIB, etc. por año.

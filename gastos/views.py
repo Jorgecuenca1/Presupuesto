@@ -19,6 +19,7 @@ from .forms import (
     ContratoCreditoForm, PagareCreditoForm, AmortizacionPagareForm,
 )
 from .utils import recalcular_rubros_metodo
+from django.views.decorators.cache import never_cache
 
 
 def _vigencia():
@@ -546,6 +547,7 @@ def limpiar_gastos(request):
 
 
 # ─── PLANTAS DE PERSONAL ─────────────────────────────────────────
+@never_cache
 @login_required
 def plantas_personal_view(request):
     """Visualización tipo Excel CALCULO_GASTOS.xlsx — hojas de planta por sección.
@@ -697,6 +699,7 @@ def plantas_personal_recalcular(request):
 
 
 # ─── REPORTE ANEXO 2 ─────────────────────────────────────────────
+@never_cache
 @login_required
 def reporte_gastos(request):
     """Reporte estilo Anexo 2: agrupado por SECCION (Unidad Ejecutora).

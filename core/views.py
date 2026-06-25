@@ -615,6 +615,13 @@ def variables_macro_view(request):
     params = ParametrosSistema.objects.filter(activo=True).first()
 
     if request.method == 'POST':
+        # Limpiar puntos de los campos monetarios (SMLV/PIB) que vienen del cop-format
+        if hasattr(request.POST, '_mutable'):
+            request.POST._mutable = True
+            for k in list(request.POST.keys()):
+                if k.startswith('var_') and k.endswith('_valor'):
+                    request.POST[k] = (request.POST[k] or '').replace('.', '').replace(',', '.')
+            request.POST._mutable = False
         try:
             # Guardar cambios de cada variable
             for v in VariableMacro.objects.all():

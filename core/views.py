@@ -286,6 +286,24 @@ def _regenerar_costo_personal(params):
 
 
 
+def _recalcular_titulos_por_codigo(vigencia):
+    """Recalcula el valor de cada rubro titulo de gasto sumando las hojas
+    descendientes por prefijo de codigo. Necesario porque el parent FK no
+    esta siempre seteado en RubroGasto."""
+    from gastos.models import RubroGasto
+    todos = list(RubroGasto.objects.filter(vigencia=vigencia))
+    hojas = {(r.seccion_id, r.codigo): r.valor_apropiacion
+             for r in todos if not r.es_titulo and r.codigo}
+    for t in todos:
+        if not t.es_titulo or not t.codigo:
+            continue
+        pref = t.codigo + '.'
+        suma = sum(v for (sec, cod), v in hojas.items()
+                   if sec == t.seccion_id and cod.startswith(pref))
+        if t.valor_apropiacion != suma:
+            t.valor_apropiacion = suma
+            t.save(update_fields=['valor_apropiacion'])
+
 def _distribuir_componentes_rubros(vigencia):
     """Distribuye componentes de CostoPersonal a los rubros CUIPO detalle del Anexo 2.
 
@@ -359,11 +377,7 @@ def parametros_view(request):
                 ).order_by('-nivel')
                 for t in titulos_ing:
                     t.calcular_hijos()
-                titulos_gas = RubroGasto.objects.filter(
-                    vigencia=params_saved.vigencia, es_titulo=True
-                ).order_by('-nivel')
-                for t in titulos_gas:
-                    t.calcular_hijos()
+                _recalcular_titulos_por_codigo(params_saved.vigencia)
                 messages.success(
                     request,
                     f'Parámetros guardados y rubros recalculados para vigencia {params_saved.vigencia}'

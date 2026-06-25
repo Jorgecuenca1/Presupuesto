@@ -611,7 +611,7 @@ def plantas_personal_guardar(request):
         try:
             vigencia = _vigencia()
             params = ParametrosSistema.objects.filter(vigencia=vigencia, activo=True).first()
-            from core.views import _regenerar_componentes_cargo, _distribuir_componentes_rubros
+            from core.views import _regenerar_componentes_cargo, _distribuir_componentes_rubros, _recalcular_titulos_por_codigo
 
             cargos_modificados = []
             for cp in CostoPersonal.objects.filter(vigencia=vigencia):
@@ -655,8 +655,7 @@ def plantas_personal_guardar(request):
 
             _distribuir_componentes_rubros(vigencia)
             resumen = recalcular_rubros_metodo(vigencia)
-            for t in RubroGasto.objects.filter(vigencia=vigencia, es_titulo=True).order_by('-nivel'):
-                t.calcular_hijos()
+            _recalcular_titulos_por_codigo(vigencia)
             messages.success(request,
                 f'Plantas guardadas. {len(cargos_modificados)} cargos con sueldo recalculado. '
                 f'CPS: {resumen.get("CPS",{}).get("rubros",0)} rubros recalculados.')
@@ -688,8 +687,7 @@ def plantas_personal_recalcular(request):
             n_act = CostoPersonal.objects.filter(vigencia=vigencia, es_pensionado=False).count()
             n_pens = CostoPersonal.objects.filter(vigencia=vigencia, es_pensionado=True).count()
             resumen = recalcular_rubros_metodo(vigencia)
-            for t in RubroGasto.objects.filter(vigencia=vigencia, es_titulo=True).order_by('-nivel'):
-                t.calcular_hijos()
+            _recalcular_titulos_por_codigo(vigencia)
             messages.success(request,
                 f'Recalculado desde Parámetros: {n_act} cargos activos + {n_pens} pensionados. '
                 f'CPS: ${resumen.get("CPS",{}).get("total_aplicado", 0):,.0f}')

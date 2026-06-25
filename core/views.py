@@ -379,6 +379,18 @@ def parametros_view(request):
         if form.is_valid():
             params_saved = form.save(commit=False)
             params_saved.activo = True
+            # Sincronizar SMLMV/IPC desde Variables Macro del año vigente (siempre)
+            from .models import get_smlv, get_ipc, VariableMacro
+            smlv_vig = get_smlv(params_saved.vigencia)
+            if smlv_vig and smlv_vig > 0:
+                params_saved.valor_smlmv = smlv_vig
+                # tambien pct_incremento_salarial desde el % del SMLV
+                smlv_obj = VariableMacro.objects.filter(anio=params_saved.vigencia, tipo='SMLV').first()
+                if smlv_obj and smlv_obj.pct_anual:
+                    params_saved.pct_incremento_salarial = smlv_obj.pct_anual
+            ipc_vig = get_ipc(params_saved.vigencia)
+            if ipc_vig and ipc_vig > 0:
+                params_saved.tasa_ipc = ipc_vig
             params_saved.save()
 
             # Recalcular ingresos y gastos con los nuevos parámetros
@@ -437,7 +449,12 @@ def tabla_concejo_personeria(request):
                         request.POST[k] = request.POST[k].replace('.', '').replace(',', '.')
                 request.POST._mutable = False
             # 1. Variables base (ParametrosSistema)
-            if 'valor_smlmv' in request.POST:
+            # NOTA: valor_smlmv NO se acepta del form (readonly), siempre se sincroniza desde Variables Macro
+            from .models import get_smlv, get_ipc, VariableMacro
+            smlv_vig = get_smlv(params.vigencia)
+            if smlv_vig and smlv_vig > 0:
+                params.valor_smlmv = smlv_vig
+            if False and 'valor_smlmv' in request.POST:
                 params.valor_smlmv = Decimal(request.POST['valor_smlmv'] or '0')
             if 'icld_calculado' in request.POST:
                 params.icld_calculado = Decimal(request.POST['icld_calculado'] or '0')

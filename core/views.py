@@ -429,6 +429,13 @@ def tabla_concejo_personeria(request):
 
     if request.method == 'POST' and params:
         try:
+            # Limpiar puntos COP de campos monetarios
+            if hasattr(request.POST, '_mutable'):
+                request.POST._mutable = True
+                for k in ['icld_calculado', 'valor_smlmv']:
+                    if k in request.POST and request.POST[k]:
+                        request.POST[k] = request.POST[k].replace('.', '').replace(',', '.')
+                request.POST._mutable = False
             # 1. Variables base (ParametrosSistema)
             if 'valor_smlmv' in request.POST:
                 params.valor_smlmv = Decimal(request.POST['valor_smlmv'] or '0')

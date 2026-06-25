@@ -36,11 +36,11 @@
             </div>
             <div class="col-md-3">
                 <label class="form-label small mb-0">ICLD ($)</label>
-                <input type="number" step="1" min="0" name="icld_calculado" value="{{ params.icld_calculado|unlocalize }}" class="form-control form-control-sm">
+                <input type="text" inputmode="numeric" name="icld_calculado" value="{{ params.icld_calculado|unlocalize }}" class="form-control form-control-sm cop-format" data-monetary="1">
             </div>
             <div class="col-md-3">
-                <label class="form-label small mb-0">SMLMV ($)</label>
-                <input type="number" step="1" min="0" name="valor_smlmv" value="{{ params.valor_smlmv|unlocalize }}" class="form-control form-control-sm">
+                <label class="form-label small mb-0">SMLMV ($) <i class="bi bi-lock-fill text-muted" title="No editable"></i></label>
+                <input type="text" inputmode="numeric" name="valor_smlmv" value="{{ params.valor_smlmv|unlocalize }}" class="form-control form-control-sm cop-format bg-light" data-monetary="1" readonly title="Valor centralizado en Variables Macroeconómicas y Parámetros del Sistema">
             </div>
             <div class="col-md-3">
                 <label class="form-label small mb-0">% Adicional Concejo (decimal)</label>
@@ -293,6 +293,7 @@
 (function() {
     var forms = document.querySelectorAll('form[method="post"], form:not([method])');
     forms.forEach(function(f) {
+        // Solo formularios que tengan un submit con texto "Guardar" o "Recalcular"
         var btns = f.querySelectorAll('button[type="submit"], input[type="submit"]');
         var hasRecalc = false;
         btns.forEach(function(b) {

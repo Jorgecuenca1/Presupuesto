@@ -284,6 +284,43 @@ def _regenerar_costo_personal(params):
             a.save(update_fields=['intereses_tcr'])
 
 
+
+def _distribuir_componentes_rubros(vigencia):
+    """Distribuye componentes de CostoPersonal a los rubros CUIPO detalle del Anexo 2.
+
+    Necesario para que al cambiar % en Parametros, no solo el rubro padre 2.1.1.01
+    (con metodo CPS) se actualice sino tambien sus hijos individuales (Sueldo basico,
+    Prima navidad, Aportes salud, etc.) que de otra forma quedan estaticos.
+    """
+    from gastos.models import CostoPersonal, RubroGasto, SeccionGasto
+    MAPEO = {
+        '2.1.1.01.01.001.01':    lambda cp: cp.salario_basico * 12 * cp.cantidad,
+        '2.1.1.01.01.001.06':    lambda cp: cp.prima_servicios * cp.cantidad,
+        '2.1.1.01.01.001.07':    lambda cp: cp.bonif_servicios_prestados * cp.cantidad,
+        '2.1.1.01.01.001.08.01': lambda cp: cp.prima_navidad * cp.cantidad,
+        '2.1.1.01.01.001.08.02': lambda cp: cp.prima_vacaciones * cp.cantidad,
+        '2.1.1.01.02.001':       lambda cp: cp.aportes_pension * cp.cantidad,
+        '2.1.1.01.02.002':       lambda cp: cp.aportes_salud * cp.cantidad,
+        '2.1.1.01.02.003':       lambda cp: cp.cesantias * cp.cantidad,
+        '2.1.1.01.02.004':       lambda cp: cp.aportes_caja * cp.cantidad,
+        '2.1.1.01.02.005':       lambda cp: cp.aportes_arl * cp.cantidad,
+        '2.1.1.01.02.006':       lambda cp: cp.aportes_icbf * cp.cantidad,
+        '2.1.1.01.02.007':       lambda cp: cp.aportes_sena * cp.cantidad,
+        '2.1.1.01.02.008':       lambda cp: cp.aportes_esap * cp.cantidad,
+        '2.1.1.01.02.009':       lambda cp: cp.aportes_escuelas * cp.cantidad,
+        '2.1.1.01.03.001.01':    lambda cp: cp.vacaciones * cp.cantidad,
+        '2.1.1.01.03.001.03':    lambda cp: cp.bonif_recreacion * cp.cantidad,
+    }
+    for sec in SeccionGasto.objects.all():
+        cargos = list(CostoPersonal.objects.filter(vigencia=vigencia, seccion=sec, es_pensionado=False))
+        if not cargos:
+            continue
+        for codigo, fn in MAPEO.items():
+            valor = sum(fn(cp) for cp in cargos)
+            RubroGasto.objects.filter(
+                vigencia=vigencia, seccion=sec, codigo=codigo, es_titulo=False
+            ).update(valor_apropiacion=valor)
+
 @login_required
 def parametros_view(request):
     params = ParametrosSistema.objects.filter(activo=True).first()
@@ -313,6 +350,7 @@ def parametros_view(request):
                 calcular_todos_ingresos(params_saved.vigencia)
                 # Regenerar CostoPersonal con los % nuevos de Parametros (recursivo)
                 _regenerar_costo_personal(params_saved)
+                _distribuir_componentes_rubros(params_saved.vigencia)
                 recalcular_rubros_metodo(params_saved.vigencia)
                 titulos_ing = RubroIngreso.objects.filter(
                     vigencia=params_saved.vigencia, es_titulo=True

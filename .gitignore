@@ -16,3 +16,4 @@ dist/
 build/
 .env
 *.log
+.venv_qa/

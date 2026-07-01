@@ -1574,7 +1574,8 @@ def _clean_money(raw):
 
 def _recalcular_amortizacion_contrato(contrato):
     """Recalcula toda la tabla de amortización del contrato.
-    Sistema: cuota fija de capital, intereses TV, con período de gracia.
+    Sistema: cuota fija de capital, intereses vencidos, con período de gracia.
+    Periodicidad configurable por contrato (M/T/S/A).
     Independiente del número de pagarés (recursivo por pagaré).
     """
     from decimal import Decimal as D, ROUND_HALF_UP
@@ -1583,9 +1584,14 @@ def _recalcular_amortizacion_contrato(contrato):
     plazo_meses = contrato.plazo_meses or 120
     gracia_meses = contrato.gracia_meses or 24
     num_cuotas = contrato.num_cuotas_capital or 32
-    total_trim = max(1, plazo_meses // 3)
-    gracia_trim = gracia_meses // 3
-    tasa_trim = (D('1') + tasa_ea) ** D('0.25') - D('1')
+    # Meses por período según periodicidad
+    per = contrato.periodicidad_pago or 'T'
+    meses_por_periodo = {'M': 1, 'T': 3, 'S': 6, 'A': 12}.get(per, 3)
+    periodos_por_anio = 12 // meses_por_periodo
+    total_per = max(1, plazo_meses // meses_por_periodo)
+    gracia_per = gracia_meses // meses_por_periodo
+    # Tasa efectiva del período: (1+EA)^(1/periodos_por_anio) - 1
+    tasa_per = (D('1') + tasa_ea) ** (D('1') / D(periodos_por_anio)) - D('1')
 
     AmortizacionPagare.objects.filter(pagare__contrato=contrato).delete()
 
@@ -1599,18 +1605,18 @@ def _recalcular_amortizacion_contrato(contrato):
         pag.save()
 
         por_anio = {}
-        for trim in range(1, total_trim + 1):
-            trim_anio = anio_desem + (trim - 1) // 4
-            intereses_trim = (saldo * tasa_trim).quantize(D('0.01'), ROUND_HALF_UP)
-            capital_trim = cap_por_cuota if trim > gracia_trim else D('0')
-            if trim == total_trim:
-                capital_trim = saldo
-            if capital_trim > saldo:
-                capital_trim = saldo
-            saldo -= capital_trim
-            por_anio.setdefault(trim_anio, {'cap': D('0'), 'int': D('0')})
-            por_anio[trim_anio]['cap'] += capital_trim
-            por_anio[trim_anio]['int'] += intereses_trim
+        for p_idx in range(1, total_per + 1):
+            p_anio = anio_desem + (p_idx - 1) // periodos_por_anio
+            intereses_p = (saldo * tasa_per).quantize(D('0.01'), ROUND_HALF_UP)
+            capital_p = cap_por_cuota if p_idx > gracia_per else D('0')
+            if p_idx == total_per:
+                capital_p = saldo
+            if capital_p > saldo:
+                capital_p = saldo
+            saldo -= capital_p
+            por_anio.setdefault(p_anio, {'cap': D('0'), 'int': D('0')})
+            por_anio[p_anio]['cap'] += capital_p
+            por_anio[p_anio]['int'] += intereses_p
 
         for anio, tot in por_anio.items():
             AmortizacionPagare.objects.create(
@@ -1731,6 +1737,9 @@ def deuda_credito_detalle(request, contrato_id):
             except Exception: pass
             try: contrato.tcr_default = D((request.POST.get('tcr') or '0').replace(',', '.'))
             except Exception: pass
+            per = (request.POST.get('periodicidad_pago') or '').strip()[:1]
+            if per in ('M','T','S','A'):
+                contrato.periodicidad_pago = per
             ff = request.POST.get('fecha_firma')
             if ff:
                 try: contrato.fecha_firma = dt.strptime(ff, '%Y-%m-%d').date()
@@ -1738,8 +1747,11 @@ def deuda_credito_detalle(request, contrato_id):
             contrato.save()
 
             for pag in contrato.pagares.all():
+                nk = f'pag_{pag.pk}_numero'
                 vk = f'pag_{pag.pk}_valor'
                 fk = f'pag_{pag.pk}_fecha'
+                if nk in request.POST and request.POST.get(nk).strip():
+                    pag.numero_pagare = request.POST.get(nk).strip()[:20]
                 if vk in request.POST:
                     pag.valor_capital = _clean_money(request.POST.get(vk))
                 if fk in request.POST and request.POST.get(fk):
@@ -1785,7 +1797,10 @@ def deuda_credito_detalle(request, contrato_id):
 @never_cache
 @login_required
 def deuda_credito_nuevo(request):
-    """Crea un nuevo contrato de crédito."""
+    """Crea un nuevo contrato de crédito.
+    Si se envía fecha_desembolso + valor_desembolso: también crea el primer pagaré
+    y calcula la amortización de una.
+    """
     from decimal import Decimal as D
     from datetime import datetime as dt
     if request.method == 'POST':
@@ -1804,12 +1819,36 @@ def deuda_credito_nuevo(request):
                 num_cuotas_capital=int(request.POST.get('num_cuotas') or 32),
                 tasa_ea=D((request.POST.get('tasa_ea') or '0.1355').replace(',', '.')),
                 tcr_default=D((request.POST.get('tcr') or '0.921').replace(',', '.')),
+                periodicidad_pago=(request.POST.get('periodicidad_pago') or 'T')[:1],
             )
             ff = request.POST.get('fecha_firma')
             if ff:
                 try: c.fecha_firma = dt.strptime(ff, '%Y-%m-%d').date()
                 except Exception: pass
             c.save()
+
+            # Pagaré inicial si viene fecha + valor
+            fecha_desem = request.POST.get('fecha_desembolso')
+            valor_pag_raw = request.POST.get('valor_primer_pagare')
+            numero_pag = (request.POST.get('numero_primer_pagare') or 'P1')[:20]
+            if fecha_desem and valor_pag_raw:
+                try:
+                    fdesem = dt.strptime(fecha_desem, '%Y-%m-%d').date()
+                    valor_pag = _clean_money(valor_pag_raw)
+                    if valor_pag > 0:
+                        PagareCredito.objects.create(
+                            contrato=c, numero_pagare=numero_pag,
+                            valor_capital=valor_pag, fecha_desembolso=fdesem,
+                            tasa_ibr=D('12.20'), puntos=D('1.35'),
+                            tasa_cobertura_riesgo=c.tcr_default or D('0.921'),
+                            plazo_meses=c.plazo_meses or 120,
+                        )
+                        _recalcular_amortizacion_contrato(c)
+                        _propagar_deuda_a_rubros(_vigencia())
+                        messages.success(request, f'Crédito con {banco} creado con pagaré {numero_pag}. Amortización calculada.')
+                        return redirect('deuda_credito_detalle', contrato_id=c.pk)
+                except Exception:
+                    pass
             messages.success(request, f'Crédito con {banco} creado. Ahora agregue pagarés.')
             return redirect('deuda_credito_detalle', contrato_id=c.pk)
         except Exception as e:

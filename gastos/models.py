@@ -71,6 +71,33 @@ class ContratoCredito(models.Model):
                                       help_text='Tasa Cobertura Riesgo default para nuevos pagarés')
     gracia_meses = models.IntegerField(default=0, verbose_name='Gracia Capital (meses)')
     num_cuotas_capital = models.IntegerField(default=0, verbose_name='Nº Cuotas Capital')
+    PERIODICIDAD_CHOICES = [
+        ('M', 'Mensual'),
+        ('T', 'Trimestral'),
+        ('S', 'Semestral'),
+        ('A', 'Anual'),
+    ]
+    periodicidad_pago = models.CharField(max_length=1, choices=PERIODICIDAD_CHOICES,
+                                         default='T', verbose_name='Periodicidad de Pago')
+
+    @property
+    def fecha_inicio_pagos(self):
+        """Calculada: primer desembolso + meses de gracia."""
+        from datetime import timedelta
+        primer = self.pagares.order_by('fecha_desembolso').first()
+        if not primer or not primer.fecha_desembolso:
+            return None
+        gracia = self.gracia_meses or 0
+        anios = gracia // 12
+        meses = gracia % 12
+        fecha = primer.fecha_desembolso
+        nuevo_mes = fecha.month + meses
+        nuevo_anio = fecha.year + anios + (nuevo_mes - 1) // 12
+        nuevo_mes = ((nuevo_mes - 1) % 12) + 1
+        try:
+            return fecha.replace(year=nuevo_anio, month=nuevo_mes)
+        except ValueError:
+            return fecha.replace(year=nuevo_anio, month=nuevo_mes, day=28)
 
     class Meta:
         verbose_name = 'Contrato de Crédito'

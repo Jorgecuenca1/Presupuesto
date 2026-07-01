@@ -67,6 +67,15 @@
                 <input type="number" name="num_cuotas" value="32" class="form-control form-control-sm">
             </div>
             <div class="col-md-2">
+                <label class="form-label small mb-0">Periodicidad Pago</label>
+                <select name="periodicidad_pago" class="form-select form-select-sm">
+                    <option value="M">Mensual</option>
+                    <option value="T" selected>Trimestral</option>
+                    <option value="S">Semestral</option>
+                    <option value="A">Anual</option>
+                </select>
+            </div>
+            <div class="col-md-2">
                 <label class="form-label small mb-0">Tasa E.A.</label>
                 <input type="number" step="0.0001" name="tasa_ea" value="0.1355" class="form-control form-control-sm">
                 <small class="text-muted">0.1355 = 13.55%</small>
@@ -75,9 +84,36 @@
                 <label class="form-label small mb-0">TCR default</label>
                 <input type="number" step="0.0001" name="tcr" value="0.921" class="form-control form-control-sm">
             </div>
+
+            <!-- Pagaré inicial (opcional) -->
+            <div class="col-md-12 mt-2">
+                <div class="alert alert-primary py-2 mb-1">
+                    <strong class="small"><i class="bi bi-file-text"></i> Primer Pagaré (opcional)</strong>
+                    <small class="text-muted">— Si lo llena, el crédito se crea con este pagaré y la amortización se calcula al instante.</small>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-0">Nº Pagaré</label>
+                <input type="text" name="numero_primer_pagare" value="P1" class="form-control form-control-sm" placeholder="P1">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small mb-0">Fecha desembolso</label>
+                <input type="date" name="fecha_desembolso" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small mb-0">Valor primer desembolso ($)</label>
+                <input type="text" name="valor_primer_pagare" class="form-control form-control-sm cop-format" data-monetary="1" placeholder="0">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small mb-0">Info</label>
+                <div class="form-control form-control-sm bg-light border-0">
+                    <small class="text-muted">Fecha inicio pagos = desembolso + gracia. Pagos trimestrales por defecto.</small>
+                </div>
+            </div>
+
             <div class="col-md-12 mt-2">
                 <button type="submit" class="btn btn-success btn-sm">
-                    <i class="bi bi-check-circle"></i> Crear crédito y continuar a pagarés
+                    <i class="bi bi-check-circle"></i> Crear crédito
                 </button>
                 <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#formNuevoCredito">Cancelar</button>
             </div>

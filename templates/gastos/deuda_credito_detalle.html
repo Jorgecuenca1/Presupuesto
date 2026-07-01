@@ -88,6 +88,26 @@
                 <input type="number" step="0.0001" name="tcr" value="{{ contrato.tcr_default|unlocalize }}" class="form-control form-control-sm">
                 <small class="text-muted">Default 0.921</small>
             </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-0">Periodicidad Pago</label>
+                <select name="periodicidad_pago" class="form-select form-select-sm">
+                    <option value="M" {% if contrato.periodicidad_pago == 'M' %}selected{% endif %}>Mensual</option>
+                    <option value="T" {% if contrato.periodicidad_pago == 'T' or not contrato.periodicidad_pago %}selected{% endif %}>Trimestral</option>
+                    <option value="S" {% if contrato.periodicidad_pago == 'S' %}selected{% endif %}>Semestral</option>
+                    <option value="A" {% if contrato.periodicidad_pago == 'A' %}selected{% endif %}>Anual</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small mb-0">Fecha Inicio de Pagos</label>
+                <div class="form-control form-control-sm bg-light border-0">
+                    {% if contrato.fecha_inicio_pagos %}
+                        <strong>{{ contrato.fecha_inicio_pagos|date:'d M Y' }}</strong>
+                        <small class="text-muted d-block">calculada = primer desembolso + {{ contrato.gracia_meses }} meses de gracia</small>
+                    {% else %}
+                        <small class="text-muted">Sin desembolsos aún — agregue un pagaré</small>
+                    {% endif %}
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -96,6 +116,10 @@
 <div class="card mb-3">
     <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
         <span><i class="bi bi-file-text"></i> Pagarés (Desembolsos) — {{ pagares|length }}</span>
+        <span class="small">
+            Pagos <strong>{{ contrato.get_periodicidad_pago_display|default:'Trimestrales' }}</strong>
+            {% if contrato.fecha_inicio_pagos %} · inicio {{ contrato.fecha_inicio_pagos|date:'d M Y' }}{% endif %}
+        </span>
     </div>
     <div class="card-body py-2">
         {% if pagares %}
@@ -104,19 +128,27 @@
             <div class="col-md-6 mb-2">
                 <div class="border rounded p-2 position-relative">
                     <div class="d-flex justify-content-between align-items-center">
-                        <strong>Pagaré {{ pag.numero_pagare }}</strong>
+                        <div>
+                            <strong class="text-primary"><i class="bi bi-file-text"></i> Pagaré Nº {{ pag.numero_pagare }}</strong>
+                            <span class="badge bg-info ms-1">${{ pag.valor_capital|floatformat:0 }}</span>
+                        </div>
                         <a href="{% url 'deuda_pagare_eliminar_v2' pag.pk %}" class="btn btn-sm btn-outline-danger py-0 px-2"
                            onclick="return confirm('Eliminar Pagaré {{ pag.numero_pagare }}?');" title="Eliminar pagaré">
                             <i class="bi bi-trash"></i>
                         </a>
                     </div>
                     <div class="row g-1 mt-1">
-                        <div class="col-6">
+                        <div class="col-4">
+                            <label class="form-label small mb-0">Nº Pagaré</label>
+                            <input type="text" name="pag_{{ pag.pk }}_numero" value="{{ pag.numero_pagare }}"
+                                   class="form-control form-control-sm">
+                        </div>
+                        <div class="col-4">
                             <label class="form-label small mb-0">Valor ($)</label>
                             <input type="text" name="pag_{{ pag.pk }}_valor" value="{{ pag.valor_capital|unlocalize }}"
                                    class="form-control form-control-sm cop-format" data-monetary="1">
                         </div>
-                        <div class="col-6">
+                        <div class="col-4">
                             <label class="form-label small mb-0">Fecha desembolso</label>
                             <input type="date" name="pag_{{ pag.pk }}_fecha" value="{{ pag.fecha_desembolso|date:'Y-m-d' }}"
                                    class="form-control form-control-sm">

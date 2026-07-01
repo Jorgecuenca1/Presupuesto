@@ -1595,18 +1595,25 @@ def _recalcular_amortizacion_contrato(contrato):
 
     AmortizacionPagare.objects.filter(pagare__contrato=contrato).delete()
 
+    def _add_meses(fecha, m):
+        y = fecha.year + (fecha.month - 1 + m) // 12
+        mo = (fecha.month - 1 + m) % 12 + 1
+        try: return fecha.replace(year=y, month=mo)
+        except ValueError: return fecha.replace(year=y, month=mo, day=28)
+
     for pag in contrato.pagares.all():
         if not pag.fecha_desembolso or pag.valor_capital <= 0:
             continue
         saldo = pag.valor_capital
-        anio_desem = pag.fecha_desembolso.year
         cap_por_cuota = pag.valor_capital / D(num_cuotas) if num_cuotas > 0 else D('0')
         pag.tasa_cobertura_riesgo = tcr
         pag.save()
 
         por_anio = {}
         for p_idx in range(1, total_per + 1):
-            p_anio = anio_desem + (p_idx - 1) // periodos_por_anio
+            # Fecha real de la cuota (respeta mes de desembolso)
+            fecha_cuota = _add_meses(pag.fecha_desembolso, p_idx * meses_por_periodo)
+            p_anio = fecha_cuota.year
             intereses_p = (saldo * tasa_per).quantize(D('0.01'), ROUND_HALF_UP)
             capital_p = cap_por_cuota if p_idx > gracia_per else D('0')
             if p_idx == total_per:
@@ -1617,6 +1624,8 @@ def _recalcular_amortizacion_contrato(contrato):
             por_anio.setdefault(p_anio, {'cap': D('0'), 'int': D('0')})
             por_anio[p_anio]['cap'] += capital_p
             por_anio[p_anio]['int'] += intereses_p
+            if saldo <= 0:
+                break
 
         for anio, tot in por_anio.items():
             AmortizacionPagare.objects.create(

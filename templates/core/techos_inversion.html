@@ -29,18 +29,18 @@
 <div class="card">
     <div class="card-body p-0 table-responsive">
         <table class="table table-sm table-bordered align-middle mb-0" style="font-size:.75rem;">
-            <thead class="table-dark text-center sticky-top">
+            <thead class="text-center sticky-top" style="background:#212529;color:#fff;">
                 <tr>
-                    <th style="min-width:220px">Concepto Ingreso / Fuente</th>
-                    <th>Ingresos</th>
-                    <th>Rendimientos</th>
-                    <th class="bg-success text-white">Total Ingresos</th>
-                    <th>Funcionamiento</th>
-                    <th>Deuda</th>
-                    <th class="bg-warning text-dark">Total Fto+Deuda</th>
-                    <th class="bg-primary text-white">Total Inversión</th>
-                    <th>Vig. Futuras</th>
-                    <th class="bg-info text-white">Disponible</th>
+                    <th style="min-width:220px;background:#212529;color:#fff;">Concepto Ingreso / Fuente</th>
+                    <th style="background:#212529;color:#fff;">Ingresos</th>
+                    <th style="background:#212529;color:#fff;">Rendimientos</th>
+                    <th style="background:#198754;color:#fff;">Total Ingresos</th>
+                    <th style="background:#212529;color:#fff;">Funcionamiento</th>
+                    <th style="background:#212529;color:#fff;">Deuda</th>
+                    <th style="background:#ffc107;color:#000;">Total Fto+Deuda</th>
+                    <th style="background:#0d6efd;color:#fff;">Total Inversión</th>
+                    <th style="background:#212529;color:#fff;">Vig. Futuras</th>
+                    <th style="background:#0dcaf0;color:#000;">Disponible</th>
                 </tr>
             </thead>
             <tbody>
@@ -51,26 +51,26 @@
                     </td>
                     <td>
                         <input type="text" name="ti_{{ t.pk }}_ingresos" value="{{ t.ingresos|unlocalize }}"
-                               class="form-control form-control-sm text-end cop-format" data-monetary="1">
+                               class="form-control form-control-sm text-end cop-format" data-monetary="1" data-auto-recalc="1">
                     </td>
                     <td>
                         <input type="text" name="ti_{{ t.pk }}_rendimientos" value="{{ t.rendimientos|unlocalize }}"
-                               class="form-control form-control-sm text-end cop-format" data-monetary="1">
+                               class="form-control form-control-sm text-end cop-format" data-monetary="1" data-auto-recalc="1">
                     </td>
                     <td class="text-end fw-bold bg-success-subtle">${{ t.total_ingresos|floatformat:0|intcomma }}</td>
                     <td>
                         <input type="text" name="ti_{{ t.pk }}_fto" value="{{ t.fto|unlocalize }}"
-                               class="form-control form-control-sm text-end cop-format" data-monetary="1">
+                               class="form-control form-control-sm text-end cop-format" data-monetary="1" data-auto-recalc="1">
                     </td>
                     <td>
                         <input type="text" name="ti_{{ t.pk }}_deuda" value="{{ t.deuda|unlocalize }}"
-                               class="form-control form-control-sm text-end cop-format" data-monetary="1">
+                               class="form-control form-control-sm text-end cop-format" data-monetary="1" data-auto-recalc="1">
                     </td>
                     <td class="text-end fw-bold bg-warning-subtle">${{ t.total_fto_deuda|floatformat:0|intcomma }}</td>
                     <td class="text-end fw-bold bg-primary-subtle text-primary">${{ t.total_inversion|floatformat:0|intcomma }}</td>
                     <td>
                         <input type="text" name="ti_{{ t.pk }}_vf" value="{{ t.vf|unlocalize }}"
-                               class="form-control form-control-sm text-end cop-format" data-monetary="1">
+                               class="form-control form-control-sm text-end cop-format" data-monetary="1" data-auto-recalc="1">
                     </td>
                     <td class="text-end fw-bold bg-info-subtle text-primary">${{ t.disponible|floatformat:0|intcomma }}</td>
                 </tr>
@@ -106,4 +106,46 @@
     </button>
 </div>
 </form>
+
+<div id="autoSaveIndicator" style="position:fixed;bottom:20px;right:20px;z-index:9999;display:none;">
+    <div class="alert alert-primary shadow py-2 mb-0">
+        <i class="bi bi-arrow-clockwise spin"></i>
+        <strong>Recalculando…</strong>
+    </div>
+</div>
+<style>
+@keyframes spinning { 100% { transform: rotate(360deg); } }
+.spin { display: inline-block; animation: spinning 0.8s linear infinite; }
+</style>
+
+<script>
+(function(){
+    const form = document.getElementById('form-techos');
+    if (!form) return;
+    const ind = document.getElementById('autoSaveIndicator');
+    let debounceTimer = null;
+
+    function getCookie(name) {
+        const m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+        return m ? decodeURIComponent(m[1]) : '';
+    }
+    async function autoSave() {
+        if (ind) ind.style.display = 'block';
+        const csrf = form.querySelector('input[name=csrfmiddlewaretoken]');
+        const token = (csrf && csrf.value) || getCookie('csrftoken');
+        try {
+            const r = await fetch(window.location.pathname, {
+                method: 'POST', body: new FormData(form),
+                headers: {'X-CSRFToken': token, 'X-Requested-With': 'XMLHttpRequest'},
+                credentials: 'same-origin',
+            });
+            if (r.ok || r.status === 302 || r.redirected) window.location.reload();
+            else { alert('Error guardando (' + r.status + '). Recargue.'); if (ind) ind.style.display = 'none'; }
+        } catch(e) { alert('Error de red: ' + e.message); if (ind) ind.style.display = 'none'; }
+    }
+    document.querySelectorAll('[data-auto-recalc]').forEach(el => {
+        el.addEventListener('change', () => { clearTimeout(debounceTimer); debounceTimer = setTimeout(autoSave, 500); });
+    });
+})();
+</script>
 {% endblock %}

@@ -322,16 +322,46 @@
     const ind = document.getElementById('autoSaveIndicator');
     let debounceTimer = null;
 
-    function triggerAutoSave() {
+    function getCookie(name) {
+        const m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+        return m ? decodeURIComponent(m[1]) : '';
+    }
+
+    async function autoSave() {
         if (ind) ind.style.display = 'block';
-        // Debounce corto para agrupar cambios rapidos (ej: escribir varios digitos)
+        // Token: primero del hidden input del form, si no, de la cookie
+        const csrfInput = form.querySelector('input[name=csrfmiddlewaretoken]');
+        const token = (csrfInput && csrfInput.value) || getCookie('csrftoken');
+        try {
+            const fd = new FormData(form);
+            const r = await fetch(window.location.pathname, {
+                method: 'POST',
+                body: fd,
+                headers: { 'X-CSRFToken': token, 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin',
+            });
+            if (r.ok || r.status === 302 || r.redirected) {
+                // Recargar para ver la nueva tabla
+                window.location.reload();
+            } else if (r.status === 403) {
+                alert('Sesión expirada o token CSRF inválido. Recargue la página.');
+                if (ind) ind.style.display = 'none';
+            } else {
+                alert('Error guardando (' + r.status + '). Recargue e intente de nuevo.');
+                if (ind) ind.style.display = 'none';
+            }
+        } catch (e) {
+            alert('Error de red: ' + e.message);
+            if (ind) ind.style.display = 'none';
+        }
+    }
+
+    function triggerAutoSave() {
         clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => form.submit(), 350);
+        debounceTimer = setTimeout(autoSave, 350);
     }
 
     document.querySelectorAll('[data-auto-recalc]').forEach(el => {
-        // 'change' se dispara al perder foco para inputs texto/numero/date
-        // y al seleccionar para <select>
         el.addEventListener('change', triggerAutoSave);
     });
 })();

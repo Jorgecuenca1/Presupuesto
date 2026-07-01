@@ -5,8 +5,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-presupuesto-puerto-lopez-2026-key')
 DEBUG = os.environ.get('DJANGO_DEBUG', '1') == '1'
-ALLOWED_HOSTS = ['*', 'presupuesto.jorgecuenca.com', 'www.presupuesto.jorgecuenca.com', 'localhost', '127.0.0.1']
-CSRF_TRUSTED_ORIGINS = ['https://presupuesto.jorgecuenca.com', 'https://www.presupuesto.jorgecuenca.com', 'http://presupuesto.jorgecuenca.com']
+ALLOWED_HOSTS = ['*', 'presupuesto.jorgecuenca.com', 'www.presupuesto.jorgecuenca.com',
+                 'presupuesto2.corpofuturo.org', 'presupuesto.corpofuturo.org',
+                 'localhost', '127.0.0.1']
+CSRF_TRUSTED_ORIGINS = [
+    'https://presupuesto.jorgecuenca.com', 'https://www.presupuesto.jorgecuenca.com',
+    'http://presupuesto.jorgecuenca.com',
+    'https://presupuesto2.corpofuturo.org', 'https://presupuesto.corpofuturo.org',
+]
 
 INSTALLED_APPS = [
     'django.contrib.admin',

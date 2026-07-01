@@ -1627,6 +1627,52 @@ def _recalcular_amortizacion_contrato(contrato):
             )
 
 
+def _tabla_amortizacion_pagare(pag, contrato):
+    """Genera la tabla de amortización cuota a cuota del pagaré.
+    Devuelve lista de dicts: {num, fecha_pago, saldo_ini, intereses, capital, cuota, saldo_fin}
+    """
+    from decimal import Decimal as D, ROUND_HALF_UP
+    from datetime import date, timedelta
+    if not pag.fecha_desembolso or pag.valor_capital <= 0:
+        return []
+    tasa_ea = contrato.tasa_ea or D('0.1355')
+    plazo_meses = contrato.plazo_meses or 120
+    gracia_meses = contrato.gracia_meses or 24
+    num_cuotas = contrato.num_cuotas_capital or 32
+    per = contrato.periodicidad_pago or 'T'
+    meses_por_per = {'M': 1, 'T': 3, 'S': 6, 'A': 12}.get(per, 3)
+    periodos_por_anio = 12 // meses_por_per
+    total_per = max(1, plazo_meses // meses_por_per)
+    gracia_per = gracia_meses // meses_por_per
+    tasa_per = (D('1') + tasa_ea) ** (D('1') / D(periodos_por_anio)) - D('1')
+    cap_por_cuota = pag.valor_capital / D(num_cuotas) if num_cuotas > 0 else D('0')
+
+    def add_meses(fecha, m):
+        y = fecha.year + (fecha.month - 1 + m) // 12
+        mo = (fecha.month - 1 + m) % 12 + 1
+        try: return fecha.replace(year=y, month=mo)
+        except ValueError: return fecha.replace(year=y, month=mo, day=28)
+
+    saldo = pag.valor_capital
+    filas = []
+    for i in range(1, total_per + 1):
+        fecha_pago = add_meses(pag.fecha_desembolso, i * meses_por_per)
+        interes = (saldo * tasa_per).quantize(D('0.01'), ROUND_HALF_UP)
+        capital = cap_por_cuota if i > gracia_per else D('0')
+        if i == total_per: capital = saldo
+        if capital > saldo: capital = saldo
+        saldo_ini = saldo
+        saldo -= capital
+        filas.append({
+            'num': i, 'fecha_pago': fecha_pago,
+            'saldo_ini': saldo_ini, 'intereses': interes,
+            'capital': capital, 'cuota': interes + capital,
+            'saldo_fin': saldo, 'es_gracia': i <= gracia_per,
+        })
+        if saldo <= 0: break
+    return filas
+
+
 def _propagar_deuda_a_rubros(vigencia):
     """Suma amortizaciones de TODOS los contratos y actualiza rubros 2.2.x."""
     from decimal import Decimal as D
@@ -1786,10 +1832,19 @@ def deuda_credito_detalle(request, contrato_id):
         fila['saldo'] = saldo
         tabla.append(fila)
 
+    # Tabla amortización cuota-a-cuota por pagaré
+    tablas_pagares = []
+    for pag in pagares:
+        tablas_pagares.append({
+            'pagare': pag,
+            'filas': _tabla_amortizacion_pagare(pag, contrato),
+        })
+
     return render(request, 'gastos/deuda_credito_detalle.html', {
         'contrato': contrato,
         'pagares': pagares,
         'tabla': tabla,
+        'tablas_pagares': tablas_pagares,
         'vigencia': vigencia,
     })
 

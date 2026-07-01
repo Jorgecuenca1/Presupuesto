@@ -1816,7 +1816,12 @@ def deuda_credito_detalle(request, contrato_id):
 
             _recalcular_amortizacion_contrato(contrato)
             _propagar_deuda_a_rubros(vigencia)
-            messages.success(request, f'Crédito {contrato.banco} recalculado y propagado a Anexo 2')
+            try:
+                from core.views import _sincronizar_techos_desde_fuentes
+                _sincronizar_techos_desde_fuentes(vigencia)
+            except Exception:
+                pass
+            messages.success(request, f'Crédito {contrato.banco} recalculado y propagado a Anexo 2 + Techos')
         except Exception as e:
             messages.error(request, f'Error: {e}')
         return redirect('deuda_credito_detalle', contrato_id=contrato.pk)
@@ -1958,6 +1963,11 @@ def deuda_pagare_nuevo_v2(request, contrato_id):
         )
         _recalcular_amortizacion_contrato(contrato)
         _propagar_deuda_a_rubros(_vigencia())
+        try:
+            from core.views import _sincronizar_techos_desde_fuentes
+            _sincronizar_techos_desde_fuentes(_vigencia())
+        except Exception:
+            pass
         messages.success(request, f'Pagaré {numero} agregado a {contrato.banco}')
     return redirect('deuda_credito_detalle', contrato_id=contrato.pk)
 

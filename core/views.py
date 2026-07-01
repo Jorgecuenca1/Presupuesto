@@ -753,6 +753,85 @@ def tabla_concejo_eliminar(request, pk):
 
 @never_cache
 @login_required
+def _sincronizar_techos_desde_fuentes(vigencia):
+    """Recalcula las columnas Ingresos, Fto y Deuda de cada TechoInversion
+    consultando RubroIngreso, RubroGasto y AmortizacionPagare.
+    Regla de matching:
+      1) Si Techo.codigo_fuente y RubroIngreso.codigo_fuente coinciden → suma.
+      2) Adicional: buscar RubroIngreso.nombre que contenga concepto_ingreso (case-insensitive)
+         para complementar cuando no hay codigo_fuente.
+      3) Deuda: suma servicio_deuda (cap+int) del año vigencia por contratos cuya
+         renta_pignorada haga match con el concepto de la fila.
+    """
+    from decimal import Decimal as D
+    from django.db.models import Sum, Q
+    try:
+        from ingresos.models import RubroIngreso
+        from gastos.models import RubroGasto, AmortizacionPagare, ContratoCredito
+    except Exception:
+        return
+    techos = list(TechoInversion.objects.filter(vigencia=vigencia))
+    if not techos:
+        return
+
+    # Pre-cargar rubros del año
+    rubros_ing = list(RubroIngreso.objects.filter(vigencia=vigencia))
+    rubros_gto = list(RubroGasto.objects.filter(vigencia=vigencia).exclude(es_titulo=True))
+
+    # Servicio deuda por contrato (año vigencia)
+    deuda_por_renta = {}
+    for c in ContratoCredito.objects.all():
+        agg = AmortizacionPagare.objects.filter(
+            pagare__contrato=c, vigencia_pago=vigencia
+        ).aggregate(t=Sum('capital_principal'), i=Sum('intereses'))
+        val = (agg['t'] or D('0')) + (agg['i'] or D('0'))
+        key = (c.renta_pignorada or '').strip().upper()
+        if key:
+            deuda_por_renta[key] = deuda_por_renta.get(key, D('0')) + val
+    deuda_total = sum(deuda_por_renta.values(), D('0'))
+
+    for t in techos:
+        concepto_up = (t.concepto_ingreso or '').strip().upper()
+        cod = (t.codigo_fuente or '').strip()
+
+        # ── INGRESOS: match por código fuente y por nombre fuzzy
+        ingresos_sum = D('0')
+        for r in rubros_ing:
+            match = False
+            if cod and (r.codigo_fuente or '').strip() == cod:
+                match = True
+            elif concepto_up and concepto_up in (r.nombre or '').upper():
+                match = True
+            if match:
+                ingresos_sum += (r.valor_apropiacion or D('0'))
+
+        # ── FUNCIONAMIENTO: match por código fuente en gastos de sección 2.1
+        fto_sum = D('0')
+        for r in rubros_gto:
+            if not r.codigo.startswith('2.1'):
+                continue
+            if cod and (r.codigo_fuente or '').strip() == cod:
+                fto_sum += (r.valor_apropiacion or D('0'))
+
+        # ── DEUDA: match por renta pignorada del contrato
+        deuda_val = D('0')
+        for k, v in deuda_por_renta.items():
+            if k and (k in concepto_up or concepto_up in k):
+                deuda_val += v
+        # Si no hay match explícito y hay una sola fila con "recursos propios/ITO", la deuda va ahí
+        # (skip para no distorsionar)
+
+        dirty = False
+        if ingresos_sum > 0 and t.ingresos != ingresos_sum:
+            t.ingresos = ingresos_sum; dirty = True
+        if fto_sum > 0 and t.fto != fto_sum:
+            t.fto = fto_sum; dirty = True
+        if t.deuda != deuda_val:
+            t.deuda = deuda_val; dirty = True
+        if dirty:
+            t.save()
+
+
 def techos_inversion_view(request):
     """Reporte Fuentes y Usos: por cada fuente muestra:
     Ingresos + Rendimientos = Total Ingresos
@@ -786,6 +865,12 @@ def techos_inversion_view(request):
         except Exception as e:
             messages.error(request, f'Error: {e}')
         return redirect('techos_inversion')
+
+    # Sincronizar desde fuentes antes de mostrar (recursivo)
+    try:
+        _sincronizar_techos_desde_fuentes(vigencia)
+    except Exception:
+        pass
 
     filas = list(TechoInversion.objects.filter(vigencia=vigencia).order_by('orden', 'concepto_ingreso'))
     # Totales

@@ -1,6 +1,6 @@
 """Context processors para inyectar variables globales en todos los templates."""
 from .models import ParametrosSistema
-from .constants import BANCOS_COLOMBIA
+from .constants import BANCOS_COLOMBIA, RENTAS_PIGNORABLES
 
 
 def vigencia_global(request):
@@ -12,4 +12,5 @@ def vigencia_global(request):
         'vigencia_activa': p.vigencia if p else None,
         'params_global': p,
         'bancos_colombia': BANCOS_COLOMBIA,
+        'rentas_pignorables': RENTAS_PIGNORABLES,
     }

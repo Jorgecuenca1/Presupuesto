@@ -50,6 +50,7 @@ urlpatterns = [
     path('cifras-historicas/calcular-tcpa/', views.calcular_tcpa_gastos, name='calcular_tcpa_gastos'),
 
     # Deuda Pública
+    path('deuda-publica/', views.deuda_publica_view, name='deuda_publica_v2'),
     path('deuda/', views.deuda_contratos_list, name='servicio_deuda_list'),
     path('deuda/contratos/', views.deuda_contratos_list, name='deuda_contratos_list'),
     path('deuda/contratos/guardar/', views.deuda_contrato_guardar, name='deuda_contrato_guardar'),

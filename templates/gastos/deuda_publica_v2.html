@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% load humanize l10n %}
+
+{% block title %}Deuda Pública{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'reporte_gastos' %}">Gastos</a></li>
+<li class="breadcrumb-item active">Deuda Pública</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="bi bi-bank"></i> Deuda Pública — Crédito {{ contrato.banco|default:"—" }}</h4>
+    <button type="submit" form="form-deuda" class="btn btn-success">
+        <i class="bi bi-save"></i> Guardar y recalcular tabla
+    </button>
+</div>
+
+<div class="alert alert-info py-2 small">
+    <i class="bi bi-info-circle"></i>
+    Al editar cualquier <strong>supuesto</strong> (cupo, tasa, plazo, gracia), el sistema recalcula toda la tabla de amortización
+    y los indicadores Ley 358/1997 (Solvencia y Sostenibilidad). Los valores se propagan automáticamente al Anexo 2 (rubros 2.2.x).
+</div>
+
+<form method="post" id="form-deuda">
+{% csrf_token %}
+
+<!-- SUPUESTOS -->
+<div class="card mb-3">
+    <div class="card-header bg-primary text-white">
+        <i class="bi bi-sliders"></i> Supuestos del Crédito (editables)
+    </div>
+    <div class="card-body py-2">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label small mb-0">Cupo total ($)</label>
+                <input type="text" name="cupo_total" value="{{ contrato.valor_contrato|unlocalize }}"
+                       class="form-control form-control-sm cop-format" data-monetary="1">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small mb-0">Entidad Financiera</label>
+                <input type="text" name="banco" value="{{ contrato.banco }}" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small mb-0">Renta Pignorada</label>
+                <input type="text" name="renta_pignorada" value="{{ contrato.renta_pignorada }}" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small mb-0">Plazo total (meses)</label>
+                <input type="number" name="plazo_meses" value="{{ contrato.plazo_meses|unlocalize }}" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-0">Gracia capital (meses)</label>
+                <input type="number" name="gracia_meses" value="{{ gracia_meses }}" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-0">N° cuotas capital</label>
+                <input type="number" name="num_cuotas" value="{{ num_cuotas }}" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-0">Tasa Interés E.A.</label>
+                <input type="number" step="0.0001" name="tasa_ea" value="{{ tasa_ea|unlocalize }}"
+                       class="form-control form-control-sm">
+                <small class="text-muted">0.1355 = 13.55%</small>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-0">TCR</label>
+                <input type="number" step="0.0001" name="tcr" value="{{ tcr|unlocalize }}" class="form-control form-control-sm">
+                <small class="text-muted">Default 0.921</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- PAGARÉS -->
+<div class="card mb-3">
+    <div class="card-header bg-secondary text-white">
+        <i class="bi bi-file-text"></i> Pagarés (desembolsos)
+    </div>
+    <div class="card-body py-2">
+        <div class="row g-2">
+            {% for pag in pagares %}
+            <div class="col-md-6">
+                <div class="border rounded p-2">
+                    <strong>Pagaré {{ pag.numero_pagare }}</strong>
+                    <div class="row g-1 mt-1">
+                        <div class="col-6">
+                            <label class="form-label small mb-0">Valor ($)</label>
+                            <input type="text" name="pag_{{ pag.pk }}_valor" value="{{ pag.valor_capital|unlocalize }}"
+                                   class="form-control form-control-sm cop-format" data-monetary="1">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small mb-0">Fecha desembolso</label>
+                            <input type="date" name="pag_{{ pag.pk }}_fecha" value="{{ pag.fecha_desembolso|date:'Y-m-d' }}"
+                                   class="form-control form-control-sm">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- RESUMEN ANUAL -->
+<div class="card mb-3">
+    <div class="card-header bg-dark text-white">
+        <i class="bi bi-table"></i> Resumen Anual del Servicio de la Deuda
+        <small class="float-end text-white-50">Recalculado automáticamente</small>
+    </div>
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-sm table-bordered align-middle mb-0" style="font-size:.78rem;">
+            <thead class="table-light">
+                <tr class="text-center">
+                    <th>Año</th>
+                    <th>Interés P1</th>
+                    <th>Capital P1</th>
+                    <th>Interés P2</th>
+                    <th>Capital P2</th>
+                    <th>Interés total</th>
+                    <th>Capital total</th>
+                    <th>Servicio Deuda</th>
+                    <th>Saldo fin de año</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in resumen_anual %}
+                <tr {% if r.anio == vigencia %}class="table-warning fw-bold"{% endif %}>
+                    <td class="text-center">{{ r.anio }}</td>
+                    <td class="text-end">${{ r.int_p1|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ r.cap_p1|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ r.int_p2|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ r.cap_p2|floatformat:0|intcomma }}</td>
+                    <td class="text-end fw-bold">${{ r.int_total|floatformat:0|intcomma }}</td>
+                    <td class="text-end fw-bold">${{ r.cap_total|floatformat:0|intcomma }}</td>
+                    <td class="text-end fw-bold text-danger">${{ r.servicio|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ r.saldo|floatformat:0|intcomma }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot class="table-dark">
+                <tr>
+                    <td class="text-end fw-bold">TOTAL</td>
+                    <td class="text-end">${{ totales.int_p1|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ totales.cap_p1|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ totales.int_p2|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ totales.cap_p2|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ totales.int_total|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ totales.cap_total|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ totales.servicio|floatformat:0|intcomma }}</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+<!-- INDICADORES LEY 358 -->
+<div class="card mb-3">
+    <div class="card-header bg-warning text-dark">
+        <i class="bi bi-speedometer2"></i> Indicadores Capacidad Endeudamiento (Ley 358/1997)
+    </div>
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-sm table-bordered mb-0" style="font-size:.78rem;">
+            <thead class="table-light text-center">
+                <tr>
+                    <th>Indicador</th>
+                    {% for r in resumen_anual %}<th {% if r.anio == vigencia %}class="table-warning"{% endif %}>{{ r.anio }}</th>{% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="fw-bold">SOLVENCIA (Int / Ahorro Operacional)<br><small class="text-muted">Máx 40%</small></td>
+                    {% for r in resumen_anual %}
+                    <td class="text-center {% if r.solvencia_ok %}bg-success text-white{% else %}bg-danger text-white{% endif %}">
+                        {{ r.solvencia_pct|floatformat:1 }}%
+                    </td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td class="fw-bold">SOSTENIBILIDAD (Saldo / Ingresos)<br><small class="text-muted">Máx 80%</small></td>
+                    {% for r in resumen_anual %}
+                    <td class="text-center {% if r.sostenibilidad_ok %}bg-success text-white{% else %}bg-danger text-white{% endif %}">
+                        {{ r.sostenibilidad_pct|floatformat:1 }}%
+                    </td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td class="fw-bold">SEMÁFORO</td>
+                    {% for r in resumen_anual %}
+                    <td class="text-center fw-bold {% if r.solvencia_ok and r.sostenibilidad_ok %}bg-success text-white{% else %}bg-danger text-white{% endif %}">
+                        {% if r.solvencia_ok and r.sostenibilidad_ok %}✓ VERDE{% else %}✗ ROJO{% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="d-flex justify-content-end mb-4">
+    <button type="submit" class="btn btn-success btn-lg">
+        <i class="bi bi-save"></i> Guardar y recalcular
+    </button>
+</div>
+</form>
+{% endblock %}

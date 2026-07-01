@@ -1554,3 +1554,200 @@ def reporte_techos_inversion(request):
         'icld_total_617': icld_total_617,
         'indicador_617': indicador_617,
     })
+
+
+@never_cache
+@login_required
+def deuda_publica_view(request):
+    """Vista integral de Deuda Publica - gemelo del Excel Anexo Capacidad Endeudamiento.
+
+    Supuestos editables → recalcula automaticamente:
+    - Tabla amortización anual (16 años, 2 pagarés)
+    - Rubros CUIPO 2.2.x del Anexo 2
+    - Indicadores Ley 358/1997 (Solvencia + Sostenibilidad + semáforo)
+    """
+    from decimal import Decimal as D, ROUND_HALF_UP
+    from datetime import date
+
+    vigencia = _vigencia()
+    contrato = ContratoCredito.objects.first()
+    if not contrato:
+        contrato = ContratoCredito.objects.create(
+            vigencia=vigencia, banco='BBVA',
+            renta_pignorada='Impuesto de transporte oleoductos',
+            objeto_credito='Empréstito', valor_contrato=D('45000000000'),
+            plazo_meses=120,
+        )
+    pagares = list(PagareCredito.objects.filter(contrato=contrato).order_by('numero_pagare'))
+    if len(pagares) < 2:
+        # Crear pagarés faltantes
+        if not pagares:
+            PagareCredito.objects.create(contrato=contrato, numero_pagare='P1',
+                valor_capital=D('20083699140.75'), fecha_desembolso=date(2026,6,9),
+                tasa_ibr=D('12.20'), puntos=D('1.35'), tasa_cobertura_riesgo=D('0.921'), plazo_meses=120)
+        if len(pagares) < 2:
+            PagareCredito.objects.create(contrato=contrato, numero_pagare='P2',
+                valor_capital=D('24916300859.25'), fecha_desembolso=date(2026,11,9),
+                tasa_ibr=D('12.20'), puntos=D('1.35'), tasa_cobertura_riesgo=D('0.921'), plazo_meses=120)
+        pagares = list(PagareCredito.objects.filter(contrato=contrato).order_by('numero_pagare'))
+
+    # Supuestos por defecto (se pueden leer de contrato/pagare)
+    gracia_meses = 24
+    num_cuotas = 32
+    tasa_ea = D('0.1355')
+    tcr = D('0.921')
+
+    # POST: guardar supuestos y recalcular
+    if request.method == 'POST':
+        try:
+            def clean(k):
+                v = (request.POST.get(k) or '').replace('.', '').replace(',', '.')
+                return v or '0'
+
+            contrato.valor_contrato = D(clean('cupo_total'))
+            contrato.banco = request.POST.get('banco', contrato.banco)[:200]
+            contrato.renta_pignorada = request.POST.get('renta_pignorada', contrato.renta_pignorada)[:200]
+            contrato.plazo_meses = int(clean('plazo_meses'))
+            contrato.save()
+
+            gracia_meses = int(clean('gracia_meses'))
+            num_cuotas = int(clean('num_cuotas'))
+            tasa_ea = D(clean('tasa_ea'))
+            tcr = D(clean('tcr'))
+
+            # Actualizar pagarés
+            for pag in pagares:
+                vk = f'pag_{pag.pk}_valor'
+                fk = f'pag_{pag.pk}_fecha'
+                if vk in request.POST:
+                    pag.valor_capital = D(clean(vk))
+                if fk in request.POST:
+                    from datetime import datetime as dt
+                    try:
+                        pag.fecha_desembolso = dt.strptime(request.POST[fk], '%Y-%m-%d').date()
+                    except Exception: pass
+                pag.tasa_cobertura_riesgo = tcr
+                pag.save()
+
+            # Recalcular tabla amortización (sistema cuota fija de capital, intereses TV)
+            AmortizacionPagare.objects.filter(pagare__contrato=contrato).delete()
+
+            # Tasa trimestral efectiva
+            tasa_trim = (D('1') + tasa_ea) ** D('0.25') - D('1')
+
+            for pag in pagares:
+                saldo = pag.valor_capital
+                anio_desem = pag.fecha_desembolso.year
+                # Total trimestres desde desembolso al fin del plazo (120 meses = 40 trimestres)
+                total_trim = 40
+                gracia_trim = gracia_meses // 3
+                # Capital por cuota
+                cap_por_cuota = pag.valor_capital / D(num_cuotas) if num_cuotas > 0 else D('0')
+
+                # Simular trimestre por trimestre, acumular por año
+                por_anio = {}
+                for trim in range(1, total_trim + 1):
+                    trim_anio = anio_desem + (trim - 1) // 4
+                    intereses_trim = (saldo * tasa_trim).quantize(D('0.01'), ROUND_HALF_UP)
+                    capital_trim = cap_por_cuota if trim > gracia_trim else D('0')
+                    # Ajuste ultimo trimestre para saldo exacto
+                    if trim == total_trim:
+                        capital_trim = saldo
+                    if capital_trim > saldo:
+                        capital_trim = saldo
+                    saldo -= capital_trim
+                    por_anio.setdefault(trim_anio, {'cap': D('0'), 'int': D('0')})
+                    por_anio[trim_anio]['cap'] += capital_trim
+                    por_anio[trim_anio]['int'] += intereses_trim
+
+                for anio, tot in por_anio.items():
+                    tcr_val = (tot['int'] * tcr).quantize(D('0.01'), ROUND_HALF_UP)
+                    AmortizacionPagare.objects.update_or_create(
+                        pagare=pag, vigencia_pago=anio,
+                        defaults={
+                            'capital_principal': tot['cap'],
+                            'intereses': tot['int'],
+                            'intereses_tcr': tcr_val,
+                        }
+                    )
+
+            # Actualizar rubros 2.2.x del vigencia
+            from django.db.models import Sum
+            agg = AmortizacionPagare.objects.filter(pagare__contrato=contrato, vigencia_pago=vigencia).aggregate(
+                c=Sum('capital_principal'), i=Sum('intereses'))
+            RubroGasto.objects.filter(vigencia=vigencia, codigo='2.2.2.01.02.002.02.03-02').update(
+                valor_apropiacion=agg['c'] or D('0'), metodo_calculo='DCAP')
+            RubroGasto.objects.filter(vigencia=vigencia, codigo='2.2.2.02.02.002.02.03-02').update(
+                valor_apropiacion=agg['i'] or D('0'), metodo_calculo='DINT')
+            from core.views import _recalcular_titulos_por_codigo
+            _recalcular_titulos_por_codigo(vigencia)
+
+            messages.success(request, 'Deuda pública recalculada y propagada al Anexo 2')
+        except Exception as e:
+            messages.error(request, f'Error: {e}')
+        return redirect('deuda_publica_v2')
+
+    # GET: armar resumen anual
+    from django.db.models import Sum
+    if not pagares or len(pagares) < 2:
+        return render(request, 'gastos/deuda_publica_v2.html', {
+            'contrato': contrato, 'pagares': pagares, 'resumen_anual': [], 'totales': {},
+            'vigencia': vigencia, 'gracia_meses': gracia_meses, 'num_cuotas': num_cuotas,
+            'tasa_ea': tasa_ea, 'tcr': tcr,
+        })
+
+    p1, p2 = pagares[0], pagares[1]
+    resumen_anual = []
+    saldo_acum = D('0')
+    ingresos_corr = D('66792101000')  # Ley 358 base (podría venir de params)
+    for anio in range(2026, 2037):
+        a1 = AmortizacionPagare.objects.filter(pagare=p1, vigencia_pago=anio).first()
+        a2 = AmortizacionPagare.objects.filter(pagare=p2, vigencia_pago=anio).first()
+        int_p1 = a1.intereses if a1 else D('0')
+        cap_p1 = a1.capital_principal if a1 else D('0')
+        int_p2 = a2.intereses if a2 else D('0')
+        cap_p2 = a2.capital_principal if a2 else D('0')
+        int_tot = int_p1 + int_p2
+        cap_tot = cap_p1 + cap_p2
+        servicio = int_tot + cap_tot
+        # Saldo fin de año
+        if not resumen_anual:
+            saldo = contrato.valor_contrato - cap_tot
+        else:
+            saldo = resumen_anual[-1]['saldo'] - cap_tot
+        # Indicadores Ley 358
+        ing_anio = ingresos_corr * (D('1') + D('0.045')) ** D(anio - 2026)
+        gastos_fto = ing_anio * D('0.22')
+        ahorro_op = ing_anio - gastos_fto
+        solvencia = (int_tot / ahorro_op * D('100')) if ahorro_op else D('0')
+        sostenibilidad = (saldo / ing_anio * D('100')) if ing_anio else D('0')
+        resumen_anual.append({
+            'anio': anio,
+            'int_p1': int_p1, 'cap_p1': cap_p1,
+            'int_p2': int_p2, 'cap_p2': cap_p2,
+            'int_total': int_tot, 'cap_total': cap_tot,
+            'servicio': servicio, 'saldo': saldo,
+            'solvencia_pct': solvencia,
+            'sostenibilidad_pct': sostenibilidad,
+            'solvencia_ok': solvencia <= 40,
+            'sostenibilidad_ok': sostenibilidad <= 80,
+        })
+
+    totales = {
+        'int_p1': sum(r['int_p1'] for r in resumen_anual),
+        'cap_p1': sum(r['cap_p1'] for r in resumen_anual),
+        'int_p2': sum(r['int_p2'] for r in resumen_anual),
+        'cap_p2': sum(r['cap_p2'] for r in resumen_anual),
+        'int_total': sum(r['int_total'] for r in resumen_anual),
+        'cap_total': sum(r['cap_total'] for r in resumen_anual),
+        'servicio': sum(r['servicio'] for r in resumen_anual),
+    }
+
+    return render(request, 'gastos/deuda_publica_v2.html', {
+        'contrato': contrato, 'pagares': pagares,
+        'resumen_anual': resumen_anual, 'totales': totales,
+        'vigencia': vigencia,
+        'gracia_meses': gracia_meses, 'num_cuotas': num_cuotas,
+        'tasa_ea': tasa_ea, 'tcr': tcr,
+    })
+

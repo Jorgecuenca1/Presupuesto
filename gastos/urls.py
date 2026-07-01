@@ -51,6 +51,8 @@ urlpatterns = [
 
     # Deuda Pública
     path('deuda-publica/', views.deuda_publica_view, name='deuda_publica_v2'),
+    path('deuda-publica/pagare/nuevo/', views.deuda_pagare_nuevo_v2, name='deuda_pagare_nuevo_v2'),
+    path('deuda-publica/pagare/<int:pk>/eliminar/', views.deuda_pagare_eliminar_v2, name='deuda_pagare_eliminar_v2'),
     path('deuda/', views.deuda_contratos_list, name='servicio_deuda_list'),
     path('deuda/contratos/', views.deuda_contratos_list, name='deuda_contratos_list'),
     path('deuda/contratos/guardar/', views.deuda_contrato_guardar, name='deuda_contrato_guardar'),

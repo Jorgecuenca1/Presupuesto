@@ -79,9 +79,15 @@
     <div class="card-body py-2">
         <div class="row g-2">
             {% for pag in pagares %}
-            <div class="col-md-6">
-                <div class="border rounded p-2">
-                    <strong>Pagaré {{ pag.numero_pagare }}</strong>
+            <div class="col-md-6 mb-2">
+                <div class="border rounded p-2 position-relative">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <strong>Pagaré {{ pag.numero_pagare }}</strong>
+                        <a href="{% url 'deuda_pagare_eliminar_v2' pag.pk %}" class="btn btn-sm btn-outline-danger py-0 px-2"
+                           onclick="return confirm('Eliminar Pagaré {{ pag.numero_pagare }}?');" title="Eliminar pagaré">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    </div>
                     <div class="row g-1 mt-1">
                         <div class="col-6">
                             <label class="form-label small mb-0">Valor ($)</label>
@@ -97,6 +103,39 @@
                 </div>
             </div>
             {% endfor %}
+        </div>
+        <hr class="my-2">
+        <!-- Formulario agregar nuevo pagaré (fuera del form principal) -->
+        <div class="row g-2">
+            <div class="col-md-6">
+                <strong class="small text-primary"><i class="bi bi-plus-circle"></i> Agregar Nuevo Pagaré</strong>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Form independiente para agregar pagaré -->
+<form method="post" action="{% url 'deuda_pagare_nuevo_v2' %}" class="card mb-3">
+    {% csrf_token %}
+    <div class="card-body py-2">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-2">
+                <label class="form-label small mb-0">Número</label>
+                <input type="text" name="numero_pagare" placeholder="P3" class="form-control form-control-sm" required>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small mb-0">Valor ($)</label>
+                <input type="text" name="valor_capital" placeholder="10.000.000.000" class="form-control form-control-sm cop-format" data-monetary="1" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small mb-0">Fecha desembolso</label>
+                <input type="date" name="fecha_desembolso" class="form-control form-control-sm" required>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="bi bi-plus"></i> Agregar Pagaré
+                </button>
+            </div>
         </div>
     </div>
 </div>

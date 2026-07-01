@@ -1751,3 +1751,45 @@ def deuda_publica_view(request):
         'tasa_ea': tasa_ea, 'tcr': tcr,
     })
 
+
+@never_cache
+@login_required
+def deuda_pagare_nuevo_v2(request):
+    """Agrega un pagaré nuevo al contrato principal."""
+    from decimal import Decimal as D
+    from datetime import date
+    if request.method == 'POST':
+        contrato = ContratoCredito.objects.first()
+        if contrato:
+            existentes = PagareCredito.objects.filter(contrato=contrato).count()
+            numero = request.POST.get('numero_pagare', f'P{existentes + 1}')[:20]
+            valor_raw = (request.POST.get('valor_capital') or '0').replace('.', '').replace(',', '.')
+            try:
+                valor = D(valor_raw)
+            except Exception:
+                valor = D('0')
+            try:
+                from datetime import datetime as dt
+                fecha = dt.strptime(request.POST.get('fecha_desembolso', ''), '%Y-%m-%d').date()
+            except Exception:
+                fecha = date.today()
+            PagareCredito.objects.create(
+                contrato=contrato, numero_pagare=numero,
+                valor_capital=valor, fecha_desembolso=fecha,
+                tasa_ibr=D('12.20'), puntos=D('1.35'),
+                tasa_cobertura_riesgo=D('0.921'), plazo_meses=120,
+            )
+            messages.success(request, f'Pagaré {numero} agregado')
+    return redirect('deuda_publica_v2')
+
+
+@never_cache
+@login_required
+def deuda_pagare_eliminar_v2(request, pk):
+    """Elimina un pagaré."""
+    pag = get_object_or_404(PagareCredito, pk=pk)
+    numero = pag.numero_pagare
+    pag.delete()
+    messages.success(request, f'Pagaré {numero} eliminado')
+    return redirect('deuda_publica_v2')
+

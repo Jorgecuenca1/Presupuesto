@@ -15,4 +15,5 @@ urlpatterns = [
     path('variables-macro/', views.variables_macro_view, name='variables_macro'),
     path('variables-macro/agregar/', views.variable_macro_agregar, name='variable_macro_agregar'),
     path('variables-macro/<int:pk>/eliminar/', views.variable_macro_eliminar, name='variable_macro_eliminar'),
+    path('techos-inversion/', views.techos_inversion_view, name='techos_inversion'),
 ]

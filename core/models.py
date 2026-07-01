@@ -415,3 +415,53 @@ class VigenciaFutura(models.Model):
 
     def __str__(self):
         return f'VF {self.vigencia_futura} - {self.codigo_fuente}: ${self.valor:,.0f}'
+
+
+class TechoInversion(models.Model):
+    """Fila del reporte Techos de Inversion (Fuentes y Usos).
+    Cada fuente de financiacion muestra:
+      Ingresos + Rendimientos = Total Ingresos
+      - Funcionamiento - Deuda = Total Inversion
+      - Vigencias Futuras = Disponible para Inversion
+    """
+    vigencia = models.IntegerField(verbose_name='Vigencia Fiscal')
+    orden = models.IntegerField(default=0)
+    concepto_ingreso = models.CharField(max_length=200, verbose_name='Concepto de Ingreso / Fuente')
+    codigo_fuente = models.CharField(max_length=20, blank=True)
+    ingresos = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+    rendimientos = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+    fto = models.DecimalField(max_digits=20, decimal_places=2, default=0,
+                               verbose_name='Funcionamiento')
+    deuda = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+    vf = models.DecimalField(max_digits=20, decimal_places=2, default=0,
+                              verbose_name='Vigencias Futuras')
+    # Destinaciones especificas (opcional)
+    vivienda = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+    medio_ambiente = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+    observaciones = models.TextField(blank=True)
+
+    class Meta:
+        verbose_name = 'Techo de Inversion'
+        verbose_name_plural = 'Techos de Inversion'
+        ordering = ['vigencia', 'orden', 'concepto_ingreso']
+        unique_together = ['vigencia', 'concepto_ingreso']
+
+    def __str__(self):
+        return f'{self.vigencia} {self.concepto_ingreso}'
+
+    @property
+    def total_ingresos(self):
+        return (self.ingresos or 0) + (self.rendimientos or 0)
+
+    @property
+    def total_fto_deuda(self):
+        return (self.fto or 0) + (self.deuda or 0)
+
+    @property
+    def total_inversion(self):
+        return self.total_ingresos - self.total_fto_deuda
+
+    @property
+    def disponible(self):
+        return self.total_inversion - (self.vf or 0)
+

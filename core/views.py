@@ -8,7 +8,7 @@ from decimal import Decimal
 from .forms import LoginForm, RegistroForm, ParametrosForm, TablaConcejoPersoneriaForm
 from .models import (
     ParametrosSistema, TablaConcejoPersoneria, PersoneriaSMLVProgresion,
-    VariableMacro,
+    VariableMacro, TechoInversion,
 )
 
 
@@ -749,3 +749,64 @@ def tabla_concejo_eliminar(request, pk):
     get_object_or_404(TablaConcejoPersoneria, pk=pk).delete()
     messages.success(request, 'Registro eliminado')
     return redirect('tabla_concejo_personeria')
+
+
+@never_cache
+@login_required
+def techos_inversion_view(request):
+    """Reporte Fuentes y Usos: por cada fuente muestra:
+    Ingresos + Rendimientos = Total Ingresos
+    - Funcionamiento - Deuda = Total Inversion
+    - Vigencias Futuras = Disponible
+    """
+    params = ParametrosSistema.objects.filter(activo=True).first()
+    vigencia = params.vigencia if params else 2027
+
+    if request.method == 'POST':
+        try:
+            # Guardar cambios de las filas existentes
+            for t in TechoInversion.objects.filter(vigencia=vigencia):
+                pref = f'ti_{t.pk}_'
+                cambio = False
+                for campo in ['ingresos', 'rendimientos', 'fto', 'deuda', 'vf', 'vivienda', 'medio_ambiente']:
+                    k = pref + campo
+                    if k in request.POST:
+                        raw = request.POST[k] or '0'
+                        raw = raw.replace('.', '').replace(',', '.')
+                        try:
+                            val = Decimal(raw)
+                            if getattr(t, campo) != val:
+                                setattr(t, campo, val)
+                                cambio = True
+                        except Exception:
+                            pass
+                if cambio:
+                    t.save()
+            messages.success(request, 'Techos de inversion actualizados')
+        except Exception as e:
+            messages.error(request, f'Error: {e}')
+        return redirect('techos_inversion')
+
+    filas = list(TechoInversion.objects.filter(vigencia=vigencia).order_by('orden', 'concepto_ingreso'))
+    # Totales
+    tot = {
+        'ingresos': sum(f.ingresos for f in filas),
+        'rendimientos': sum(f.rendimientos for f in filas),
+        'fto': sum(f.fto for f in filas),
+        'deuda': sum(f.deuda for f in filas),
+        'vf': sum(f.vf for f in filas),
+        'vivienda': sum(f.vivienda for f in filas),
+        'medio_ambiente': sum(f.medio_ambiente for f in filas),
+    }
+    tot['total_ingresos'] = tot['ingresos'] + tot['rendimientos']
+    tot['total_fto_deuda'] = tot['fto'] + tot['deuda']
+    tot['total_inversion'] = tot['total_ingresos'] - tot['total_fto_deuda']
+    tot['disponible'] = tot['total_inversion'] - tot['vf']
+
+    return render(request, 'core/techos_inversion.html', {
+        'filas': filas,
+        'totales': tot,
+        'vigencia': vigencia,
+        'params': params,
+    })
+

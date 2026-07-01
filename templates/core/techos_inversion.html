@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% load humanize l10n %}
+
+{% block title %}Techos de Inversión{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Techos de Inversión</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="bi bi-diagram-3"></i> Techos de Inversión — Fuentes y Usos {{ vigencia }}</h4>
+    <button type="submit" form="form-techos" class="btn btn-success">
+        <i class="bi bi-save"></i> Guardar cambios
+    </button>
+</div>
+
+<div class="alert alert-info py-2 small">
+    <i class="bi bi-info-circle"></i>
+    <strong>Fórmulas:</strong>
+    Total Ingresos = Ingresos + Rendimientos ·
+    Total Fto+Deuda = Funcionamiento + Deuda ·
+    <strong>Total Inversión = Total Ingresos − Total Fto+Deuda</strong> ·
+    Disponible = Total Inversión − Vigencias Futuras
+</div>
+
+<form method="post" id="form-techos">
+{% csrf_token %}
+
+<div class="card">
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-sm table-bordered align-middle mb-0" style="font-size:.75rem;">
+            <thead class="table-dark text-center sticky-top">
+                <tr>
+                    <th style="min-width:220px">Concepto Ingreso / Fuente</th>
+                    <th>Ingresos</th>
+                    <th>Rendimientos</th>
+                    <th class="bg-success text-white">Total Ingresos</th>
+                    <th>Funcionamiento</th>
+                    <th>Deuda</th>
+                    <th class="bg-warning text-dark">Total Fto+Deuda</th>
+                    <th class="bg-primary text-white">Total Inversión</th>
+                    <th>Vig. Futuras</th>
+                    <th class="bg-info text-white">Disponible</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in filas %}
+                <tr>
+                    <td><strong>{{ t.concepto_ingreso }}</strong>
+                        {% if t.codigo_fuente %}<br><small class="text-muted">{{ t.codigo_fuente }}</small>{% endif %}
+                    </td>
+                    <td>
+                        <input type="text" name="ti_{{ t.pk }}_ingresos" value="{{ t.ingresos|unlocalize }}"
+                               class="form-control form-control-sm text-end cop-format" data-monetary="1">
+                    </td>
+                    <td>
+                        <input type="text" name="ti_{{ t.pk }}_rendimientos" value="{{ t.rendimientos|unlocalize }}"
+                               class="form-control form-control-sm text-end cop-format" data-monetary="1">
+                    </td>
+                    <td class="text-end fw-bold bg-success-subtle">${{ t.total_ingresos|floatformat:0|intcomma }}</td>
+                    <td>
+                        <input type="text" name="ti_{{ t.pk }}_fto" value="{{ t.fto|unlocalize }}"
+                               class="form-control form-control-sm text-end cop-format" data-monetary="1">
+                    </td>
+                    <td>
+                        <input type="text" name="ti_{{ t.pk }}_deuda" value="{{ t.deuda|unlocalize }}"
+                               class="form-control form-control-sm text-end cop-format" data-monetary="1">
+                    </td>
+                    <td class="text-end fw-bold bg-warning-subtle">${{ t.total_fto_deuda|floatformat:0|intcomma }}</td>
+                    <td class="text-end fw-bold bg-primary-subtle text-primary">${{ t.total_inversion|floatformat:0|intcomma }}</td>
+                    <td>
+                        <input type="text" name="ti_{{ t.pk }}_vf" value="{{ t.vf|unlocalize }}"
+                               class="form-control form-control-sm text-end cop-format" data-monetary="1">
+                    </td>
+                    <td class="text-end fw-bold bg-info-subtle text-primary">${{ t.disponible|floatformat:0|intcomma }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="10" class="text-center text-muted py-4">
+                        No hay fuentes cargadas. Ejecute el script de importación desde el Excel Fuentes y Usos.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot class="table-dark">
+                <tr>
+                    <td><strong>TOTAL</strong></td>
+                    <td class="text-end">${{ totales.ingresos|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ totales.rendimientos|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ totales.total_ingresos|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ totales.fto|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ totales.deuda|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ totales.total_fto_deuda|floatformat:0|intcomma }}</td>
+                    <td class="text-end text-info">${{ totales.total_inversion|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ totales.vf|floatformat:0|intcomma }}</td>
+                    <td class="text-end text-warning">${{ totales.disponible|floatformat:0|intcomma }}</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+<div class="d-flex justify-content-end mt-3">
+    <button type="submit" class="btn btn-success btn-lg">
+        <i class="bi bi-save"></i> Guardar y recalcular
+    </button>
+</div>
+</form>
+{% endblock %}

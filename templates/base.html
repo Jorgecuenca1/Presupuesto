@@ -87,6 +87,9 @@
         <a href="{% url 'variables_macro' %}" class="nav-link {% if request.resolver_match.url_name == 'variables_macro' %}active{% endif %}">
             <i class="bi bi-graph-up-arrow"></i> Variables Macroeconómicas
         </a>
+        <a href="{% url 'techos_inversion' %}" class="nav-link {% if request.resolver_match.url_name == 'techos_inversion' %}active{% endif %}">
+            <i class="bi bi-diagram-3"></i> Techos de Inversión
+        </a>
 
         <div class="nav-section">Ingresos - Cifras Históricas</div>
         <a href="{% url 'cifras_historicas_ingresos' %}" class="nav-link {% if request.resolver_match.url_name == 'cifras_historicas_ingresos' %}active{% endif %}">
@@ -154,8 +157,8 @@
         <a href="{% url 'deuda_publica_v2' %}" class="nav-link {% if request.resolver_match.url_name == 'deuda_publica_v2' %}active{% endif %}">
             <i class="bi bi-bank"></i> Deuda Pública
         </a>
-        <a href="{% url 'deuda_contratos_list' %}" class="nav-link {% if 'deuda' in request.resolver_match.url_name %}active{% endif %}">
-            <i class="bi bi-bank"></i> Deuda Pública
+        <a href="{% url 'deuda_contratos_list' %}" class="nav-link {% if request.resolver_match.url_name == 'deuda_contratos_list' %}active{% endif %}">
+            <i class="bi bi-clipboard"></i> Deuda: Contratos (legacy)
         </a>
         <a href="{% url 'deuda_resumen' %}" class="nav-link {% if request.resolver_match.url_name == 'deuda_resumen' %}active{% endif %}">
             <i class="bi bi-file-earmark-bar-graph"></i> Resumen Deuda

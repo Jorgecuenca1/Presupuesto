@@ -1556,240 +1556,319 @@ def reporte_techos_inversion(request):
     })
 
 
-@never_cache
-@login_required
-def deuda_publica_view(request):
-    """Vista integral de Deuda Publica - gemelo del Excel Anexo Capacidad Endeudamiento.
+# ============================================================
+# DEUDA PÚBLICA — arquitectura N contratos × N pagarés recursivo
+# ============================================================
 
-    Supuestos editables → recalcula automaticamente:
-    - Tabla amortización anual (16 años, 2 pagarés)
-    - Rubros CUIPO 2.2.x del Anexo 2
-    - Indicadores Ley 358/1997 (Solvencia + Sostenibilidad + semáforo)
+def _clean_money(raw):
+    """Convierte '1.234.567,89' o '1234567.89' en Decimal."""
+    from decimal import Decimal as D
+    v = (raw or '').strip().replace('.', '').replace(',', '.')
+    if not v:
+        return D('0')
+    try:
+        return D(v)
+    except Exception:
+        return D('0')
+
+
+def _recalcular_amortizacion_contrato(contrato):
+    """Recalcula toda la tabla de amortización del contrato.
+    Sistema: cuota fija de capital, intereses TV, con período de gracia.
+    Independiente del número de pagarés (recursivo por pagaré).
     """
     from decimal import Decimal as D, ROUND_HALF_UP
-    from datetime import date
+    tasa_ea = contrato.tasa_ea or D('0.1355')
+    tcr = contrato.tcr_default or D('0.921')
+    plazo_meses = contrato.plazo_meses or 120
+    gracia_meses = contrato.gracia_meses or 24
+    num_cuotas = contrato.num_cuotas_capital or 32
+    total_trim = max(1, plazo_meses // 3)
+    gracia_trim = gracia_meses // 3
+    tasa_trim = (D('1') + tasa_ea) ** D('0.25') - D('1')
 
-    vigencia = _vigencia()
-    contrato = ContratoCredito.objects.first()
-    if not contrato:
-        contrato = ContratoCredito.objects.create(
-            vigencia=vigencia, banco='BBVA',
-            renta_pignorada='Impuesto de transporte oleoductos',
-            objeto_credito='Empréstito', valor_contrato=D('45000000000'),
-            plazo_meses=120,
-        )
-    pagares = list(PagareCredito.objects.filter(contrato=contrato).order_by('numero_pagare'))
-    if len(pagares) < 2:
-        # Crear pagarés faltantes
-        if not pagares:
-            PagareCredito.objects.create(contrato=contrato, numero_pagare='P1',
-                valor_capital=D('20083699140.75'), fecha_desembolso=date(2026,6,9),
-                tasa_ibr=D('12.20'), puntos=D('1.35'), tasa_cobertura_riesgo=D('0.921'), plazo_meses=120)
-        if len(pagares) < 2:
-            PagareCredito.objects.create(contrato=contrato, numero_pagare='P2',
-                valor_capital=D('24916300859.25'), fecha_desembolso=date(2026,11,9),
-                tasa_ibr=D('12.20'), puntos=D('1.35'), tasa_cobertura_riesgo=D('0.921'), plazo_meses=120)
-        pagares = list(PagareCredito.objects.filter(contrato=contrato).order_by('numero_pagare'))
+    AmortizacionPagare.objects.filter(pagare__contrato=contrato).delete()
 
-    # Supuestos por defecto (se pueden leer de contrato/pagare)
-    gracia_meses = 24
-    num_cuotas = 32
-    tasa_ea = D('0.1355')
-    tcr = D('0.921')
+    for pag in contrato.pagares.all():
+        if not pag.fecha_desembolso or pag.valor_capital <= 0:
+            continue
+        saldo = pag.valor_capital
+        anio_desem = pag.fecha_desembolso.year
+        cap_por_cuota = pag.valor_capital / D(num_cuotas) if num_cuotas > 0 else D('0')
+        pag.tasa_cobertura_riesgo = tcr
+        pag.save()
 
-    # POST: guardar supuestos y recalcular
-    if request.method == 'POST':
-        try:
-            def clean(k):
-                v = (request.POST.get(k) or '').replace('.', '').replace(',', '.')
-                return v or '0'
+        por_anio = {}
+        for trim in range(1, total_trim + 1):
+            trim_anio = anio_desem + (trim - 1) // 4
+            intereses_trim = (saldo * tasa_trim).quantize(D('0.01'), ROUND_HALF_UP)
+            capital_trim = cap_por_cuota if trim > gracia_trim else D('0')
+            if trim == total_trim:
+                capital_trim = saldo
+            if capital_trim > saldo:
+                capital_trim = saldo
+            saldo -= capital_trim
+            por_anio.setdefault(trim_anio, {'cap': D('0'), 'int': D('0')})
+            por_anio[trim_anio]['cap'] += capital_trim
+            por_anio[trim_anio]['int'] += intereses_trim
 
-            contrato.valor_contrato = D(clean('cupo_total'))
-            contrato.banco = request.POST.get('banco', contrato.banco)[:200]
-            contrato.renta_pignorada = request.POST.get('renta_pignorada', contrato.renta_pignorada)[:200]
-            contrato.plazo_meses = int(clean('plazo_meses'))
-            contrato.save()
+        for anio, tot in por_anio.items():
+            AmortizacionPagare.objects.create(
+                pagare=pag, vigencia_pago=anio,
+                capital_principal=tot['cap'],
+                intereses=tot['int'],
+                intereses_tcr=(tot['int'] * tcr).quantize(D('0.01'), ROUND_HALF_UP),
+            )
 
-            gracia_meses = int(clean('gracia_meses'))
-            num_cuotas = int(clean('num_cuotas'))
-            tasa_ea = D(clean('tasa_ea'))
-            tcr = D(clean('tcr'))
 
-            # Actualizar pagarés
-            for pag in pagares:
-                vk = f'pag_{pag.pk}_valor'
-                fk = f'pag_{pag.pk}_fecha'
-                if vk in request.POST:
-                    pag.valor_capital = D(clean(vk))
-                if fk in request.POST:
-                    from datetime import datetime as dt
-                    try:
-                        pag.fecha_desembolso = dt.strptime(request.POST[fk], '%Y-%m-%d').date()
-                    except Exception: pass
-                pag.tasa_cobertura_riesgo = tcr
-                pag.save()
-
-            # Recalcular tabla amortización (sistema cuota fija de capital, intereses TV)
-            AmortizacionPagare.objects.filter(pagare__contrato=contrato).delete()
-
-            # Tasa trimestral efectiva
-            tasa_trim = (D('1') + tasa_ea) ** D('0.25') - D('1')
-
-            for pag in pagares:
-                saldo = pag.valor_capital
-                anio_desem = pag.fecha_desembolso.year
-                # Total trimestres desde desembolso al fin del plazo (120 meses = 40 trimestres)
-                total_trim = 40
-                gracia_trim = gracia_meses // 3
-                # Capital por cuota
-                cap_por_cuota = pag.valor_capital / D(num_cuotas) if num_cuotas > 0 else D('0')
-
-                # Simular trimestre por trimestre, acumular por año
-                por_anio = {}
-                for trim in range(1, total_trim + 1):
-                    trim_anio = anio_desem + (trim - 1) // 4
-                    intereses_trim = (saldo * tasa_trim).quantize(D('0.01'), ROUND_HALF_UP)
-                    capital_trim = cap_por_cuota if trim > gracia_trim else D('0')
-                    # Ajuste ultimo trimestre para saldo exacto
-                    if trim == total_trim:
-                        capital_trim = saldo
-                    if capital_trim > saldo:
-                        capital_trim = saldo
-                    saldo -= capital_trim
-                    por_anio.setdefault(trim_anio, {'cap': D('0'), 'int': D('0')})
-                    por_anio[trim_anio]['cap'] += capital_trim
-                    por_anio[trim_anio]['int'] += intereses_trim
-
-                for anio, tot in por_anio.items():
-                    tcr_val = (tot['int'] * tcr).quantize(D('0.01'), ROUND_HALF_UP)
-                    AmortizacionPagare.objects.update_or_create(
-                        pagare=pag, vigencia_pago=anio,
-                        defaults={
-                            'capital_principal': tot['cap'],
-                            'intereses': tot['int'],
-                            'intereses_tcr': tcr_val,
-                        }
-                    )
-
-            # Actualizar rubros 2.2.x del vigencia
-            from django.db.models import Sum
-            agg = AmortizacionPagare.objects.filter(pagare__contrato=contrato, vigencia_pago=vigencia).aggregate(
-                c=Sum('capital_principal'), i=Sum('intereses'))
-            RubroGasto.objects.filter(vigencia=vigencia, codigo='2.2.2.01.02.002.02.03-02').update(
-                valor_apropiacion=agg['c'] or D('0'), metodo_calculo='DCAP')
-            RubroGasto.objects.filter(vigencia=vigencia, codigo='2.2.2.02.02.002.02.03-02').update(
-                valor_apropiacion=agg['i'] or D('0'), metodo_calculo='DINT')
-            from core.views import _recalcular_titulos_por_codigo
-            _recalcular_titulos_por_codigo(vigencia)
-
-            messages.success(request, 'Deuda pública recalculada y propagada al Anexo 2')
-        except Exception as e:
-            messages.error(request, f'Error: {e}')
-        return redirect('deuda_publica_v2')
-
-    # GET: armar resumen anual
+def _propagar_deuda_a_rubros(vigencia):
+    """Suma amortizaciones de TODOS los contratos y actualiza rubros 2.2.x."""
+    from decimal import Decimal as D
     from django.db.models import Sum
-    if not pagares or len(pagares) < 2:
-        return render(request, 'gastos/deuda_publica_v2.html', {
-            'contrato': contrato, 'pagares': pagares, 'resumen_anual': [], 'totales': {},
-            'vigencia': vigencia, 'gracia_meses': gracia_meses, 'num_cuotas': num_cuotas,
-            'tasa_ea': tasa_ea, 'tcr': tcr,
-        })
+    agg = AmortizacionPagare.objects.filter(vigencia_pago=vigencia).aggregate(
+        c=Sum('capital_principal'), i=Sum('intereses'))
+    RubroGasto.objects.filter(vigencia=vigencia, codigo='2.2.2.01.02.002.02.03-02').update(
+        valor_apropiacion=agg['c'] or D('0'), metodo_calculo='DCAP')
+    RubroGasto.objects.filter(vigencia=vigencia, codigo='2.2.2.02.02.002.02.03-02').update(
+        valor_apropiacion=agg['i'] or D('0'), metodo_calculo='DINT')
+    try:
+        from core.views import _recalcular_titulos_por_codigo
+        _recalcular_titulos_por_codigo(vigencia)
+    except Exception:
+        pass
 
-    p1, p2 = pagares[0], pagares[1]
-    resumen_anual = []
-    saldo_acum = D('0')
-    ingresos_corr = D('66792101000')  # Ley 358 base (podría venir de params)
-    for anio in range(2026, 2037):
-        a1 = AmortizacionPagare.objects.filter(pagare=p1, vigencia_pago=anio).first()
-        a2 = AmortizacionPagare.objects.filter(pagare=p2, vigencia_pago=anio).first()
-        int_p1 = a1.intereses if a1 else D('0')
-        cap_p1 = a1.capital_principal if a1 else D('0')
-        int_p2 = a2.intereses if a2 else D('0')
-        cap_p2 = a2.capital_principal if a2 else D('0')
-        int_tot = int_p1 + int_p2
-        cap_tot = cap_p1 + cap_p2
-        servicio = int_tot + cap_tot
-        # Saldo fin de año
-        if not resumen_anual:
-            saldo = contrato.valor_contrato - cap_tot
-        else:
-            saldo = resumen_anual[-1]['saldo'] - cap_tot
-        # Indicadores Ley 358
-        ing_anio = ingresos_corr * (D('1') + D('0.045')) ** D(anio - 2026)
-        gastos_fto = ing_anio * D('0.22')
-        ahorro_op = ing_anio - gastos_fto
-        solvencia = (int_tot / ahorro_op * D('100')) if ahorro_op else D('0')
+
+def _resumen_anual_todos_contratos(vigencia_base):
+    """Arma el resumen anual global sumando TODOS los contratos activos.
+    Indicadores Ley 358/1997 sobre suma agregada.
+    """
+    from decimal import Decimal as D
+    from django.db.models import Sum
+    contratos = list(ContratoCredito.objects.all())
+    if not contratos:
+        return [], {}
+
+    anios = sorted(set(AmortizacionPagare.objects.values_list('vigencia_pago', flat=True)))
+    if not anios:
+        return [], {}
+
+    saldo = sum((c.valor_contrato for c in contratos), D('0'))
+    ingresos_corr = D('66792101000')
+
+    resumen = []
+    for anio in anios:
+        agg = AmortizacionPagare.objects.filter(vigencia_pago=anio).aggregate(
+            c=Sum('capital_principal'), i=Sum('intereses'), t=Sum('intereses_tcr'))
+        cap = agg['c'] or D('0')
+        inter = agg['i'] or D('0')
+        tcr_i = agg['t'] or D('0')
+        servicio = cap + inter
+        saldo -= cap
+
+        ing_anio = ingresos_corr * (D('1') + D('0.045')) ** D(anio - anios[0])
+        ahorro_op = ing_anio * D('0.78')
+        solvencia = (inter / ahorro_op * D('100')) if ahorro_op else D('0')
         sostenibilidad = (saldo / ing_anio * D('100')) if ing_anio else D('0')
-        resumen_anual.append({
-            'anio': anio,
-            'int_p1': int_p1, 'cap_p1': cap_p1,
-            'int_p2': int_p2, 'cap_p2': cap_p2,
-            'int_total': int_tot, 'cap_total': cap_tot,
-            'servicio': servicio, 'saldo': saldo,
-            'solvencia_pct': solvencia,
-            'sostenibilidad_pct': sostenibilidad,
-            'solvencia_ok': solvencia <= 40,
-            'sostenibilidad_ok': sostenibilidad <= 80,
+        resumen.append({
+            'anio': anio, 'capital': cap, 'intereses': inter,
+            'intereses_tcr': tcr_i, 'servicio': servicio, 'saldo': saldo,
+            'solvencia_pct': solvencia, 'sostenibilidad_pct': sostenibilidad,
+            'solvencia_ok': solvencia <= 40, 'sostenibilidad_ok': sostenibilidad <= 80,
         })
 
     totales = {
-        'int_p1': sum(r['int_p1'] for r in resumen_anual),
-        'cap_p1': sum(r['cap_p1'] for r in resumen_anual),
-        'int_p2': sum(r['int_p2'] for r in resumen_anual),
-        'cap_p2': sum(r['cap_p2'] for r in resumen_anual),
-        'int_total': sum(r['int_total'] for r in resumen_anual),
-        'cap_total': sum(r['cap_total'] for r in resumen_anual),
-        'servicio': sum(r['servicio'] for r in resumen_anual),
+        'capital': sum((r['capital'] for r in resumen), D('0')),
+        'intereses': sum((r['intereses'] for r in resumen), D('0')),
+        'servicio': sum((r['servicio'] for r in resumen), D('0')),
     }
+    return resumen, totales
 
-    return render(request, 'gastos/deuda_publica_v2.html', {
-        'contrato': contrato, 'pagares': pagares,
-        'resumen_anual': resumen_anual, 'totales': totales,
+
+@never_cache
+@login_required
+def deuda_publica_view(request):
+    """Dashboard de Deuda Pública — lista de créditos + resumen agregado."""
+    vigencia = _vigencia()
+    contratos_qs = ContratoCredito.objects.all().order_by('banco')
+    contratos = []
+    for c in contratos_qs:
+        c.num_pagares_val = c.pagares.count()
+        c.total_desembolsado_val = c.total_desembolsado
+        contratos.append(c)
+    resumen_anual, totales = _resumen_anual_todos_contratos(vigencia)
+    return render(request, 'gastos/deuda_dashboard.html', {
+        'contratos': contratos,
+        'resumen_anual': resumen_anual,
+        'totales': totales,
         'vigencia': vigencia,
-        'gracia_meses': gracia_meses, 'num_cuotas': num_cuotas,
-        'tasa_ea': tasa_ea, 'tcr': tcr,
+        'num_contratos': len(contratos),
     })
 
 
 @never_cache
 @login_required
-def deuda_pagare_nuevo_v2(request):
-    """Agrega un pagaré nuevo al contrato principal."""
+def deuda_credito_detalle(request, contrato_id):
+    """Detalle + edición de un contrato específico con sus pagarés y amortización."""
     from decimal import Decimal as D
-    from datetime import date
+    from datetime import datetime as dt
+
+    vigencia = _vigencia()
+    contrato = get_object_or_404(ContratoCredito, pk=contrato_id)
+
     if request.method == 'POST':
-        contrato = ContratoCredito.objects.first()
-        if contrato:
-            existentes = PagareCredito.objects.filter(contrato=contrato).count()
-            numero = request.POST.get('numero_pagare', f'P{existentes + 1}')[:20]
-            valor_raw = (request.POST.get('valor_capital') or '0').replace('.', '').replace(',', '.')
-            try:
-                valor = D(valor_raw)
-            except Exception:
-                valor = D('0')
-            try:
-                from datetime import datetime as dt
-                fecha = dt.strptime(request.POST.get('fecha_desembolso', ''), '%Y-%m-%d').date()
-            except Exception:
-                fecha = date.today()
-            PagareCredito.objects.create(
-                contrato=contrato, numero_pagare=numero,
-                valor_capital=valor, fecha_desembolso=fecha,
-                tasa_ibr=D('12.20'), puntos=D('1.35'),
-                tasa_cobertura_riesgo=D('0.921'), plazo_meses=120,
+        try:
+            contrato.banco = (request.POST.get('banco') or contrato.banco)[:200]
+            contrato.renta_pignorada = (request.POST.get('renta_pignorada') or contrato.renta_pignorada)[:200]
+            contrato.objeto_credito = (request.POST.get('objeto_credito') or contrato.objeto_credito)[:500]
+            contrato.valor_contrato = _clean_money(request.POST.get('cupo_total'))
+            try: contrato.plazo_meses = int(request.POST.get('plazo_meses') or 0)
+            except Exception: pass
+            try: contrato.gracia_meses = int(request.POST.get('gracia_meses') or 0)
+            except Exception: pass
+            try: contrato.num_cuotas_capital = int(request.POST.get('num_cuotas') or 0)
+            except Exception: pass
+            try: contrato.tasa_ea = D((request.POST.get('tasa_ea') or '0').replace(',', '.'))
+            except Exception: pass
+            try: contrato.tcr_default = D((request.POST.get('tcr') or '0').replace(',', '.'))
+            except Exception: pass
+            ff = request.POST.get('fecha_firma')
+            if ff:
+                try: contrato.fecha_firma = dt.strptime(ff, '%Y-%m-%d').date()
+                except Exception: pass
+            contrato.save()
+
+            for pag in contrato.pagares.all():
+                vk = f'pag_{pag.pk}_valor'
+                fk = f'pag_{pag.pk}_fecha'
+                if vk in request.POST:
+                    pag.valor_capital = _clean_money(request.POST.get(vk))
+                if fk in request.POST and request.POST.get(fk):
+                    try: pag.fecha_desembolso = dt.strptime(request.POST[fk], '%Y-%m-%d').date()
+                    except Exception: pass
+                pag.save()
+
+            _recalcular_amortizacion_contrato(contrato)
+            _propagar_deuda_a_rubros(vigencia)
+            messages.success(request, f'Crédito {contrato.banco} recalculado y propagado a Anexo 2')
+        except Exception as e:
+            messages.error(request, f'Error: {e}')
+        return redirect('deuda_credito_detalle', contrato_id=contrato.pk)
+
+    pagares = list(contrato.pagares.all().order_by('numero_pagare'))
+    from decimal import Decimal as D
+    anios = list(AmortizacionPagare.objects.filter(pagare__contrato=contrato)
+                 .values_list('vigencia_pago', flat=True).distinct().order_by('vigencia_pago'))
+    tabla = []
+    saldo = contrato.valor_contrato
+    for anio in anios:
+        fila = {'anio': anio, 'pagares': [], 'cap_total': D('0'), 'int_total': D('0')}
+        for pag in pagares:
+            a = AmortizacionPagare.objects.filter(pagare=pag, vigencia_pago=anio).first()
+            cap = a.capital_principal if a else D('0')
+            inter = a.intereses if a else D('0')
+            fila['pagares'].append({'pagare': pag, 'cap': cap, 'int': inter})
+            fila['cap_total'] += cap
+            fila['int_total'] += inter
+        fila['servicio'] = fila['cap_total'] + fila['int_total']
+        saldo -= fila['cap_total']
+        fila['saldo'] = saldo
+        tabla.append(fila)
+
+    return render(request, 'gastos/deuda_credito_detalle.html', {
+        'contrato': contrato,
+        'pagares': pagares,
+        'tabla': tabla,
+        'vigencia': vigencia,
+    })
+
+
+@never_cache
+@login_required
+def deuda_credito_nuevo(request):
+    """Crea un nuevo contrato de crédito."""
+    from decimal import Decimal as D
+    from datetime import datetime as dt
+    if request.method == 'POST':
+        try:
+            banco = (request.POST.get('banco') or '').strip()[:200]
+            if not banco:
+                messages.error(request, 'Entidad financiera es obligatoria')
+                return redirect('deuda_publica_v2')
+            c = ContratoCredito(
+                vigencia=_vigencia(), banco=banco,
+                renta_pignorada=(request.POST.get('renta_pignorada') or '')[:200],
+                objeto_credito=(request.POST.get('objeto_credito') or 'Empréstito')[:500],
+                valor_contrato=_clean_money(request.POST.get('valor_contrato')),
+                plazo_meses=int(request.POST.get('plazo_meses') or 120),
+                gracia_meses=int(request.POST.get('gracia_meses') or 24),
+                num_cuotas_capital=int(request.POST.get('num_cuotas') or 32),
+                tasa_ea=D((request.POST.get('tasa_ea') or '0.1355').replace(',', '.')),
+                tcr_default=D((request.POST.get('tcr') or '0.921').replace(',', '.')),
             )
-            messages.success(request, f'Pagaré {numero} agregado')
+            ff = request.POST.get('fecha_firma')
+            if ff:
+                try: c.fecha_firma = dt.strptime(ff, '%Y-%m-%d').date()
+                except Exception: pass
+            c.save()
+            messages.success(request, f'Crédito con {banco} creado. Ahora agregue pagarés.')
+            return redirect('deuda_credito_detalle', contrato_id=c.pk)
+        except Exception as e:
+            messages.error(request, f'Error creando crédito: {e}')
     return redirect('deuda_publica_v2')
 
 
 @never_cache
 @login_required
+def deuda_credito_eliminar(request, contrato_id):
+    """Elimina un contrato completo."""
+    c = get_object_or_404(ContratoCredito, pk=contrato_id)
+    banco = c.banco
+    c.delete()
+    _propagar_deuda_a_rubros(_vigencia())
+    messages.success(request, f'Crédito {banco} eliminado')
+    return redirect('deuda_publica_v2')
+
+
+
+
+@never_cache
+@login_required
+def deuda_pagare_nuevo_v2(request, contrato_id):
+    """Agrega un pagaré al contrato indicado y recalcula la amortización."""
+    from decimal import Decimal as D
+    from datetime import date, datetime as dt
+    contrato = get_object_or_404(ContratoCredito, pk=contrato_id)
+    if request.method == 'POST':
+        existentes = PagareCredito.objects.filter(contrato=contrato).count()
+        numero = (request.POST.get('numero_pagare') or f'P{existentes + 1}')[:20]
+        valor = _clean_money(request.POST.get('valor_capital'))
+        try:
+            fecha = dt.strptime(request.POST.get('fecha_desembolso', ''), '%Y-%m-%d').date()
+        except Exception:
+            fecha = date.today()
+        PagareCredito.objects.create(
+            contrato=contrato, numero_pagare=numero,
+            valor_capital=valor, fecha_desembolso=fecha,
+            tasa_ibr=D('12.20'), puntos=D('1.35'),
+            tasa_cobertura_riesgo=contrato.tcr_default or D('0.921'),
+            plazo_meses=contrato.plazo_meses or 120,
+        )
+        _recalcular_amortizacion_contrato(contrato)
+        _propagar_deuda_a_rubros(_vigencia())
+        messages.success(request, f'Pagaré {numero} agregado a {contrato.banco}')
+    return redirect('deuda_credito_detalle', contrato_id=contrato.pk)
+
+
+@never_cache
+@login_required
 def deuda_pagare_eliminar_v2(request, pk):
-    """Elimina un pagaré."""
+    """Elimina un pagaré y recalcula la amortización del contrato."""
     pag = get_object_or_404(PagareCredito, pk=pk)
+    contrato = pag.contrato
     numero = pag.numero_pagare
     pag.delete()
+    _recalcular_amortizacion_contrato(contrato)
+    _propagar_deuda_a_rubros(_vigencia())
     messages.success(request, f'Pagaré {numero} eliminado')
-    return redirect('deuda_publica_v2')
+    return redirect('deuda_credito_detalle', contrato_id=contrato.pk)
 

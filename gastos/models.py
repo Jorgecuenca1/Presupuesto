@@ -62,6 +62,15 @@ class ContratoCredito(models.Model):
     codigo_fuente = models.CharField(max_length=20, blank=True, verbose_name='Código Fuente')
     nombre_fuente = models.CharField(max_length=200, blank=True, verbose_name='Fuente Financiación')
     observaciones = models.TextField(blank=True)
+    fecha_firma = models.DateField(null=True, blank=True, verbose_name='Fecha Firma Contrato')
+    tasa_ea = models.DecimalField(max_digits=8, decimal_places=6, default=0,
+                                  verbose_name='Tasa Interés E.A.',
+                                  help_text='Efectiva anual, ej: 0.1355 = 13.55%')
+    tcr_default = models.DecimalField(max_digits=8, decimal_places=6, default=0,
+                                      verbose_name='TCR default',
+                                      help_text='Tasa Cobertura Riesgo default para nuevos pagarés')
+    gracia_meses = models.IntegerField(default=0, verbose_name='Gracia Capital (meses)')
+    num_cuotas_capital = models.IntegerField(default=0, verbose_name='Nº Cuotas Capital')
 
     class Meta:
         verbose_name = 'Contrato de Crédito'

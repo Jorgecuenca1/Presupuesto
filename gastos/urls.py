@@ -49,9 +49,12 @@ urlpatterns = [
     path('cifras-historicas/importar/', views.importar_cifras_historicas_gastos, name='importar_cifras_historicas_gastos'),
     path('cifras-historicas/calcular-tcpa/', views.calcular_tcpa_gastos, name='calcular_tcpa_gastos'),
 
-    # Deuda Pública
+    # Deuda Pública (N contratos × N pagarés recursivo)
     path('deuda-publica/', views.deuda_publica_view, name='deuda_publica_v2'),
-    path('deuda-publica/pagare/nuevo/', views.deuda_pagare_nuevo_v2, name='deuda_pagare_nuevo_v2'),
+    path('deuda-publica/credito/nuevo/', views.deuda_credito_nuevo, name='deuda_credito_nuevo'),
+    path('deuda-publica/credito/<int:contrato_id>/', views.deuda_credito_detalle, name='deuda_credito_detalle'),
+    path('deuda-publica/credito/<int:contrato_id>/eliminar/', views.deuda_credito_eliminar, name='deuda_credito_eliminar'),
+    path('deuda-publica/credito/<int:contrato_id>/pagare/nuevo/', views.deuda_pagare_nuevo_v2, name='deuda_pagare_nuevo_v2'),
     path('deuda-publica/pagare/<int:pk>/eliminar/', views.deuda_pagare_eliminar_v2, name='deuda_pagare_eliminar_v2'),
     path('deuda/', views.deuda_contratos_list, name='servicio_deuda_list'),
     path('deuda/contratos/', views.deuda_contratos_list, name='deuda_contratos_list'),

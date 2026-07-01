@@ -99,7 +99,7 @@ class ContratoCreditoForm(forms.ModelForm):
         fields = '__all__'
         widgets = {
             'vigencia': forms.NumberInput(attrs={'class': W}),
-            'banco': forms.TextInput(attrs={'class': W}),
+            'banco': forms.TextInput(attrs={'class': W, 'list': 'bancos-colombia'}),
             'renta_pignorada': forms.TextInput(attrs={'class': W}),
             'objeto_credito': forms.Textarea(attrs={'class': W, 'rows': 2}),
             'valor_contrato': forms.NumberInput(attrs={'class': W, 'step': '0.01'}),

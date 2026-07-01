@@ -288,5 +288,10 @@
     });
 })();
 </script>
+
+<!-- Combobox searchable global: bancos colombianos (HTML5 datalist) -->
+<datalist id="bancos-colombia">
+    {% for b in bancos_colombia %}<option value="{{ b }}"></option>{% endfor %}
+</datalist>
 </body>
 </html>

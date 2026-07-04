@@ -811,13 +811,16 @@ def _sincronizar_techos_desde_fuentes(vigencia):
             if cod and (r.codigo_fuente or '').strip() == cod:
                 fto_sum += (r.valor_apropiacion or D('0'))
 
-        # ── DEUDA: match por renta pignorada del contrato (substring o palabras clave >=5 chars)
+        # ── DEUDA: match por renta pignorada del contrato
+        # Reglas: (a) substring exacto; o (b) coinciden >=2 palabras significativas,
+        # excluyendo stop-words genericos que aparecen en muchos rubros
+        STOP = {'IMPUESTO','RECURSO','RECURSOS','INGRESO','INGRESOS','FONDO','TASA','SGP','DEL','LOS','LAS','POR','PARA','CON','SIN','AL','LA','EL'}
+        def _tok(s):
+            return {w for w in s.split() if len(w) >= 4 and w not in STOP}
         def _match_texto(a, b):
             if not a or not b: return False
             if a in b or b in a: return True
-            words_a = {w for w in a.split() if len(w) >= 5}
-            words_b = {w for w in b.split() if len(w) >= 5}
-            return len(words_a & words_b) >= 1
+            return len(_tok(a) & _tok(b)) >= 2
 
         deuda_val = D('0')
         for k, v in deuda_por_renta.items():

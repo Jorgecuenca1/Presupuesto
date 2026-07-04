@@ -751,8 +751,6 @@ def tabla_concejo_eliminar(request, pk):
     return redirect('tabla_concejo_personeria')
 
 
-@never_cache
-@login_required
 def _sincronizar_techos_desde_fuentes(vigencia):
     """Recalcula las columnas Ingresos, Fto y Deuda de cada TechoInversion
     consultando RubroIngreso, RubroGasto y AmortizacionPagare.
@@ -832,6 +830,8 @@ def _sincronizar_techos_desde_fuentes(vigencia):
             t.save()
 
 
+@never_cache
+@login_required
 def techos_inversion_view(request):
     """Reporte Fuentes y Usos: por cada fuente muestra:
     Ingresos + Rendimientos = Total Ingresos

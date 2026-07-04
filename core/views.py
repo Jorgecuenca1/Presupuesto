@@ -811,10 +811,17 @@ def _sincronizar_techos_desde_fuentes(vigencia):
             if cod and (r.codigo_fuente or '').strip() == cod:
                 fto_sum += (r.valor_apropiacion or D('0'))
 
-        # ── DEUDA: match por renta pignorada del contrato
+        # ── DEUDA: match por renta pignorada del contrato (substring o palabras clave >=5 chars)
+        def _match_texto(a, b):
+            if not a or not b: return False
+            if a in b or b in a: return True
+            words_a = {w for w in a.split() if len(w) >= 5}
+            words_b = {w for w in b.split() if len(w) >= 5}
+            return len(words_a & words_b) >= 1
+
         deuda_val = D('0')
         for k, v in deuda_por_renta.items():
-            if k and (k in concepto_up or concepto_up in k):
+            if _match_texto(k, concepto_up):
                 deuda_val += v
         # Si no hay match explícito y hay una sola fila con "recursos propios/ITO", la deuda va ahí
         # (skip para no distorsionar)

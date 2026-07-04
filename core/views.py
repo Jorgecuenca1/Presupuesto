@@ -798,7 +798,7 @@ def _sincronizar_techos_desde_fuentes(vigencia):
             match = False
             if cod and (r.codigo_fuente or '').strip() == cod:
                 match = True
-            elif concepto_up and concepto_up in (r.nombre or '').upper():
+            elif concepto_up and concepto_up in (r.descripcion or '').upper():
                 match = True
             if match:
                 ingresos_sum += (r.valor_apropiacion or D('0'))

@@ -90,7 +90,7 @@
     <div class="col-md-3">
         <div class="card stat-card {% if indicador_617 <= 80 %}green{% else %}orange{% endif %} p-3">
             <div class="stat-label">Indicador Ley 617</div>
-            <div class="stat-value">{{ indicador_617 }}%</div>
+            <div class="stat-value">{{ indicador_617|floatformat:0 }}%</div>
             <small class="text-muted">GF/ICLD Totales</small>
         </div>
     </div>

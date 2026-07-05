@@ -817,10 +817,18 @@ def _sincronizar_techos_desde_fuentes(vigencia):
         STOP = {'IMPUESTO','RECURSO','RECURSOS','INGRESO','INGRESOS','FONDO','TASA','SGP','DEL','LOS','LAS','POR','PARA','CON','SIN','AL','LA','EL'}
         def _tok(s):
             return {w for w in s.split() if len(w) >= 4 and w not in STOP}
+        def _prefijos_comunes(ta, tb, n=5):
+            """Cuenta palabras cuyos primeros `n` chars coinciden (soporta plurales/abrev)."""
+            count = 0
+            pa = {w[:n] for w in ta if len(w) >= n}
+            pb = {w[:n] for w in tb if len(w) >= n}
+            return len(pa & pb)
         def _match_texto(a, b):
             if not a or not b: return False
             if a in b or b in a: return True
-            return len(_tok(a) & _tok(b)) >= 2
+            ta, tb = _tok(a), _tok(b)
+            # 2+ prefijos (5 chars) en común
+            return _prefijos_comunes(ta, tb, 5) >= 2
 
         deuda_val = D('0')
         for k, v in deuda_por_renta.items():

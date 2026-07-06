@@ -197,4 +197,45 @@
         {% endif %}
     </div>
 </div>
+
+<!-- ── MFMP Nación 2026: Proyección 11 años ─────────────────── -->
+{% if mfmp_tabla %}
+<div class="row g-3 mt-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <i class="bi bi-graph-up-arrow"></i>
+                <strong>Variables Macroeconómicas · MFMP Nación 2026</strong>
+                <small class="text-white-50 float-end">Proyección {{ mfmp_anios.0 }} — {{ mfmp_anios|last }} · Fuente: DGPM Ministerio de Hacienda</small>
+            </div>
+            <div class="card-body p-0 table-responsive">
+                <table class="table table-sm table-bordered table-hover mb-0 align-middle" style="font-size:.78rem;">
+                    <thead class="table-light text-center sticky-top">
+                        <tr>
+                            <th style="min-width:220px;text-align:left;">Variable</th>
+                            <th>Unidad</th>
+                            {% for a in mfmp_anios %}
+                            <th {% if a == params.vigencia %}class="table-warning"{% endif %}>{{ a }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for f in mfmp_tabla %}
+                        <tr>
+                            <td><strong>{{ f.nombre }}</strong></td>
+                            <td class="text-center text-muted small">{{ f.unidad }}</td>
+                            {% for v in f.valores %}
+                            <td class="text-end {% if forloop.counter0 == 0 %}fw-bold{% endif %}">
+                                {% if v is not None %}{{ v|floatformat:1 }}{% else %}<span class="text-muted">—</span>{% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}

@@ -345,11 +345,27 @@ class VariableMacro(models.Model):
     """
     TIPO_CHOICES = [
         ('SMLV', 'Salario Mínimo Legal Vigente (SMLMV)'),
-        ('IPC', 'Inflación (IPC)'),
+        ('IPC', 'Inflación (IPC) fin de periodo (%)'),
         ('PIB', 'PIB Nacional ($ Corrientes)'),
-        ('PETROLEO', 'Precio Barril Petróleo (US$)'),
+        ('PETROLEO', 'Precio Barril Petróleo Brent (USD)'),
         ('DTF', 'DTF (Tasa de interés)'),
-        ('TRM', 'TRM (Tasa Cambio)'),
+        ('TRM', 'TRM promedio (USD/COP)'),
+        # ── MFMP Nación 2026 (Tabla 3.1)
+        ('PIB_R', 'Crecimiento del PIB real (%)'),
+        ('PIB_N', 'Crecimiento del PIB nominal (%)'),
+        ('SOCIOS', 'Crecimiento socios comerciales (%)'),
+        ('CTA_CORR', 'Balance de cuenta corriente (% PIB)'),
+        ('DEPREC', 'Depreciación tasa de cambio (%)'),
+        ('PROD_PET', 'Producción de petróleo (KBPD)'),
+        ('ING_GNC', 'Ingresos totales del GNC (% PIB)'),
+        ('GTO_GNC', 'Gastos totales del GNC (% PIB)'),
+        ('BAL_GNC', 'Balance fiscal del GNC (% PIB)'),
+        ('BAL_PRIM', 'Balance primario del GNC (% PIB)'),
+        ('T_LOCAL', 'Tasa de interés local (%, promedio)'),
+        ('T_EXT', 'Tasa de interés externa (%, promedio)'),
+        ('D_NETA', 'Deuda neta del GNC (% PIB)'),
+        ('BAL_GG', 'Balance fiscal del GG (% PIB)'),
+        ('D_GG', 'Deuda consolidada del GG (% PIB)'),
     ]
     anio = models.IntegerField(verbose_name='Año')
     tipo = models.CharField(max_length=10, choices=TIPO_CHOICES, verbose_name='Variable')

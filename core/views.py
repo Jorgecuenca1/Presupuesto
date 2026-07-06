@@ -112,6 +112,41 @@ def dashboard(request):
             if icld_total > 0:
                 indicador_617 = (Decimal(str(total_funcionamiento)) / icld_total * 100).quantize(Decimal('0.01'))
 
+    # ── MFMP Nación 2026: variables macroeconómicas por año ────────────
+    from .models import VariableMacro
+    MFMP_TIPOS = [
+        ('PIB_R', 'Crecimiento PIB real', '%'),
+        ('PIB_N', 'Crecimiento PIB nominal', '%'),
+        ('SOCIOS', 'Socios comerciales', '%'),
+        ('CTA_CORR', 'Balance cta. corriente', '% PIB'),
+        ('TRM', 'TRM promedio', 'USD/COP'),
+        ('DEPREC', 'Depreciación TRM', '%'),
+        ('PETROLEO', 'Precio Brent', 'USD'),
+        ('PROD_PET', 'Producción petróleo', 'KBPD'),
+        ('IPC', 'Inflación fin periodo', '%'),
+        ('ING_GNC', 'Ingresos GNC', '% PIB'),
+        ('GTO_GNC', 'Gastos GNC', '% PIB'),
+        ('BAL_GNC', 'Balance fiscal GNC', '% PIB'),
+        ('BAL_PRIM', 'Balance primario GNC', '% PIB'),
+        ('T_LOCAL', 'Tasa interés local', '%'),
+        ('T_EXT', 'Tasa interés externa', '%'),
+        ('D_NETA', 'Deuda neta GNC', '% PIB'),
+        ('BAL_GG', 'Balance fiscal GG', '% PIB'),
+        ('D_GG', 'Deuda consolidada GG', '% PIB'),
+    ]
+    vig = params.vigencia if params else 2027
+    mfmp_anios = list(range(vig, vig + 11))  # 11 años a partir de vigencia
+    mfmp_data = {t[0]: {} for t in MFMP_TIPOS}
+    for vm in VariableMacro.objects.filter(tipo__in=[t[0] for t in MFMP_TIPOS], anio__in=mfmp_anios):
+        mfmp_data[vm.tipo][vm.anio] = vm.valor
+    mfmp_tabla = []
+    for cod, nombre, unidad in MFMP_TIPOS:
+        fila = {'codigo': cod, 'nombre': nombre, 'unidad': unidad,
+                'valores': [mfmp_data.get(cod, {}).get(a) for a in mfmp_anios]}
+        # Solo incluir si tiene al menos un dato
+        if any(v is not None for v in fila['valores']):
+            mfmp_tabla.append(fila)
+
     context = {
         'params': params,
         'total_contribuyentes_predial': total_contribuyentes_predial,
@@ -127,6 +162,8 @@ def dashboard(request):
         'total_deuda': total_deuda,
         'rubros_por_metodo': rubros_por_metodo,
         'indicador_617': indicador_617,
+        'mfmp_anios': mfmp_anios,
+        'mfmp_tabla': mfmp_tabla,
     }
     return render(request, 'core/dashboard.html', context)
 

@@ -1689,9 +1689,11 @@ def _propagar_deuda_a_rubros(vigencia):
     agg = AmortizacionPagare.objects.filter(vigencia_pago=vigencia).aggregate(
         c=Sum('capital_principal'), i=Sum('intereses'))
     RubroGasto.objects.filter(vigencia=vigencia, codigo='2.2.2.01.02.002.02.03-02').update(
-        valor_apropiacion=agg['c'] or D('0'), metodo_calculo='DCAP')
+        valor_apropiacion=agg['c'] or D('0'), metodo_calculo='DCAP', tipo_gasto='DEU')
     RubroGasto.objects.filter(vigencia=vigencia, codigo='2.2.2.02.02.002.02.03-02').update(
-        valor_apropiacion=agg['i'] or D('0'), metodo_calculo='DINT')
+        valor_apropiacion=agg['i'] or D('0'), metodo_calculo='DINT', tipo_gasto='DEU')
+    # Todos los rubros bajo 2.2.* → tipo_gasto='DEU' (Servicio de Deuda)
+    RubroGasto.objects.filter(vigencia=vigencia, codigo__startswith='2.2').update(tipo_gasto='DEU')
     try:
         from core.views import _recalcular_titulos_por_codigo
         _recalcular_titulos_por_codigo(vigencia)

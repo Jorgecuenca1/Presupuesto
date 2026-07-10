@@ -164,13 +164,23 @@ def calcular_predial_vigencias_anteriores(vigencia, tipo='urbano'):
 
 
 def calcular_ica(vigencia):
-    """Calcula el ICA para todos los contribuyentes agrupado por tipo."""
+    """Calcula el ICA para todos los contribuyentes agrupado por tipo.
+
+    Reglas:
+      - Filtro sanidad: contribuyentes con `ingresos_brutos > 1 billón` son
+        outliers del Excel DECLAR.ICO (datos mal capturados por el declarante,
+        ej. AGROSERVICIOS con $10.6 billones). Para esos, se conserva el
+        `impuesto_calculado` importado (col O del Excel = ICA declarado real)
+        y NO se re-multiplica.
+      - Contribuyentes normales: aplica fórmula `ingresos × (1+IPC) × tarifa/1000`.
+    """
     params = get_params(vigencia)
     if not params:
         return {}
 
     ResumenCalculo.objects.filter(vigencia=vigencia, tipo='ica').delete()
     resultados = {}
+    UMBRAL_OUTLIER = Decimal('1000000000000')  # 1 billón COP
 
     for codigo, label in ContribuyenteICA._meta.get_field('actividad').choices:
         contribuyentes = ContribuyenteICA.objects.filter(vigencia=vigencia, actividad=codigo)
@@ -179,10 +189,18 @@ def calcular_ica(vigencia):
             continue
 
         for c in contribuyentes:
-            c.ingresos_proyectados = c.ingresos_brutos * (1 + params.tasa_pib_nominal)
-            c.tarifa_aplicada = tarifa.tarifa_por_mil
-            c.impuesto_calculado = c.ingresos_proyectados * tarifa.tarifa_por_mil / 1000
-            c.save(update_fields=['tarifa_aplicada', 'impuesto_calculado', 'ingresos_proyectados'])
+            base = c.ingresos_brutos or Decimal('0')
+            if base > UMBRAL_OUTLIER:
+                # Outlier: respetar el ICA declarado real, no re-multiplicar.
+                # impuesto_calculado ya trae el valor de la col O del Excel.
+                c.tarifa_aplicada = tarifa.tarifa_por_mil
+                c.ingresos_proyectados = base
+                c.save(update_fields=['tarifa_aplicada', 'ingresos_proyectados'])
+            else:
+                c.ingresos_proyectados = base * (Decimal('1') + params.tasa_ipc)
+                c.tarifa_aplicada = tarifa.tarifa_por_mil
+                c.impuesto_calculado = c.ingresos_proyectados * tarifa.tarifa_por_mil / Decimal('1000')
+                c.save(update_fields=['tarifa_aplicada', 'impuesto_calculado', 'ingresos_proyectados'])
 
         agg = contribuyentes.aggregate(total_impuesto=Sum('impuesto_calculado'))
         total = agg['total_impuesto'] or 0

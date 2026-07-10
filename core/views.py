@@ -72,9 +72,17 @@ def dashboard(request):
     equilibrio = Decimal(str(total_ingresos)) - Decimal(str(total_gastos))
 
     # Componentes de ingresos (suma de proyecciones por tipo en ResumenCalculo)
-    total_predial = ResumenCalculo.objects.filter(
+    total_predial_va = ResumenCalculo.objects.filter(
         vigencia=vigencia, tipo__in=['predial_urbano', 'predial_rural']
     ).aggregate(t=Sum('proyeccion'))['t'] or Decimal('0')
+    # Sumar predial de vigencias anteriores (cobranza atrasada) para que coincida con /ingresos/calculo-predial/
+    try:
+        from ingresos.utils import calcular_predial_vigencias_anteriores
+        total_urb_ant, _ = calcular_predial_vigencias_anteriores(vigencia, 'urbano')
+        total_rur_ant, _ = calcular_predial_vigencias_anteriores(vigencia, 'rural')
+        total_predial = total_predial_va + (total_urb_ant or Decimal('0')) + (total_rur_ant or Decimal('0'))
+    except Exception:
+        total_predial = total_predial_va
     total_ica_calc = ResumenCalculo.objects.filter(
         vigencia=vigencia, tipo='ica'
     ).aggregate(t=Sum('proyeccion'))['t'] or Decimal('0')
@@ -428,6 +436,13 @@ def parametros_view(request):
             ipc_vig = get_ipc(params_saved.vigencia)
             if ipc_vig and ipc_vig > 0:
                 params_saved.tasa_ipc = ipc_vig
+                # UVT proyectada: UVT_anterior × (1 + IPC_vigencia)
+                # (DIAN emite en noviembre año anterior; hasta entonces se usa la fórmula legal)
+                anio_uvt_anterior = params_saved.vigencia - 1
+                uvt_prev = VariableMacro.objects.filter(anio=anio_uvt_anterior, tipo='UVT').first()
+                if uvt_prev and uvt_prev.valor > 0:
+                    from decimal import Decimal as _D
+                    params_saved.valor_uvt = (uvt_prev.valor * (_D('1') + ipc_vig)).quantize(_D('1'))
             params_saved.save()
 
             # Recalcular ingresos y gastos con los nuevos parámetros

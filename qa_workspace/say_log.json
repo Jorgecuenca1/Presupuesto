@@ -1,0 +1,429 @@
+[
+  {
+    "idx": 1,
+    "text": "Sistema SIPRE del municipio de Puerto L\u00f3pez, Meta.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0001.aiff",
+    "shot": null,
+    "t": 0.4997201659716666
+  },
+  {
+    "idx": 2,
+    "text": "Software de presupuesto p\u00fablico desarrollado por el Doctor William Borrego.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0002.aiff",
+    "shot": null,
+    "t": 4.585679290990811
+  },
+  {
+    "idx": 3,
+    "text": "A continuaci\u00f3n, un recorrido de control de calidad m\u00f3dulo por m\u00f3dulo.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0003.aiff",
+    "shot": null,
+    "t": 9.443827125011012
+  },
+  {
+    "idx": 4,
+    "text": "Vamos a validar con voz, capturas y verificaciones autom\u00e1ticas contra la base de datos.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0004.aiff",
+    "shot": null,
+    "t": 14.265598249970935
+  },
+  {
+    "idx": 5,
+    "text": "Autenticando como usuario qa demo con permisos de superusuario.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0005.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/001_00_login.png",
+    "t": 21.53877270797966
+  },
+  {
+    "idx": 6,
+    "text": "Secci\u00f3n uno. Dashboard general. Aqu\u00ed veremos los indicadores agregados del presupuesto.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0006.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/002_01_post_login.png",
+    "t": 26.81906212499598
+  },
+  {
+    "idx": 7,
+    "text": "La vigencia activa es 2027.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0007.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/003_dashboard_top.png",
+    "t": 33.44150554097723
+  },
+  {
+    "idx": 8,
+    "text": "El total de ingresos apropiados es de 244.315 millones de pesos.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0008.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/003_dashboard_top.png",
+    "t": 36.58165145799285
+  },
+  {
+    "idx": 9,
+    "text": "El total de gastos apropiados es de 21.913 millones de pesos.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0009.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/003_dashboard_top.png",
+    "t": 43.55994283297332
+  },
+  {
+    "idx": 10,
+    "text": "El presupuesto est\u00e1 en equilibrio positivo. Ingresos cubren los gastos.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0010.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/003_dashboard_top.png",
+    "t": 49.498472707986366
+  },
+  {
+    "idx": 11,
+    "text": "Ahora bajar\u00e9 a la tabla de variables macroecon\u00f3micas del marco fiscal de mediano plazo, publicado por la Naci\u00f3n en dos mil veintis\u00e9is.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0011.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/003_dashboard_top.png",
+    "t": 54.78455566597404
+  },
+  {
+    "idx": 12,
+    "text": "Se listan 21 variables proyectadas para los pr\u00f3ximos once a\u00f1os, desde 2027 hasta 2037.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0012.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/004_dashboard_mfmp.png",
+    "t": 64.25918683299096
+  },
+  {
+    "idx": 13,
+    "text": "Por ejemplo, la inflaci\u00f3n proyectada para 2027 es de 4.4 por ciento.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0013.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/004_dashboard_mfmp.png",
+    "t": 72.5569559999858
+  },
+  {
+    "idx": 14,
+    "text": "La tasa representativa del mercado promedio ser\u00e1 de 3.858 pesos por d\u00f3lar.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0014.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/004_dashboard_mfmp.png",
+    "t": 79.08260837499984
+  },
+  {
+    "idx": 15,
+    "text": "El barril de petr\u00f3leo Brent est\u00e1 proyectado en 74.9 d\u00f3lares.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0015.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/004_dashboard_mfmp.png",
+    "t": 85.93148337502498
+  },
+  {
+    "idx": 16,
+    "text": "Secci\u00f3n dos. Par\u00e1metros del sistema. Aqu\u00ed se configuran los valores base que rigen todos los c\u00e1lculos.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0016.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/004_dashboard_mfmp.png",
+    "t": 91.89592683297815
+  },
+  {
+    "idx": 17,
+    "text": "Vigencia: 2027.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0017.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/005_parametros.png",
+    "t": 99.62114833301166
+  },
+  {
+    "idx": 18,
+    "text": "Salario m\u00ednimo legal vigente: 1.859.461 pesos.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0018.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/005_parametros.png",
+    "t": 102.40971920802258
+  },
+  {
+    "idx": 19,
+    "text": "Unidad de valor tributario, U V T: 52.374 pesos.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0019.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/005_parametros.png",
+    "t": 109.5327680829796
+  },
+  {
+    "idx": 20,
+    "text": "Tasa I P C: 4.00 por ciento.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0020.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/005_parametros.png",
+    "t": 116.35141641600057
+  },
+  {
+    "idx": 21,
+    "text": "Verificando consistencia con la tabla de variables macro.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0021.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/005_parametros.png",
+    "t": 120.32377345801797
+  },
+  {
+    "idx": 22,
+    "text": "Correcto. El salario m\u00ednimo coincide con el registrado en variables macro.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0022.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/005_parametros.png",
+    "t": 124.26014333299827
+  },
+  {
+    "idx": 23,
+    "text": "Secci\u00f3n tres. Variables macroecon\u00f3micas. Aqu\u00ed se almacenan SMLV, IPC, PIB, TRM y las 15 variables del marco fiscal.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0023.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/005_parametros.png",
+    "t": 129.54222770797787
+  },
+  {
+    "idx": 24,
+    "text": "En total hay 356 registros. La base cubre 21 tipos distintos de variables.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0024.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/006_variables_macro.png",
+    "t": 140.99158420797903
+  },
+  {
+    "idx": 25,
+    "text": "Secci\u00f3n cuatro. Ingresos. Vamos a revisar los c\u00e1lculos de predial, industria y comercio, y estampillas.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0025.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/006_variables_macro.png",
+    "t": 147.94657987501705
+  },
+  {
+    "idx": 26,
+    "text": "El anexo uno de ingresos tiene 250 rubros por un total de 1.828 mil millones de pesos.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0026.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/007_ingresos_anexo1.png",
+    "t": 157.4450227500056
+  },
+  {
+    "idx": 27,
+    "text": "Contribuyentes de industria y comercio: 1.774, con un impuesto agregado de 95.276 millones.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0027.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/008_contribuyentes_ica.png",
+    "t": 166.0773303330061
+  },
+  {
+    "idx": 28,
+    "text": "El c\u00e1lculo del predial usa la f\u00f3rmula: base gravable multiplicada por la tarifa por mil.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0028.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/009_calculo_predial.png",
+    "t": 177.93096266599605
+  },
+  {
+    "idx": 29,
+    "text": "El c\u00e1lculo del I C A agrupa contribuyentes por actividad y aplica la tarifa por mil seg\u00fan la categor\u00eda.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0029.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/010_calculo_ica.png",
+    "t": 184.47900195798138
+  },
+  {
+    "idx": 30,
+    "text": "Las estampillas son contribuciones sobre la contrataci\u00f3n p\u00fablica. Cultura, adulto mayor, pro-desarrollo, entre otras.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0030.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/011_estampillas.png",
+    "t": 191.6662763329805
+  },
+  {
+    "idx": 31,
+    "text": "Secci\u00f3n cinco. Gastos. Anexo dos, costo del personal, plantas, y la tabla de la Ley 617.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0031.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/011_estampillas.png",
+    "t": 200.4159186250181
+  },
+  {
+    "idx": 32,
+    "text": "El anexo dos suma 21 mil millones de pesos.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0032.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/012_gastos_anexo2.png",
+    "t": 209.51785970799392
+  },
+  {
+    "idx": 33,
+    "text": "Funcionamiento: 0 mil millones.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0033.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/012_gastos_anexo2.png",
+    "t": 213.0830878749839
+  },
+  {
+    "idx": 34,
+    "text": "Servicio de deuda: 0 mil millones.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0034.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/012_gastos_anexo2.png",
+    "t": 216.06578604102833
+  },
+  {
+    "idx": 35,
+    "text": "Inversi\u00f3n: 0 mil millones.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0035.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/012_gastos_anexo2.png",
+    "t": 219.2265107500134
+  },
+  {
+    "idx": 36,
+    "text": "El costo de personal tiene 51 cargos con un costo anual de 9.322 millones.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0036.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/013_costo_personal.png",
+    "t": 222.16333933302667
+  },
+  {
+    "idx": 37,
+    "text": "Las plantas de personal muestran cada cargo con su prestaciones, aportes patronales y bonificaciones.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0037.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/014_plantas_personal.png",
+    "t": 229.71670441597234
+  },
+  {
+    "idx": 38,
+    "text": "La Ley 617 del a\u00f1o 2000 limita los gastos de los \u00f3rganos de control: Concejo Municipal y Personer\u00eda.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0038.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/015_tabla_concejo.png",
+    "t": 237.24005929101259
+  },
+  {
+    "idx": 39,
+    "text": "Secci\u00f3n seis. Deuda p\u00fablica. Este es uno de los m\u00f3dulos m\u00e1s complejos, con arquitectura recursiva.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0039.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/015_tabla_concejo.png",
+    "t": 245.33965183299733
+  },
+  {
+    "idx": 40,
+    "text": "Hay 1 cr\u00e9dito registrado.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0040.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/016_deuda_dashboard.png",
+    "t": 253.2929943749914
+  },
+  {
+    "idx": 41,
+    "text": "Cr\u00e9dito con BBVA: cupo 45 mil millones, tasa efectiva anual 13.55 por ciento.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0041.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/016_deuda_dashboard.png",
+    "t": 255.50135983299697
+  },
+  {
+    "idx": 42,
+    "text": "Detalle del cr\u00e9dito con BBVA. Renta pignorada: Impuesto de transporte oleoductos.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0042.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/017_deuda_detalle.png",
+    "t": 264.02877270797035
+  },
+  {
+    "idx": 43,
+    "text": "Periodicidad de pagos: Trimestral. Plazo total: 120 meses, con 24 meses de gracia.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0043.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/017_deuda_detalle.png",
+    "t": 270.4992442909861
+  },
+  {
+    "idx": 44,
+    "text": "El cr\u00e9dito tiene 2 pagar\u00e9s desembolsados.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0044.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/017_deuda_detalle.png",
+    "t": 278.653831832984
+  },
+  {
+    "idx": 45,
+    "text": "Pagar\u00e9 P1: 20 mil millones, desembolsado el 09 de June de 2026.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0045.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/017_deuda_detalle.png",
+    "t": 281.9728867909871
+  },
+  {
+    "idx": 46,
+    "text": "Pagar\u00e9 P2: 24 mil millones, desembolsado el 03 de May de 2027.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0046.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/017_deuda_detalle.png",
+    "t": 288.6503892909968
+  },
+  {
+    "idx": 47,
+    "text": "La tabla de amortizaci\u00f3n tiene 22 filas anuales agregadas, m\u00e1s el detalle cuota por cuota trimestral por pagar\u00e9.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0047.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/018_deuda_amortizacion.png",
+    "t": 295.8869840829866
+  },
+  {
+    "idx": 48,
+    "text": "Para la vigencia 2027, el servicio de deuda es: capital 0 millones, intereses 4.201 millones.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0048.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/018_deuda_amortizacion.png",
+    "t": 303.8190283330041
+  },
+  {
+    "idx": 49,
+    "text": "Edge case: creaci\u00f3n y eliminaci\u00f3n de un cr\u00e9dito de prueba.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0049.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/018_deuda_amortizacion.png",
+    "t": 313.2238290410023
+  },
+  {
+    "idx": 50,
+    "text": "Cr\u00e9dito de prueba creado. Verificando que aparece en el dashboard.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0050.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/018_deuda_amortizacion.png",
+    "t": 317.5438330830075
+  },
+  {
+    "idx": 51,
+    "text": "Confirmado. El cr\u00e9dito de prueba aparece en el listado.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0051.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/019_deuda_con_qa.png",
+    "t": 322.3936789999716
+  },
+  {
+    "idx": 52,
+    "text": "Cr\u00e9dito de prueba eliminado. La base queda limpia.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0052.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/019_deuda_con_qa.png",
+    "t": 326.3342296250048
+  },
+  {
+    "idx": 53,
+    "text": "Secci\u00f3n siete. Techos de inversi\u00f3n. Aqu\u00ed se cruzan las fuentes con los usos, y las cifras se sincronizan desde ingresos y gastos.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0053.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/019_deuda_con_qa.png",
+    "t": 330.00136245798785
+  },
+  {
+    "idx": 54,
+    "text": "Hay 33 fuentes registradas.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0054.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/020_techos.png",
+    "t": 339.39288270799443
+  },
+  {
+    "idx": 55,
+    "text": "Total ingresos: 134 mil millones.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0055.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/020_techos.png",
+    "t": 342.11877624999033
+  },
+  {
+    "idx": 56,
+    "text": "Total funcionamiento: 17 mil millones.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0056.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/020_techos.png",
+    "t": 346.15399037499446
+  },
+  {
+    "idx": 57,
+    "text": "Total deuda: 4.201 millones.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0057.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/020_techos.png",
+    "t": 349.9211597079993
+  },
+  {
+    "idx": 58,
+    "text": "Se detectan 1 filas con deuda sincronizada autom\u00e1ticamente desde los contratos.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0058.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/020_techos.png",
+    "t": 353.77581495797494
+  },
+  {
+    "idx": 59,
+    "text": "La fuente Impuesto trans oleoducto paga 4.201 millones al servicio de deuda.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0059.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/020_techos.png",
+    "t": 359.62242475000676
+  },
+  {
+    "idx": 60,
+    "text": "Generando el reporte de control de calidad en formato HTML.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0060.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/020_techos.png",
+    "t": 366.06401283299783
+  },
+  {
+    "idx": 61,
+    "text": "Reporte generado con \u00e9xito. Fin del proceso de control de calidad.",
+    "aiff": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/audios/0061.aiff",
+    "shot": "/Users/jorgebinkio/Documents/corpofuturo/willy/Presupuesto/qa_workspace/shots/020_techos.png",
+    "t": 370.7197488750098
+  }
+]

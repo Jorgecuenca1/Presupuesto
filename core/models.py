@@ -399,9 +399,27 @@ def get_smlv(anio, fallback=None):
 
 
 def get_ipc(anio, fallback=None):
+    """Retorna el IPC como decimal fraccional (0.044 para 4.4%).
+
+    VariableMacro.valor almacena el porcentaje puro (4.4). Este helper
+    siempre normaliza a decimal fraccional para que los cálculos
+    (× (1 + tasa_ipc)) funcionen correctamente.
+    """
     obj = VariableMacro.objects.filter(anio=anio, tipo='IPC').first()
     if obj:
-        return obj.pct_anual if obj.pct_anual else obj.valor
+        # Si el pct_anual está bien calibrado (fraccional coherente), usarlo
+        if obj.pct_anual and obj.pct_anual > 0:
+            v = obj.pct_anual
+            # Sanity check: si viene como % puro (> 1), normalizar
+            if v > Decimal('1'):
+                return v / Decimal('100')
+            return v
+        if obj.valor:
+            v = obj.valor
+            # valor viene en % puro desde MFMP (4.4) → normalizar a 0.044
+            if v > Decimal('1'):
+                return v / Decimal('100')
+            return v
     return fallback or Decimal('0')
 
 

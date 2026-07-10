@@ -398,12 +398,96 @@ def _limpiar_cop(post_data, campos):
     return post_data
 
 
+def _limite_ley617_por_categoria(cat):
+    """Ley 617/2000 art. 6: % límite gastos funcionamiento sobre ICLD."""
+    mapa = {'E': 50, '1': 65, '2': 70, '3': 70, '4': 80, '5': 80, '6': 80}
+    return Decimal(str(mapa.get(str(cat or '5').strip().upper(), 80)))
+
+
+def _sincronizar_params_desde_macro(params):
+    """Sincroniza SMLMV, IPC, UVT, pct_incremento_pensionados y límites
+    legales de un ParametrosSistema con los valores de VariableMacro y las
+    normas vigentes. Se llama tanto en GET como en POST del form.
+
+    Retorna dict con lo que cambió (para telemetría/log).
+    """
+    from .models import get_smlv, get_ipc
+    cambios = {}
+    if not params:
+        return cambios
+    vig = params.vigencia
+
+    # SMLMV desde Variables Macro
+    smlv = get_smlv(vig)
+    if smlv and smlv > 0 and params.valor_smlmv != smlv:
+        cambios['valor_smlmv'] = (params.valor_smlmv, smlv)
+        params.valor_smlmv = smlv
+
+    smlv_obj = VariableMacro.objects.filter(anio=vig, tipo='SMLV').first()
+    if smlv_obj and smlv_obj.pct_anual and params.pct_incremento_salarial != smlv_obj.pct_anual:
+        cambios['pct_incremento_salarial'] = (params.pct_incremento_salarial, smlv_obj.pct_anual)
+        params.pct_incremento_salarial = smlv_obj.pct_anual
+
+    # IPC + derivados
+    ipc = get_ipc(vig)
+    if ipc and ipc > 0:
+        if params.tasa_ipc != ipc:
+            cambios['tasa_ipc'] = (params.tasa_ipc, ipc)
+            params.tasa_ipc = ipc
+        # % incremento pensionados = IPC (Ley 100/1993 art. 14)
+        if params.pct_incremento_pensionados != ipc:
+            cambios['pct_incremento_pensionados'] = (params.pct_incremento_pensionados, ipc)
+            params.pct_incremento_pensionados = ipc
+
+        # UVT proyectada = UVT_año_anterior × (1 + IPC_vigencia)
+        uvt_prev = VariableMacro.objects.filter(anio=vig - 1, tipo='UVT').first()
+        if uvt_prev and uvt_prev.valor > 0:
+            uvt_proj = (uvt_prev.valor * (Decimal('1') + ipc)).quantize(Decimal('1'))
+            if params.valor_uvt != uvt_proj:
+                cambios['valor_uvt'] = (params.valor_uvt, uvt_proj)
+                params.valor_uvt = uvt_proj
+            VariableMacro.objects.update_or_create(
+                anio=vig, tipo='UVT',
+                defaults={'valor': uvt_proj, 'pct_anual': ipc, 'es_proyectado': True},
+            )
+
+    # Ley 358/1997 actualizada por Ley 819/2003:
+    #   Solvencia (intereses / ahorro operacional) máx 40% → sostenibilidad
+    #   Sostenibilidad (saldo deuda / ingresos corrientes) máx 80% → sostenibilidad
+    # Ley 1416/2010 y decreto 707/2013 subieron indicadores a 60% y 100%
+    # respectivamente para municipios cat 4-6
+    if params.pct_limite_intereses_ley358 != Decimal('60'):
+        cambios['pct_limite_intereses_ley358'] = (params.pct_limite_intereses_ley358, Decimal('60'))
+        params.pct_limite_intereses_ley358 = Decimal('60')
+    if params.pct_limite_saldo_deuda_ley358 != Decimal('100'):
+        cambios['pct_limite_saldo_deuda_ley358'] = (params.pct_limite_saldo_deuda_ley358, Decimal('100'))
+        params.pct_limite_saldo_deuda_ley358 = Decimal('100')
+
+    # Ley 617/2000 art. 6: límite gasto funcionamiento según categoría
+    lim617 = _limite_ley617_por_categoria(params.categoria_municipio)
+    if params.pct_limite_funcionamiento_ley617 != lim617:
+        cambios['pct_limite_funcionamiento_ley617'] = (
+            params.pct_limite_funcionamiento_ley617, lim617)
+        params.pct_limite_funcionamiento_ley617 = lim617
+
+    if cambios:
+        params.save()
+    return cambios
+
+
 @never_cache
 @login_required
 def parametros_view(request):
     params = ParametrosSistema.objects.filter(activo=True).first()
     if not params:
         params = ParametrosSistema.objects.order_by('-vigencia').first()
+
+    # Sincronización perezosa: al abrir el form ya trae los valores oficiales
+    # (SMLMV, IPC, UVT proyectada, límites legales, % pensionados = IPC).
+    try:
+        _sincronizar_params_desde_macro(params)
+    except Exception:
+        pass
 
     # Autollenar ICLD si esta en 0 y hay cifras historicas
     if params and (params.icld_calculado is None or params.icld_calculado == 0):
@@ -424,26 +508,9 @@ def parametros_view(request):
         if form.is_valid():
             params_saved = form.save(commit=False)
             params_saved.activo = True
-            # Sincronizar SMLMV/IPC desde Variables Macro del año vigente (siempre)
-            from .models import get_smlv, get_ipc, VariableMacro
-            smlv_vig = get_smlv(params_saved.vigencia)
-            if smlv_vig and smlv_vig > 0:
-                params_saved.valor_smlmv = smlv_vig
-                # tambien pct_incremento_salarial desde el % del SMLV
-                smlv_obj = VariableMacro.objects.filter(anio=params_saved.vigencia, tipo='SMLV').first()
-                if smlv_obj and smlv_obj.pct_anual:
-                    params_saved.pct_incremento_salarial = smlv_obj.pct_anual
-            ipc_vig = get_ipc(params_saved.vigencia)
-            if ipc_vig and ipc_vig > 0:
-                params_saved.tasa_ipc = ipc_vig
-                # UVT proyectada: UVT_anterior × (1 + IPC_vigencia)
-                # (DIAN emite en noviembre año anterior; hasta entonces se usa la fórmula legal)
-                anio_uvt_anterior = params_saved.vigencia - 1
-                uvt_prev = VariableMacro.objects.filter(anio=anio_uvt_anterior, tipo='UVT').first()
-                if uvt_prev and uvt_prev.valor > 0:
-                    from decimal import Decimal as _D
-                    params_saved.valor_uvt = (uvt_prev.valor * (_D('1') + ipc_vig)).quantize(_D('1'))
+            # Sincronización automática (SMLMV, IPC, UVT, % pensionados, límites Ley 358 y 617)
             params_saved.save()
+            _sincronizar_params_desde_macro(params_saved)
 
             # Recalcular ingresos y gastos con los nuevos parámetros
             from ingresos.utils import calcular_todos_ingresos

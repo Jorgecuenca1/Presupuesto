@@ -17,3 +17,6 @@ build/
 .env
 *.log
 .venv_qa/
+
+qa_workspace/
+.venv-qa/

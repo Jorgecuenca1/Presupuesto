@@ -182,7 +182,13 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "presupuesto_project.settings")
 sys.path.insert(0, PROJ)
 import django; django.setup()
 from django.db.models import Sum
-from core.models import ParametrosSistema, VariableMacro, TechoInversion
+from core.models import (
+    ParametrosSistema, VariableMacro, TechoInversion,
+    FuenteFinanciacion, PlanFinancieroLinea, ICLDProyectado,
+    Ley617Proyectado, POAIProyectado, POAIPorDependencia,
+    CuadrePorFuente, SaldoVFPorFuente, Refinanciacion,
+    CCPETIngreso, CCPETGasto,
+)
 from ingresos.models import ContribuyenteICA, RubroIngreso
 from gastos.models import (
     ContratoCredito, PagareCredito, AmortizacionPagare,
@@ -574,6 +580,118 @@ def qa_techos():
             say(f"La fuente {t.concepto_ingreso} paga {num(t.deuda/1_000_000)} millones al servicio de deuda.")
 
 # ═══════════════════════════════════════════════════════════════════
+# SECCION 8: MFMP (Marco Fiscal de Mediano Plazo v75)
+# ═══════════════════════════════════════════════════════════════════
+
+def qa_mfmp():
+    say("Sección ocho. Marco Fiscal de Mediano Plazo, con datos importados del Excel versión 75.", wait=True)
+    from django.db.models import Sum
+
+    # Menú
+    go("/mfmp/")
+    shot("mfmp_menu")
+    n_fuentes = FuenteFinanciacion.objects.count()
+    say(f"El sistema ya integra {n_fuentes} fuentes de financiación desde el catálogo oficial.")
+    log_step("MFMP", "Menú principal", "OK", screenshot="mfmp_menu.png",
+             detalle=f"{n_fuentes} fuentes")
+
+    # Plan Financiero
+    go("/mfmp/plan-financiero/")
+    shot("plan_financiero")
+    n_pf = PlanFinancieroLinea.objects.count()
+    ing_2027 = PlanFinancieroLinea.objects.filter(tipo='A', anio=2027).first()
+    inv_2027 = PlanFinancieroLinea.objects.filter(tipo='D', anio=2027).first()
+    say(f"Plan Financiero con {n_pf} celdas.")
+    if ing_2027:
+        say(f"Ingresos totales proyectados para 2027: {num(ing_2027.valor/1_000_000_000)} mil millones.")
+    if inv_2027:
+        say(f"Inversión proyectada 2027: {num(inv_2027.valor/1_000_000_000)} mil millones.")
+    log_step("MFMP", "Plan Financiero 10 años", "OK", screenshot="plan_financiero.png")
+
+    # ICLD Proyectado
+    go("/mfmp/icld-proyectado/")
+    shot("icld_proyectado")
+    icld_recursos = ICLDProyectado.objects.filter(fuente__codigo='1', anio=2027).first()
+    if icld_recursos:
+        say(f"ICLD Recursos Propios 2027: {num(icld_recursos.valor_bruto/1_000_000)} millones.")
+    log_step("MFMP", "ICLD Proyectado", "OK", screenshot="icld_proyectado.png")
+
+    # Ley 617
+    go("/mfmp/ley-617/")
+    shot("ley_617")
+    l617_2027 = Ley617Proyectado.objects.filter(anio=2027).first()
+    if l617_2027:
+        pct = float(l617_2027.pct_cumplido)
+        say(f"Ley 617 en 2027: gastos de funcionamiento consumen el {pct:.2f} por ciento del I C L D neto.")
+        if l617_2027.cumple:
+            say("Estado: cumple el límite legal.")
+        else:
+            say("Alerta: excede el límite. Requiere ajuste.")
+    log_step("MFMP", "Ley 617 Proyectado", "OK", screenshot="ley_617.png")
+
+    # POAI Proyectado
+    go("/mfmp/poai/")
+    shot("poai_proyectado")
+    poai_total_2027 = POAIProyectado.objects.filter(anio=2027).aggregate(t=Sum('valor'))['t'] or 0
+    say(f"POAI total 2027: {num(poai_total_2027/1_000_000_000)} mil millones.")
+    log_step("MFMP", "POAI Proyectado", "OK", screenshot="poai_proyectado.png")
+
+    # POAI Dependencias
+    go("/mfmp/poai-dependencias/")
+    shot("poai_dependencias")
+    n_deps = POAIPorDependencia.objects.values('dependencia').distinct().count()
+    say(f"Se distribuye entre {n_deps} secretarías del municipio.")
+    log_step("MFMP", "POAI Dependencias", "OK", screenshot="poai_dependencias.png")
+
+    # Cuadre por Fuente
+    go("/mfmp/cuadre-fuente/")
+    shot("cuadre_fuente")
+    fuentes_cuadran = 0
+    for c in CuadrePorFuente.objects.filter(anio=2027):
+        if c.cuadra:
+            fuentes_cuadran += 1
+    total_c = CuadrePorFuente.objects.filter(anio=2027).count()
+    say(f"Cuadre 2027: {fuentes_cuadran} de {total_c} fuentes cuadran ingreso igual gasto.")
+    log_step("MFMP", "Cuadre por Fuente", "OK", screenshot="cuadre_fuente.png",
+             detalle=f"{fuentes_cuadran}/{total_c} cuadran")
+
+    # Saldo VF
+    go("/mfmp/saldo-vf-fuente/")
+    shot("saldo_vf")
+    tot_vf = SaldoVFPorFuente.objects.aggregate(a=Sum('apropiacion_definitiva'), v=Sum('vf_aprobadas'))
+    say(f"Vigencias futuras aprobadas suman {num((tot_vf['v'] or 0)/1_000_000)} millones.")
+    log_step("MFMP", "Saldo VF por Fuente", "OK", screenshot="saldo_vf.png")
+
+    # Refinanciación
+    go("/mfmp/refinanciacion/")
+    shot("refinanciacion")
+    r = Refinanciacion.objects.first()
+    if r:
+        say(f"Escenario de refinanciación configurado para el año {r.anio_refinanciacion} con nueva tasa {float(r.nueva_tasa_ea)*100:.1f} por ciento.")
+    log_step("MFMP", "Refinanciación", "OK", screenshot="refinanciacion.png")
+
+    # CCPET
+    go("/mfmp/ccpet-ingresos/")
+    shot("ccpet_ingresos")
+    n_cci = CCPETIngreso.objects.count()
+    say(f"Clasificación CCPET Ingresos con {n_cci} rubros presupuestales.")
+    log_step("MFMP", "CCPET Ingresos", "OK", screenshot="ccpet_ingresos.png")
+
+    go("/mfmp/ccpet-gastos/")
+    shot("ccpet_gastos")
+    n_ccg = CCPETGasto.objects.count()
+    say(f"Clasificación CCPET Gastos con {n_ccg} rubros presupuestales.")
+    log_step("MFMP", "CCPET Gastos", "OK", screenshot="ccpet_gastos.png")
+
+    # Panel de Control
+    go("/panel-control/")
+    shot("panel_control")
+    say("Por último, el Panel de Control muestra el semáforo de cada dato del sistema.")
+    say("Cada verificación tiene su estado: cargado, provisional o faltante.")
+    log_step("MFMP", "Panel de Control", "OK", screenshot="panel_control.png")
+
+
+# ═══════════════════════════════════════════════════════════════════
 # REPORTE HTML FINAL
 # ═══════════════════════════════════════════════════════════════════
 
@@ -636,6 +754,7 @@ def main():
             "gastos": qa_gastos,
             "deuda": qa_deuda,
             "techos": qa_techos,
+            "mfmp": qa_mfmp,
         }
         if SECCION == "all":
             for nombre, fn in secciones.items():

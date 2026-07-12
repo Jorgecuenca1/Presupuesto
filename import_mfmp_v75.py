@@ -129,15 +129,19 @@ def importar(xlsx_path):
     row_h = 8
     anios = [ws.cell(row=row_h, column=c).value for c in range(3, 14)]
     anios = [int(a) for a in anios if a]
-    # F9: Gastos de Funcionamiento, F10: ICLD Neto
+    # F9: Gastos de Funcionamiento, F10: ICLD Neto (buscar solo primer match)
     gf_row = None; icld_row = None; pct_row = None
     for r in range(9, min(ws.max_row + 1, 14)):
         c = ws.cell(row=r, column=2).value
         if not c: continue
         cs = str(c).lower()
-        if 'gasto' in cs and 'funcion' in cs: gf_row = r
-        elif 'icld' in cs and 'neto' in cs: icld_row = r
-        elif 'limite' in cs or 'límite' in cs: pct_row = r
+        # Excluir filas de indicador/límite que también contienen palabras clave
+        if 'indicador' in cs or 'cumple' in cs:
+            if 'limite' in cs or 'límite' in cs:
+                pct_row = r
+            continue
+        if gf_row is None and 'gasto' in cs and 'funcion' in cs: gf_row = r
+        if icld_row is None and 'icld' in cs and 'neto' in cs: icld_row = r
     if gf_row and icld_row:
         n = 0
         for i, anio in enumerate(anios):

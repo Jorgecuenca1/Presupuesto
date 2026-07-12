@@ -26,4 +26,8 @@ urlpatterns = [
     path('mfmp/poai-dependencias/', views.poai_dependencias_view, name='poai_dependencias'),
     path('mfmp/cuadre-fuente/', views.cuadre_fuente_view, name='cuadre_fuente'),
     path('mfmp/saldo-vf-fuente/', views.saldo_vf_fuente_view, name='saldo_vf_fuente'),
+    path('mfmp/refinanciacion/', views.refinanciacion_view, name='refinanciacion'),
+    path('mfmp/ccpet-ingresos/', views.ccpet_ingresos_view, name='ccpet_ingresos'),
+    path('mfmp/ccpet-gastos/', views.ccpet_gastos_view, name='ccpet_gastos'),
+    path('panel-control/', views.panel_control_view, name='panel_control'),
 ]

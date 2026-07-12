@@ -686,3 +686,75 @@ class IngresoCorrienteLey358(models.Model):
         verbose_name_plural = 'Ingresos Corrientes Ley 358'
         unique_together = ['codigo_ccpet', 'fuente']
         ordering = ['codigo_ccpet']
+
+
+# ═══ FASE 4: Refinanciación + CCPET ══════════════════════════════════════
+
+class Refinanciacion(models.Model):
+    """Escenario de refinanciación de deuda (hoja 'Refinanciacion' del v75).
+    Un solo registro (singleton) con los parámetros del escenario + proyección 11 años.
+    """
+    aplicar = models.BooleanField(default=False, verbose_name='Aplicar Refinanciación')
+    anio_refinanciacion = models.IntegerField(default=2029, verbose_name='Año de Refinanciación')
+    nueva_tasa_ea = models.DecimalField(max_digits=6, decimal_places=4, default=Decimal('0.11'),
+                                        verbose_name='Nueva Tasa E.A.')
+    nuevo_plazo_anios = models.IntegerField(default=8, verbose_name='Nuevo Plazo Total (años)')
+    anios_gracia = models.IntegerField(default=1, verbose_name='Años de Gracia')
+    saldo_refinanciar = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    pagare_objetivo = models.CharField(max_length=100, default='Pagaré 1 - BBVA')
+
+    class Meta:
+        verbose_name = 'Refinanciación'
+        verbose_name_plural = 'Refinanciaciones'
+
+
+class RefinanciacionProyeccion(models.Model):
+    """Proyección año a año del saldo original + intereses + amortización."""
+    anio = models.IntegerField(unique=True)
+    saldo_original = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    intereses = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    amortizacion = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+
+    class Meta:
+        verbose_name = 'Refinanciación (proyección)'
+        verbose_name_plural = 'Refinanciación (proyecciones)'
+        ordering = ['anio']
+
+
+class CCPETIngreso(models.Model):
+    """Clasificación CCPET Ingresos 2027 (hoja 'CCPET Ingresos 2027')."""
+    rubro_presupuestal = models.CharField(max_length=40, verbose_name='Rubro Presupuestal')
+    fuente = models.CharField(max_length=10, blank=True)
+    descripcion = models.TextField(verbose_name='Descripción')
+    presupuesto = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    vigencia = models.IntegerField(default=2027)
+
+    class Meta:
+        verbose_name = 'CCPET Ingreso'
+        verbose_name_plural = 'CCPET Ingresos'
+        unique_together = ['vigencia', 'rubro_presupuestal', 'fuente']
+        ordering = ['rubro_presupuestal']
+
+    @property
+    def nivel(self):
+        """Cantidad de puntos = nivel jerárquico (03=1, 03.1=2, etc.)."""
+        return self.rubro_presupuestal.count('.')
+
+
+class CCPETGasto(models.Model):
+    """Clasificación CCPET Gastos 2027 (hoja 'CCPET Gastos 2027')."""
+    rubro_presupuestal = models.CharField(max_length=40, verbose_name='Rubro Presupuestal')
+    fuente = models.CharField(max_length=10, blank=True)
+    descripcion = models.TextField(verbose_name='Descripción')
+    presupuesto = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    vigencia = models.IntegerField(default=2027)
+
+    class Meta:
+        verbose_name = 'CCPET Gasto'
+        verbose_name_plural = 'CCPET Gastos'
+        unique_together = ['vigencia', 'rubro_presupuestal', 'fuente']
+        ordering = ['rubro_presupuestal']
+
+    @property
+    def nivel(self):
+        return self.rubro_presupuestal.count('.')

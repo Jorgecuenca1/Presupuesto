@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Refinanciación{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'mfmp_menu' %}">MFMP</a></li>
+<li class="breadcrumb-item active">Refinanciación</li>
+{% endblock %}
+{% block content %}
+<h4 class="mb-3"><i class="bi bi-arrow-repeat"></i> Escenario de Refinanciación de Deuda</h4>
+
+{% if ref %}
+<div class="row g-3 mb-3">
+    <div class="col-md-3"><div class="card p-2"><small class="text-muted">Aplicar</small><h6>{% if ref.aplicar %}<span class="badge bg-success">SÍ</span>{% else %}<span class="badge bg-secondary">NO</span>{% endif %}</h6></div></div>
+    <div class="col-md-3"><div class="card p-2"><small class="text-muted">Año refinanciación</small><h6>{{ ref.anio_refinanciacion }}</h6></div></div>
+    <div class="col-md-3"><div class="card p-2"><small class="text-muted">Nueva tasa E.A.</small><h6>{{ ref.nueva_tasa_ea|floatformat:4 }}</h6></div></div>
+    <div class="col-md-3"><div class="card p-2"><small class="text-muted">Plazo</small><h6>{{ ref.nuevo_plazo_anios }} años · {{ ref.anios_gracia }} gracia</h6></div></div>
+    <div class="col-md-6"><div class="card p-2"><small class="text-muted">Saldo a refinanciar</small><h6>${{ ref.saldo_refinanciar|floatformat:0|intcomma }}</h6></div></div>
+    <div class="col-md-6"><div class="card p-2"><small class="text-muted">Pagaré objetivo</small><h6>{{ ref.pagare_objetivo }}</h6></div></div>
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-header bg-dark text-white">Proyección Original 2025-2036</div>
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-sm table-bordered mb-0" style="font-size:.85rem;">
+            <thead class="table-dark text-center">
+                <tr><th>Año</th><th>Saldo Original</th><th>Intereses</th><th>Amortización</th></tr>
+            </thead>
+            <tbody>
+                {% for p in proyecciones %}
+                <tr>
+                    <td class="text-center fw-bold">{{ p.anio }}</td>
+                    <td class="text-end">${{ p.saldo_original|floatformat:0|intcomma }}</td>
+                    <td class="text-end text-primary">${{ p.intereses|floatformat:0|intcomma }}</td>
+                    <td class="text-end text-success">${{ p.amortizacion|floatformat:0|intcomma }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

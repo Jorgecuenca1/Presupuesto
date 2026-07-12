@@ -91,5 +91,35 @@
             </div>
         </a>
     </div>
+    <div class="col-md-6 col-lg-4">
+        <a href="{% url 'refinanciacion' %}" class="text-decoration-none">
+            <div class="card h-100" style="border-color:#6f42c1;">
+                <div class="card-body">
+                    <h5 style="color:#6f42c1;"><i class="bi bi-arrow-repeat"></i> Refinanciación</h5>
+                    <p class="small text-muted mb-1">Escenario refinanciación deuda + proyección</p>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-6 col-lg-4">
+        <a href="{% url 'ccpet_ingresos' %}" class="text-decoration-none">
+            <div class="card h-100" style="border-color:#20c997;">
+                <div class="card-body">
+                    <h5 style="color:#20c997;"><i class="bi bi-tag"></i> CCPET Ingresos</h5>
+                    <p class="small text-muted mb-1">Clasificación Común Presupuesto Territorial</p>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-6 col-lg-4">
+        <a href="{% url 'ccpet_gastos' %}" class="text-decoration-none">
+            <div class="card h-100" style="border-color:#fd7e14;">
+                <div class="card-body">
+                    <h5 style="color:#fd7e14;"><i class="bi bi-tag-fill"></i> CCPET Gastos</h5>
+                    <p class="small text-muted mb-1">Clasificación gastos por sección</p>
+                </div>
+            </div>
+        </a>
+    </div>
 </div>
 {% endblock %}

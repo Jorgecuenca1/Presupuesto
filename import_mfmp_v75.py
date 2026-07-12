@@ -24,7 +24,8 @@ from core.models import (
     FuenteFinanciacion, PlanFinancieroLinea, ICLDProyectado,
     Ley617Proyectado, POAIProyectado, POAIPorDependencia,
     CuadrePorFuente, SaldoVFPorFuente, IngresoCorrienteLey358,
-    ParametrosSistema,
+    Refinanciacion, RefinanciacionProyeccion,
+    CCPETIngreso, CCPETGasto, ParametrosSistema,
 )
 
 
@@ -262,6 +263,77 @@ def importar(xlsx_path):
         )
         n += 1
     print(f'✓ Ing Corrientes Ley 358:        {n:>5}')
+
+    # ═══ 10) REFINANCIACIÓN ══════════════════════════════════════════════
+    ws = wb['Refinanciacion']
+    # Header parámetros en F3-F9
+    aplicar = bool(int(D(ws.cell(row=3, column=2).value)))
+    anio_ref = int(D(ws.cell(row=4, column=2).value))
+    tasa = D(ws.cell(row=5, column=2).value)
+    plazo = int(D(ws.cell(row=6, column=2).value))
+    gracia = int(D(ws.cell(row=7, column=2).value))
+    saldo = D(ws.cell(row=8, column=2).value) * Decimal('1000000')  # viene en millones
+    pagare_obj = str(ws.cell(row=9, column=2).value or 'Pagaré 1 - BBVA')
+    r_obj, _ = Refinanciacion.objects.update_or_create(
+        pk=1, defaults={
+            'aplicar': aplicar, 'anio_refinanciacion': anio_ref,
+            'nueva_tasa_ea': tasa, 'nuevo_plazo_anios': plazo,
+            'anios_gracia': gracia, 'saldo_refinanciar': saldo,
+            'pagare_objetivo': pagare_obj[:100],
+        }
+    )
+    # Años en F10: cols 3..14 = 2025..2036
+    anios = [ws.cell(row=10, column=c).value for c in range(3, 15)]
+    anios = [int(a) for a in anios if a]
+    n = 0
+    for i, anio in enumerate(anios):
+        col = 3 + i
+        saldo_o = D(ws.cell(row=11, column=col).value) * Decimal('1000000')
+        int_o = D(ws.cell(row=12, column=col).value) * Decimal('1000000')
+        amort_o = D(ws.cell(row=13, column=col).value) * Decimal('1000000')
+        RefinanciacionProyeccion.objects.update_or_create(
+            anio=anio, defaults={
+                'saldo_original': saldo_o,
+                'intereses': int_o,
+                'amortizacion': amort_o,
+            }
+        )
+        n += 1
+    print(f'✓ Refinanciación proyección:     {n:>5}')
+
+    # ═══ 11) CCPET INGRESOS 2027 ═════════════════════════════════════════
+    ws = wb['CCPET Ingresos 2027']
+    n = 0
+    for r in range(5, ws.max_row + 1):
+        cod = ws.cell(row=r, column=1).value
+        if not cod: continue
+        fte = ws.cell(row=r, column=2).value or ''
+        desc = ws.cell(row=r, column=3).value or ''
+        ppto = D(ws.cell(row=r, column=4).value)
+        CCPETIngreso.objects.update_or_create(
+            vigencia=2027, rubro_presupuestal=str(cod).strip(),
+            fuente=str(fte or '').strip(),
+            defaults={'descripcion': str(desc).strip()[:2000], 'presupuesto': ppto},
+        )
+        n += 1
+    print(f'✓ CCPET Ingresos 2027:           {n:>5}')
+
+    # ═══ 12) CCPET GASTOS 2027 ═══════════════════════════════════════════
+    ws = wb['CCPET Gastos 2027']
+    n = 0
+    for r in range(5, ws.max_row + 1):
+        cod = ws.cell(row=r, column=1).value
+        if not cod: continue
+        fte = ws.cell(row=r, column=2).value or ''
+        desc = ws.cell(row=r, column=3).value or ''
+        ppto = D(ws.cell(row=r, column=4).value)
+        CCPETGasto.objects.update_or_create(
+            vigencia=2027, rubro_presupuestal=str(cod).strip(),
+            fuente=str(fte or '').strip(),
+            defaults={'descripcion': str(desc).strip()[:2000], 'presupuesto': ppto},
+        )
+        n += 1
+    print(f'✓ CCPET Gastos 2027:             {n:>5}')
 
     # ═══ Sincronizar ICLD calculado de ParametrosSistema desde Plan Financiero
     # (usuario pidió: ICLD 2027 debe venir del Plan Financiero proyectado 2027-2036)

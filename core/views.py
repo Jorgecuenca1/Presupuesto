@@ -871,25 +871,33 @@ def tabla_concejo_eliminar(request, pk):
 
 
 def _sincronizar_techos_desde_fuentes(vigencia):
-    """Recalcula las columnas Ingresos, Fto y Deuda de cada TechoInversion
-    consultando RubroIngreso, RubroGasto y AmortizacionPagare.
-    Regla de matching:
-      1) Si Techo.codigo_fuente y RubroIngreso.codigo_fuente coinciden → suma.
-      2) Adicional: buscar RubroIngreso.nombre que contenga concepto_ingreso (case-insensitive)
-         para complementar cuando no hay codigo_fuente.
-      3) Deuda: suma servicio_deuda (cap+int) del año vigencia por contratos cuya
-         renta_pignorada haga match con el concepto de la fila.
+    """Recalcula las columnas Ingresos, Fto y Deuda de cada TechoInversion.
+
+    Regla de matching en cascada (mayor prioridad primero):
+      1) ICLDProyectado por FuenteFinanciacion (dato MFMP v75)
+      2) POAIProyectado por FuenteFinanciacion (dato MFMP v75)
+      3) RubroIngreso por codigo_fuente o nombre fuzzy (dato base sistema)
+      4) AmortizacionPagare por renta_pignorada match (deuda)
     """
     from decimal import Decimal as D
     from django.db.models import Sum, Q
     try:
         from ingresos.models import RubroIngreso
         from gastos.models import RubroGasto, AmortizacionPagare, ContratoCredito
+        from .models import (FuenteFinanciacion, ICLDProyectado, POAIProyectado)
     except Exception:
         return
     techos = list(TechoInversion.objects.filter(vigencia=vigencia))
     if not techos:
         return
+
+    # Pre-cargar datos MFMP proyectados (v75) por fuente
+    icld_by_cod = {icld.fuente.codigo: icld for icld in
+                   ICLDProyectado.objects.filter(anio=vigencia).select_related('fuente')}
+    poai_by_cod = {p.fuente.codigo: p for p in
+                   POAIProyectado.objects.filter(anio=vigencia).select_related('fuente')}
+    fuentes_by_cod = {f.codigo: f for f in FuenteFinanciacion.objects.all()}
+    fuentes_by_nombre_up = {f.nombre.strip().upper(): f for f in fuentes_by_cod.values()}
 
     # Pre-cargar rubros del año
     rubros_ing = list(RubroIngreso.objects.filter(vigencia=vigencia))
@@ -911,16 +919,35 @@ def _sincronizar_techos_desde_fuentes(vigencia):
         concepto_up = (t.concepto_ingreso or '').strip().upper()
         cod = (t.codigo_fuente or '').strip()
 
-        # ── INGRESOS: match por código fuente y por nombre fuzzy
+        # ── Buscar FuenteFinanciacion matching para este techo
+        fuente_mfmp = None
+        if cod and cod in fuentes_by_cod:
+            fuente_mfmp = fuentes_by_cod[cod]
+        elif concepto_up:
+            # match por nombre exacto o prefijo del nombre
+            for nom, f in fuentes_by_nombre_up.items():
+                if nom == concepto_up or concepto_up in nom or nom in concepto_up:
+                    fuente_mfmp = f
+                    break
+
+        # ── INGRESOS: prioridad ICLD Proyectado (v75), luego POAI, luego rubros
         ingresos_sum = D('0')
-        for r in rubros_ing:
-            match = False
-            if cod and (r.codigo_fuente or '').strip() == cod:
-                match = True
-            elif concepto_up and concepto_up in (r.descripcion or '').upper():
-                match = True
-            if match:
-                ingresos_sum += (r.valor_apropiacion or D('0'))
+        if fuente_mfmp and fuente_mfmp.codigo in icld_by_cod:
+            # Dato oficial MFMP (fuente 1 = Recursos Propios, etc.)
+            ingresos_sum = icld_by_cod[fuente_mfmp.codigo].valor_bruto or D('0')
+        elif fuente_mfmp and fuente_mfmp.codigo in poai_by_cod:
+            # Para fuentes SGP/otras que solo tienen POAI proyectado
+            ingresos_sum = poai_by_cod[fuente_mfmp.codigo].valor or D('0')
+        else:
+            # Fallback: rubros CUIPO del año vigencia
+            for r in rubros_ing:
+                match = False
+                if cod and (r.codigo_fuente or '').strip() == cod:
+                    match = True
+                elif concepto_up and concepto_up in (r.descripcion or '').upper():
+                    match = True
+                if match:
+                    ingresos_sum += (r.valor_apropiacion or D('0'))
 
         # ── FUNCIONAMIENTO: match por código fuente en gastos de sección 2.1
         fto_sum = D('0')
@@ -1212,3 +1239,251 @@ def mfmp_menu(request):
         'saldo_vf': SaldoVFPorFuente.objects.count(),
     }
     return render(request, 'core/mfmp_menu.html', {'stats': stats})
+
+
+# ═══ FASE 4: Vistas Refinanciación + CCPET ══════════════════════════════
+
+@never_cache
+@login_required
+def refinanciacion_view(request):
+    """Escenario de refinanciación de deuda + proyección año a año."""
+    from .models import Refinanciacion, RefinanciacionProyeccion
+    r = Refinanciacion.objects.first()
+    proys = list(RefinanciacionProyeccion.objects.all().order_by('anio'))
+    return render(request, 'core/refinanciacion.html', {'ref': r, 'proyecciones': proys})
+
+
+@never_cache
+@login_required
+def ccpet_ingresos_view(request):
+    """CCPET Ingresos 2027 con jerarquía y presupuesto."""
+    from .models import CCPETIngreso
+    filas = list(CCPETIngreso.objects.filter(vigencia=2027).order_by('rubro_presupuestal', 'fuente'))
+    from django.db.models import Sum
+    total = CCPETIngreso.objects.filter(vigencia=2027, rubro_presupuestal='03.1').aggregate(t=Sum('presupuesto'))['t'] or 0
+    return render(request, 'core/ccpet_ingresos.html', {'filas': filas, 'total': total})
+
+
+@never_cache
+@login_required
+def ccpet_gastos_view(request):
+    """CCPET Gastos 2027 con jerarquía y presupuesto."""
+    from .models import CCPETGasto
+    filas = list(CCPETGasto.objects.filter(vigencia=2027).order_by('rubro_presupuestal', 'fuente'))
+    from django.db.models import Sum
+    total = CCPETGasto.objects.filter(vigencia=2027).exclude(rubro_presupuestal__contains='.').aggregate(t=Sum('presupuesto'))['t'] or 0
+    return render(request, 'core/ccpet_gastos.html', {'filas': filas, 'total': total})
+
+
+# ═══ FASE 5: Panel de Control - Estado de Datos ═══════════════════════════
+
+@never_cache
+@login_required
+def panel_control_view(request):
+    """Panel semáforo: qué está cargado, provisional, faltante."""
+    from .models import (
+        VariableMacro, ParametrosSistema, TechoInversion,
+        PlanFinancieroLinea, ICLDProyectado, Ley617Proyectado,
+        POAIProyectado, POAIPorDependencia, CuadrePorFuente,
+        SaldoVFPorFuente, FuenteFinanciacion, Refinanciacion,
+        CCPETIngreso, CCPETGasto,
+    )
+    from ingresos.models import RubroIngreso, ContribuyenteICA
+    from gastos.models import RubroGasto, ContratoCredito, CostoPersonal
+
+    p = ParametrosSistema.objects.filter(activo=True).first()
+    V = p.vigencia if p else 2027
+
+    def estado(condicion_ok, condicion_prov=False):
+        if condicion_ok: return 'CARGADO', 'success'
+        if condicion_prov: return 'PROVISIONAL', 'warning'
+        return 'FALTANTE', 'danger'
+
+    items = []
+
+    # 1. Parámetros del sistema
+    st, cl = estado(p and p.valor_uvt > 0 and p.tasa_ipc > 0)
+    items.append({
+        'n': 1, 'concepto': 'Parámetros del Sistema',
+        'ubicacion': 'Parámetros',
+        'situacion': f'UVT ${p.valor_uvt:,.0f} · IPC {p.tasa_ipc*100:.1f}% · SMLMV ${p.valor_smlmv:,.0f}' if p else 'sin datos',
+        'estado': st, 'clase': cl,
+        'url_name': 'parametros',
+    })
+
+    # 2. Variables Macroeconómicas
+    n_vm = VariableMacro.objects.count()
+    st, cl = estado(n_vm >= 300)
+    items.append({
+        'n': 2, 'concepto': 'Variables Macroeconómicas',
+        'ubicacion': 'Variables Macro',
+        'situacion': f'{n_vm} registros (MFMP Nación 2026)',
+        'estado': st, 'clase': cl,
+        'url_name': 'variables_macro',
+    })
+
+    # 3. Rubros Ingresos
+    n_ri = RubroIngreso.objects.filter(vigencia=V).count()
+    st, cl = estado(n_ri >= 100)
+    items.append({
+        'n': 3, 'concepto': 'Rubros de Ingresos (Anexo 1)',
+        'ubicacion': 'Ingresos › Reporte',
+        'situacion': f'{n_ri} rubros con apropiación {V}',
+        'estado': st, 'clase': cl,
+        'url_name': 'reporte_ingresos',
+    })
+
+    # 4. Contribuyentes ICA
+    n_ica = ContribuyenteICA.objects.filter(vigencia=V).count()
+    st, cl = estado(n_ica >= 100)
+    items.append({
+        'n': 4, 'concepto': 'Contribuyentes ICA',
+        'ubicacion': 'Ingresos › Contribuyentes ICA',
+        'situacion': f'{n_ica} contribuyentes cargados',
+        'estado': st, 'clase': cl,
+        'url_name': 'contribuyentes_ica',
+    })
+
+    # 5. Rubros Gastos
+    n_rg = RubroGasto.objects.filter(vigencia=V).count()
+    st, cl = estado(n_rg >= 100)
+    items.append({
+        'n': 5, 'concepto': 'Rubros de Gastos (Anexo 2)',
+        'ubicacion': 'Gastos › Reporte',
+        'situacion': f'{n_rg} rubros con apropiación {V}',
+        'estado': st, 'clase': cl,
+        'url_name': 'reporte_gastos',
+    })
+
+    # 6. Costo Personal
+    n_cp = CostoPersonal.objects.filter(vigencia=V).count()
+    st, cl = estado(n_cp >= 10)
+    items.append({
+        'n': 6, 'concepto': 'Costo de Personal (Plantas)',
+        'ubicacion': 'Gastos › Costo Personal',
+        'situacion': f'{n_cp} cargos registrados',
+        'estado': st, 'clase': cl,
+        'url_name': 'costo_personal_list',
+    })
+
+    # 7. Deuda Pública
+    n_dc = ContratoCredito.objects.count()
+    st, cl = estado(n_dc >= 1)
+    items.append({
+        'n': 7, 'concepto': 'Deuda Pública (Contratos)',
+        'ubicacion': 'Gastos › Deuda Pública',
+        'situacion': f'{n_dc} contratos de crédito',
+        'estado': st, 'clase': cl,
+        'url_name': 'deuda_publica_v2',
+    })
+
+    # 8. Fuentes de Financiación
+    n_f = FuenteFinanciacion.objects.count()
+    st, cl = estado(n_f >= 100)
+    items.append({
+        'n': 8, 'concepto': 'Catálogo Fuentes de Financiación',
+        'ubicacion': 'MFMP',
+        'situacion': f'{n_f} fuentes cargadas',
+        'estado': st, 'clase': cl,
+        'url_name': 'mfmp_menu',
+    })
+
+    # 9. Plan Financiero
+    n_pf = PlanFinancieroLinea.objects.count()
+    st, cl = estado(n_pf >= 70)
+    items.append({
+        'n': 9, 'concepto': 'Plan Financiero 10 años',
+        'ubicacion': 'MFMP › Plan Financiero',
+        'situacion': f'{n_pf} celdas (A/B/C/D × 11 años)',
+        'estado': st, 'clase': cl,
+        'url_name': 'plan_financiero',
+    })
+
+    # 10. ICLD Proyectado
+    n_i = ICLDProyectado.objects.count()
+    st, cl = estado(n_i >= 20)
+    items.append({
+        'n': 10, 'concepto': 'ICLD Proyectado 10 años',
+        'ubicacion': 'MFMP › ICLD',
+        'situacion': f'{n_i} registros',
+        'estado': st, 'clase': cl,
+        'url_name': 'icld_proyectado',
+    })
+
+    # 11. Ley 617
+    n_617 = Ley617Proyectado.objects.count()
+    st, cl = estado(n_617 >= 10)
+    items.append({
+        'n': 11, 'concepto': 'Ley 617 Proyectado',
+        'ubicacion': 'MFMP › Ley 617',
+        'situacion': f'{n_617} años proyectados',
+        'estado': st, 'clase': cl,
+        'url_name': 'ley_617',
+    })
+
+    # 12. POAI
+    n_poai = POAIProyectado.objects.count()
+    st, cl = estado(n_poai >= 200)
+    items.append({
+        'n': 12, 'concepto': 'POAI 2027-2036',
+        'ubicacion': 'MFMP › POAI',
+        'situacion': f'{n_poai} celdas',
+        'estado': st, 'clase': cl,
+        'url_name': 'poai_proyectado',
+    })
+
+    # 13. Techos Inversion
+    n_ti = TechoInversion.objects.filter(vigencia=V).count()
+    st, cl = estado(n_ti >= 20)
+    items.append({
+        'n': 13, 'concepto': 'Techos de Inversión',
+        'ubicacion': 'Techos Inversión',
+        'situacion': f'{n_ti} fuentes registradas',
+        'estado': st, 'clase': cl,
+        'url_name': 'techos_inversion',
+    })
+
+    # 14. Cuadre Fuente
+    n_c = CuadrePorFuente.objects.count()
+    dif_ok = CuadrePorFuente.objects.count() - CuadrePorFuente.objects.filter(ingreso=0, gasto=0).count()
+    st, cl = estado(n_c >= 100)
+    items.append({
+        'n': 14, 'concepto': 'Cuadre por Fuente (validador)',
+        'ubicacion': 'MFMP › Cuadre',
+        'situacion': f'{n_c} registros ({dif_ok} con datos)',
+        'estado': st, 'clase': cl,
+        'url_name': 'cuadre_fuente',
+    })
+
+    # 15. Refinanciación
+    r = Refinanciacion.objects.first()
+    st, cl = estado(r is not None, condicion_prov=False)
+    items.append({
+        'n': 15, 'concepto': 'Escenario Refinanciación',
+        'ubicacion': 'MFMP › Refinanciación',
+        'situacion': (f'Año {r.anio_refinanciacion}, tasa {float(r.nueva_tasa_ea)*100:.1f}%' if r else 'sin escenario'),
+        'estado': st, 'clase': cl,
+        'url_name': 'refinanciacion',
+    })
+
+    # 16. CCPET
+    n_cci = CCPETIngreso.objects.count()
+    n_ccg = CCPETGasto.objects.count()
+    st, cl = estado(n_cci >= 200 and n_ccg >= 400)
+    items.append({
+        'n': 16, 'concepto': 'CCPET Clasificación',
+        'ubicacion': 'MFMP › CCPET',
+        'situacion': f'Ingresos: {n_cci} · Gastos: {n_ccg}',
+        'estado': st, 'clase': cl,
+        'url_name': 'ccpet_ingresos',
+    })
+
+    resumen = {
+        'cargado': sum(1 for i in items if i['estado'] == 'CARGADO'),
+        'provisional': sum(1 for i in items if i['estado'] == 'PROVISIONAL'),
+        'faltante': sum(1 for i in items if i['estado'] == 'FALTANTE'),
+        'total': len(items),
+    }
+    return render(request, 'core/panel_control.html', {
+        'items': items, 'resumen': resumen, 'vigencia': V,
+    })

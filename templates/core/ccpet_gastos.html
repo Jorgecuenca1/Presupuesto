@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}CCPET Gastos{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'mfmp_menu' %}">MFMP</a></li>
+<li class="breadcrumb-item active">CCPET Gastos</li>
+{% endblock %}
+{% block content %}
+<h4 class="mb-3"><i class="bi bi-tag-fill"></i> CCPET Gastos 2027 · Clasificación Presupuestal</h4>
+<div class="alert alert-info py-2 small">
+    Total presupuesto de gastos por secciones: <strong>${{ total|floatformat:0|intcomma }}</strong>.
+</div>
+<div class="card">
+    <div class="card-body p-0 table-responsive" style="max-height:70vh;">
+        <table class="table table-sm table-bordered table-hover mb-0" style="font-size:.75rem;">
+            <thead class="table-dark text-center sticky-top">
+                <tr><th style="text-align:left;">Rubro Presupuestal</th><th>Fuente</th><th style="text-align:left;">Descripción</th><th>Presupuesto 2027</th></tr>
+            </thead>
+            <tbody>
+                {% for f in filas %}
+                <tr {% if f.nivel <= 2 %}class="table-warning fw-bold"{% elif f.nivel == 3 %}class="table-info"{% endif %}>
+                    <td><code>{{ f.rubro_presupuestal }}</code></td>
+                    <td class="text-center">{{ f.fuente|default:'—' }}</td>
+                    <td>{{ f.descripcion|truncatechars:80 }}</td>
+                    <td class="text-end">${{ f.presupuesto|floatformat:0|intcomma }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

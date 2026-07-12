@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Plan Financiero{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'mfmp_menu' %}">MFMP</a></li>
+<li class="breadcrumb-item active">Plan Financiero</li>
+{% endblock %}
+{% block content %}
+<h4 class="mb-3"><i class="bi bi-graph-up"></i> Plan Financiero 2026-2036</h4>
+
+<div class="alert alert-info py-2 small mb-3">
+    <strong>Balance:</strong> A. Ingresos = B. Funcionamiento + C. Servicio Deuda + D. Inversión.
+    Todos los valores en pesos corrientes.
+</div>
+
+<div class="card">
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-sm table-bordered mb-0" style="font-size:.78rem;">
+            <thead class="table-dark text-center sticky-top">
+                <tr>
+                    <th style="min-width:250px;text-align:left;">Concepto</th>
+                    {% for a in anios %}<th>{{ a }}</th>{% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in filas %}
+                <tr {% if f.destacado %}class="table-warning fw-bold"{% endif %}>
+                    <td>{{ f.nombre }}</td>
+                    {% for v in f.valores %}
+                    <td class="text-end">${{ v|floatformat:0|intcomma }}</td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

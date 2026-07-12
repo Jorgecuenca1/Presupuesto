@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Cuadre por Fuente{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'mfmp_menu' %}">MFMP</a></li>
+<li class="breadcrumb-item active">Cuadre por Fuente</li>
+{% endblock %}
+{% block content %}
+<h4 class="mb-3"><i class="bi bi-check2-square"></i> Cuadre Ingreso vs Gasto por Fuente</h4>
+<div class="alert alert-info py-2 small">
+    Validador del equilibrio presupuestal: cada fuente debe cumplir <strong>Ingreso = Gasto</strong>.
+    Filas con diferencia distinta de cero requieren revisión.
+</div>
+<div class="card">
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-sm table-bordered mb-0" style="font-size:.75rem;">
+            <thead class="table-dark text-center sticky-top">
+                <tr>
+                    <th rowspan="2" style="min-width:220px;text-align:left;">Fuente</th>
+                    {% for a in anios %}<th colspan="4">{{ a }}</th>{% endfor %}
+                </tr>
+                <tr>
+                    {% for a in anios %}
+                    <th>Ingreso</th><th>Gasto</th><th>Δ</th><th></th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in filas %}
+                <tr>
+                    <td><strong>{{ f.fuente.codigo }}</strong> - {{ f.fuente.nombre|truncatechars:35 }}</td>
+                    {% for v in f.anios %}
+                    <td class="text-end">${{ v.ingreso|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ v.gasto|floatformat:0|intcomma }}</td>
+                    <td class="text-end {% if v.cuadra %}text-success{% else %}text-danger fw-bold{% endif %}">
+                        {% if v.dif == 0 %}—{% else %}${{ v.dif|floatformat:0|intcomma }}{% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if v.cuadra %}<span class="text-success">✓</span>{% else %}<span class="text-danger">✗</span>{% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

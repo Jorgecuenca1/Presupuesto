@@ -1032,3 +1032,183 @@ def techos_inversion_view(request):
         'params': params,
     })
 
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# MFMP - Vistas del Marco Fiscal de Mediano Plazo (v75)
+# ═══════════════════════════════════════════════════════════════════════════
+
+@never_cache
+@login_required
+def plan_financiero_view(request):
+    """Plan Financiero 10 años (A. Ingresos, B. Fto, C. Deuda, D. Inversión)."""
+    from .models import PlanFinancieroLinea
+    anios = sorted(set(PlanFinancieroLinea.objects.values_list('anio', flat=True)))
+    orden = ['A', 'B', 'B1', 'B2', 'C', 'D', 'T']
+    filas = []
+    for tipo in orden:
+        vals = {l.anio: l.valor for l in PlanFinancieroLinea.objects.filter(tipo=tipo)}
+        if not vals: continue
+        filas.append({
+            'tipo': tipo,
+            'nombre': dict(PlanFinancieroLinea.TIPO_CHOICES).get(tipo, tipo),
+            'valores': [vals.get(a, Decimal('0')) for a in anios],
+            'destacado': tipo in ('A', 'T', 'D'),
+        })
+    return render(request, 'core/plan_financiero.html', {
+        'anios': anios, 'filas': filas,
+    })
+
+
+@never_cache
+@login_required
+def icld_proyectado_view(request):
+    """ICLD proyectado 10 años por fuente."""
+    from .models import ICLDProyectado, FuenteFinanciacion
+    from django.db.models import Sum
+    anios = sorted(set(ICLDProyectado.objects.values_list('anio', flat=True)))
+    fuentes = FuenteFinanciacion.objects.filter(icld_proyectado__isnull=False).distinct()
+    filas = []
+    tot_bruto = {a: Decimal('0') for a in anios}
+    tot_neto = {a: Decimal('0') for a in anios}
+    for f in fuentes:
+        proys = {p.anio: p for p in f.icld_proyectado.all()}
+        fila = {'fuente': f, 'anios': []}
+        for a in anios:
+            p = proys.get(a)
+            if p:
+                bruto = p.valor_bruto or Decimal('0')
+                neto = p.icld_neto or Decimal('0')
+                tot_bruto[a] += bruto
+                tot_neto[a] += neto
+                fila['anios'].append({'bruto': bruto, 'neto': neto})
+            else:
+                fila['anios'].append({'bruto': Decimal('0'), 'neto': Decimal('0')})
+        filas.append(fila)
+    pares_totales = [{'bruto': tot_bruto[a], 'neto': tot_neto[a]} for a in anios]
+    return render(request, 'core/icld_proyectado.html', {
+        'anios': anios, 'filas': filas,
+        'pares_totales': pares_totales,
+    })
+
+
+@never_cache
+@login_required
+def ley_617_view(request):
+    """Ley 617/2000 proyectada: GF vs ICLD Neto + semáforo cumplimiento."""
+    from .models import Ley617Proyectado
+    filas = list(Ley617Proyectado.objects.all().order_by('anio'))
+    return render(request, 'core/ley_617_proyectado.html', {'filas': filas})
+
+
+@never_cache
+@login_required
+def poai_proyectado_view(request):
+    """POAI 10 años por fuente + totales."""
+    from .models import POAIProyectado, FuenteFinanciacion
+    from django.db.models import Sum
+    anios = sorted(set(POAIProyectado.objects.values_list('anio', flat=True)))
+    fuentes = list(FuenteFinanciacion.objects.filter(poai_proyectado__isnull=False).distinct())
+    filas = []
+    tot = {a: Decimal('0') for a in anios}
+    for f in fuentes:
+        proys = {p.anio: p.valor for p in f.poai_proyectado.all()}
+        vals = [proys.get(a, Decimal('0')) for a in anios]
+        for i, a in enumerate(anios):
+            tot[a] += vals[i]
+        filas.append({'fuente': f, 'valores': vals, 'total_10y': sum(vals)})
+    filas.sort(key=lambda x: -x['total_10y'])
+    return render(request, 'core/poai_proyectado.html', {
+        'anios': anios, 'filas': filas,
+        'totales': [tot[a] for a in anios],
+    })
+
+
+@never_cache
+@login_required
+def poai_dependencias_view(request):
+    """POAI por dependencia con % participación."""
+    from .models import POAIPorDependencia
+    from django.db.models import Sum
+    anios = sorted(set(POAIPorDependencia.objects.values_list('anio', flat=True)))
+    deps = POAIPorDependencia.objects.values('dependencia', 'pct_participacion').distinct()
+    filas = []
+    tot = {a: Decimal('0') for a in anios}
+    for d in deps:
+        proys = {p.anio: p.valor for p in POAIPorDependencia.objects.filter(dependencia=d['dependencia'])}
+        vals = [proys.get(a, Decimal('0')) for a in anios]
+        for i, a in enumerate(anios):
+            tot[a] += vals[i]
+        filas.append({
+            'dependencia': d['dependencia'],
+            'pct': d['pct_participacion'],
+            'valores': vals,
+            'total_10y': sum(vals),
+        })
+    filas.sort(key=lambda x: -x['pct'])
+    return render(request, 'core/poai_dependencias.html', {
+        'anios': anios, 'filas': filas,
+        'totales': [tot[a] for a in anios],
+    })
+
+
+@never_cache
+@login_required
+def cuadre_fuente_view(request):
+    """Cuadre Ingreso vs Gasto por fuente (validador)."""
+    from .models import CuadrePorFuente, FuenteFinanciacion
+    anios = sorted(set(CuadrePorFuente.objects.values_list('anio', flat=True)), reverse=True)
+    fuentes = FuenteFinanciacion.objects.filter(cuadres__isnull=False).distinct()
+    filas = []
+    for f in fuentes:
+        cuadres = {c.anio: c for c in f.cuadres.all()}
+        fila = {'fuente': f, 'anios': []}
+        for a in anios:
+            c = cuadres.get(a)
+            if c:
+                fila['anios'].append({
+                    'ingreso': c.ingreso, 'gasto': c.gasto,
+                    'dif': c.diferencia, 'cuadra': c.cuadra,
+                })
+            else:
+                fila['anios'].append({'ingreso': 0, 'gasto': 0, 'dif': 0, 'cuadra': True})
+        filas.append(fila)
+    filas.sort(key=lambda x: (all(v['cuadra'] for v in x['anios']),
+                              -sum((v['ingreso'] or 0) for v in x['anios'])))
+    return render(request, 'core/cuadre_fuente.html', {'anios': anios, 'filas': filas})
+
+
+@never_cache
+@login_required
+def saldo_vf_fuente_view(request):
+    """Saldo VF disponible por fuente."""
+    from .models import SaldoVFPorFuente
+    filas = list(SaldoVFPorFuente.objects.select_related('fuente').all().order_by('fuente__codigo'))
+    from django.db.models import Sum
+    tot = SaldoVFPorFuente.objects.aggregate(
+        ap=Sum('apropiacion_definitiva'),
+        va=Sum('vf_aprobadas'),
+        vt=Sum('vf_en_tramite'),
+    )
+    return render(request, 'core/saldo_vf_fuente.html', {
+        'filas': filas, 'total': tot,
+    })
+
+
+@never_cache
+@login_required
+def mfmp_menu(request):
+    """Menú principal del MFMP."""
+    from .models import (PlanFinancieroLinea, ICLDProyectado, Ley617Proyectado,
+                         POAIProyectado, POAIPorDependencia, CuadrePorFuente,
+                         SaldoVFPorFuente)
+    stats = {
+        'plan_financiero': PlanFinancieroLinea.objects.count(),
+        'icld': ICLDProyectado.objects.count(),
+        'ley_617': Ley617Proyectado.objects.count(),
+        'poai': POAIProyectado.objects.count(),
+        'poai_dep': POAIPorDependencia.objects.count(),
+        'cuadre': CuadrePorFuente.objects.count(),
+        'saldo_vf': SaldoVFPorFuente.objects.count(),
+    }
+    return render(request, 'core/mfmp_menu.html', {'stats': stats})

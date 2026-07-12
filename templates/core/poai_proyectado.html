@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}POAI Proyectado{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'mfmp_menu' %}">MFMP</a></li>
+<li class="breadcrumb-item active">POAI 2027-2036</li>
+{% endblock %}
+{% block content %}
+<h4 class="mb-3"><i class="bi bi-bar-chart-line"></i> POAI · Plan Operativo Anual de Inversiones 2027-2036</h4>
+<div class="card">
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-sm table-bordered mb-0" style="font-size:.72rem;">
+            <thead class="table-dark text-center sticky-top">
+                <tr>
+                    <th style="min-width:220px;text-align:left;">Fuente</th>
+                    {% for a in anios %}<th>{{ a }}</th>{% endfor %}
+                    <th>Total 10 años</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in filas %}
+                <tr>
+                    <td><strong>{{ f.fuente.codigo }}</strong> - {{ f.fuente.nombre|truncatechars:35 }}</td>
+                    {% for v in f.valores %}
+                    <td class="text-end">${{ v|floatformat:0|intcomma }}</td>
+                    {% endfor %}
+                    <td class="text-end fw-bold table-info">${{ f.total_10y|floatformat:0|intcomma }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot class="table-dark">
+                <tr>
+                    <td>TOTAL</td>
+                    {% for t in totales %}
+                    <td class="text-end">${{ t|floatformat:0|intcomma }}</td>
+                    {% endfor %}
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+{% endblock %}

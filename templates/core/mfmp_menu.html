@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}MFMP · Marco Fiscal de Mediano Plazo{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">MFMP</li>{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="bi bi-diagram-3"></i> MFMP · Marco Fiscal de Mediano Plazo 2027-2036</h4>
+</div>
+
+<div class="alert alert-primary py-2 small">
+    <i class="bi bi-info-circle"></i>
+    Datos importados del Excel <strong>Sistema_MFMP_PuertoLopez_v75.xlsx</strong>.
+    Proyecciones a 10 años · 102 fuentes · 30 hojas del libro fuente.
+</div>
+
+<div class="row g-3">
+    <div class="col-md-6 col-lg-4">
+        <a href="{% url 'plan_financiero' %}" class="text-decoration-none">
+            <div class="card h-100 border-primary">
+                <div class="card-body">
+                    <h5 class="text-primary"><i class="bi bi-graph-up"></i> Plan Financiero</h5>
+                    <p class="small text-muted mb-1">A. Ingresos, B. Funcionamiento, C. Deuda, D. Inversión</p>
+                    <span class="badge bg-primary">{{ stats.plan_financiero }} celdas</span>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-6 col-lg-4">
+        <a href="{% url 'icld_proyectado' %}" class="text-decoration-none">
+            <div class="card h-100 border-success">
+                <div class="card-body">
+                    <h5 class="text-success"><i class="bi bi-cash-stack"></i> ICLD Proyectado</h5>
+                    <p class="small text-muted mb-1">Ingresos Corrientes de Libre Destinación 10 años por fuente</p>
+                    <span class="badge bg-success">{{ stats.icld }} celdas</span>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-6 col-lg-4">
+        <a href="{% url 'ley_617' %}" class="text-decoration-none">
+            <div class="card h-100 border-warning">
+                <div class="card-body">
+                    <h5 class="text-warning"><i class="bi bi-shield-check"></i> Ley 617/2000</h5>
+                    <p class="small text-muted mb-1">Gastos Funcionamiento vs ICLD Neto + semáforo cumplimiento</p>
+                    <span class="badge bg-warning text-dark">{{ stats.ley_617 }} años</span>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-6 col-lg-4">
+        <a href="{% url 'poai_proyectado' %}" class="text-decoration-none">
+            <div class="card h-100 border-info">
+                <div class="card-body">
+                    <h5 class="text-info"><i class="bi bi-bar-chart-line"></i> POAI 2027-2036</h5>
+                    <p class="small text-muted mb-1">Plan Operativo Anual de Inversiones por fuente</p>
+                    <span class="badge bg-info text-dark">{{ stats.poai }} celdas</span>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-6 col-lg-4">
+        <a href="{% url 'poai_dependencias' %}" class="text-decoration-none">
+            <div class="card h-100 border-secondary">
+                <div class="card-body">
+                    <h5 class="text-secondary"><i class="bi bi-buildings"></i> POAI por Dependencia</h5>
+                    <p class="small text-muted mb-1">Distribución por secretarías con % participación</p>
+                    <span class="badge bg-secondary">{{ stats.poai_dep }} celdas</span>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-6 col-lg-4">
+        <a href="{% url 'cuadre_fuente' %}" class="text-decoration-none">
+            <div class="card h-100 border-danger">
+                <div class="card-body">
+                    <h5 class="text-danger"><i class="bi bi-check2-square"></i> Cuadre por Fuente</h5>
+                    <p class="small text-muted mb-1">Validador Ingreso = Gasto por fuente y año</p>
+                    <span class="badge bg-danger">{{ stats.cuadre }} registros</span>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-6 col-lg-4">
+        <a href="{% url 'saldo_vf_fuente' %}" class="text-decoration-none">
+            <div class="card h-100 border-dark">
+                <div class="card-body">
+                    <h5 class="text-dark"><i class="bi bi-piggy-bank"></i> Saldo VF por Fuente</h5>
+                    <p class="small text-muted mb-1">Vigencias futuras aprobadas/trámite/saldo disponible</p>
+                    <span class="badge bg-dark">{{ stats.saldo_vf }} fuentes</span>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+{% endblock %}

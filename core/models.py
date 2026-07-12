@@ -499,3 +499,190 @@ class TechoInversion(models.Model):
     def disponible(self):
         return self.total_inversion - (self.vf or 0)
 
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# MFMP - Marco Fiscal de Mediano Plazo (Excel Sistema_MFMP_PuertoLopez_v75)
+# Modelos que replican las hojas críticas del Excel v75.
+# ═══════════════════════════════════════════════════════════════════════════
+
+class FuenteFinanciacion(models.Model):
+    """Catálogo de fuentes de financiación (hoja 'Fuentes' del v75, 103 fuentes)."""
+    codigo = models.CharField(max_length=10, unique=True, verbose_name='Código')
+    nombre = models.CharField(max_length=200, verbose_name='Nombre de la Fuente')
+    activo = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = 'Fuente de Financiación'
+        verbose_name_plural = 'Fuentes de Financiación'
+        ordering = ['codigo']
+
+    def __str__(self):
+        return f'{self.codigo} - {self.nombre}'
+
+
+class PlanFinancieroLinea(models.Model):
+    """Plan Financiero (hoja 'Plan Financiero' del v75).
+    Cada línea es un concepto (A. Ingresos, B. Funcionamiento, C. Deuda, D. Inversión)
+    con proyección a 10 años.
+    """
+    TIPO_CHOICES = [
+        ('A', 'A. INGRESOS TOTALES'),
+        ('B', 'B. FUNCIONAMIENTO'),
+        ('B1', 'B.1 Personal'),
+        ('B2', 'B.2 Bienes, Servicios y Otros'),
+        ('C', 'C. SERVICIO DE LA DEUDA'),
+        ('D', 'D. INVERSIÓN'),
+        ('T', 'Total Gastos (B+C+D)'),
+    ]
+    tipo = models.CharField(max_length=3, choices=TIPO_CHOICES)
+    anio = models.IntegerField()
+    valor = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+
+    class Meta:
+        verbose_name = 'Plan Financiero'
+        verbose_name_plural = 'Plan Financiero'
+        unique_together = ['tipo', 'anio']
+        ordering = ['tipo', 'anio']
+
+    def __str__(self):
+        return f'{self.tipo} {self.anio}: ${self.valor:,.0f}'
+
+
+class ICLDProyectado(models.Model):
+    """ICLD proyectado 10 años por fuente (hoja 'ICLD')."""
+    fuente = models.ForeignKey(FuenteFinanciacion, on_delete=models.CASCADE, related_name='icld_proyectado')
+    anio = models.IntegerField()
+    valor_bruto = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    # Deducciones ICLD Neto
+    ley_99 = models.DecimalField(max_digits=22, decimal_places=2, default=0, help_text='1% Ley 99/1993 (CAR)')
+    fonpet = models.DecimalField(max_digits=22, decimal_places=2, default=0, help_text='Contingente FONPET')
+    otros_deducciones = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+
+    class Meta:
+        verbose_name = 'ICLD Proyectado'
+        verbose_name_plural = 'ICLD Proyectados'
+        unique_together = ['fuente', 'anio']
+        ordering = ['fuente', 'anio']
+
+    @property
+    def icld_neto(self):
+        return self.valor_bruto - self.ley_99 - self.fonpet - self.otros_deducciones
+
+
+class Ley617Proyectado(models.Model):
+    """Ley 617/2000 proyectada por año: GF vs ICLD Neto (hoja 'Ley 617')."""
+    anio = models.IntegerField(unique=True)
+    gastos_funcionamiento = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    icld_neto = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    pct_limite = models.DecimalField(max_digits=5, decimal_places=2, default=80,
+                                       help_text='% límite legal Ley 617 según categoría (5-6=80%)')
+
+    class Meta:
+        verbose_name = 'Ley 617 Proyectado'
+        verbose_name_plural = 'Ley 617 Proyectados'
+        ordering = ['anio']
+
+    @property
+    def pct_cumplido(self):
+        if self.icld_neto <= 0: return 0
+        return (self.gastos_funcionamiento / self.icld_neto * 100).quantize(Decimal('0.01'))
+
+    @property
+    def cumple(self):
+        return self.pct_cumplido <= self.pct_limite
+
+
+class POAIProyectado(models.Model):
+    """POAI 2027-2036 por fuente (hoja 'POAI 2027-2036')."""
+    fuente = models.ForeignKey(FuenteFinanciacion, on_delete=models.CASCADE, related_name='poai_proyectado')
+    anio = models.IntegerField()
+    valor = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+
+    class Meta:
+        verbose_name = 'POAI Proyectado'
+        verbose_name_plural = 'POAI Proyectados'
+        unique_together = ['fuente', 'anio']
+        ordering = ['fuente', 'anio']
+
+
+class POAIPorDependencia(models.Model):
+    """POAI distribuido por dependencia con % participación (hoja 'POAI x Dependencia')."""
+    dependencia = models.CharField(max_length=200)
+    pct_participacion = models.DecimalField(max_digits=10, decimal_places=8, default=0)
+    # valores por año se cargan como dict (columnas 2027-2036)
+    anio = models.IntegerField()
+    valor = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+
+    class Meta:
+        verbose_name = 'POAI por Dependencia'
+        verbose_name_plural = 'POAI por Dependencias'
+        unique_together = ['dependencia', 'anio']
+        ordering = ['-valor']
+
+
+class CuadrePorFuente(models.Model):
+    """Cuadre Ingreso vs Gasto por fuente (hoja 'Cuadre por Fuente')."""
+    fuente = models.ForeignKey(FuenteFinanciacion, on_delete=models.CASCADE, related_name='cuadres')
+    anio = models.IntegerField()
+    ingreso = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    gasto = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+
+    class Meta:
+        verbose_name = 'Cuadre por Fuente'
+        verbose_name_plural = 'Cuadres por Fuente'
+        unique_together = ['fuente', 'anio']
+        ordering = ['fuente', 'anio']
+
+    @property
+    def diferencia(self):
+        return self.ingreso - self.gasto
+
+    @property
+    def cuadra(self):
+        return abs(self.diferencia) < Decimal('1')
+
+
+class SaldoVFPorFuente(models.Model):
+    """Saldo disponible de Vigencias Futuras por Fuente (hoja 'Saldo VF por Fuente')."""
+    fuente = models.ForeignKey(FuenteFinanciacion, on_delete=models.CASCADE, related_name='vf_saldos')
+    anio_referencia = models.IntegerField()
+    apropiacion_definitiva = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    cdp_vigentes = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    vf_aprobadas = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    vf_en_tramite = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    vf_solicitada = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+
+    class Meta:
+        verbose_name = 'Saldo VF por Fuente'
+        verbose_name_plural = 'Saldos VF por Fuente'
+        unique_together = ['fuente', 'anio_referencia']
+        ordering = ['fuente']
+
+    @property
+    def saldo_disponible(self):
+        return self.apropiacion_definitiva - self.cdp_vigentes - self.vf_aprobadas - self.vf_en_tramite
+
+    @property
+    def estado(self):
+        s = self.saldo_disponible
+        if s < 0: return 'AGOTADO'
+        if s == 0: return 'SIN SALDO'
+        return 'HAY SALDO DISPONIBLE'
+
+
+class IngresoCorrienteLey358(models.Model):
+    """Ingresos corrientes para Ley 358 (hoja 'Ing Corrientes Ley 358')."""
+    codigo_ccpet = models.CharField(max_length=40)
+    descripcion = models.CharField(max_length=300)
+    fuente = models.CharField(max_length=10)
+    ejec_2024 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    ejec_2025 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    aforo_2026 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    aplica_ley_358 = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = 'Ingreso Corriente Ley 358'
+        verbose_name_plural = 'Ingresos Corrientes Ley 358'
+        unique_together = ['codigo_ccpet', 'fuente']
+        ordering = ['codigo_ccpet']

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}ICLD Proyectado{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'mfmp_menu' %}">MFMP</a></li>
+<li class="breadcrumb-item active">ICLD Proyectado</li>
+{% endblock %}
+{% block content %}
+<h4 class="mb-3"><i class="bi bi-cash-stack"></i> ICLD Proyectado 2026-2036 por Fuente</h4>
+
+<div class="card">
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-sm table-bordered mb-0" style="font-size:.75rem;">
+            <thead class="table-dark text-center sticky-top">
+                <tr>
+                    <th rowspan="2" style="min-width:250px;text-align:left;">Fuente</th>
+                    {% for a in anios %}<th colspan="2">{{ a }}</th>{% endfor %}
+                </tr>
+                <tr>
+                    {% for a in anios %}
+                    <th class="small">Bruto</th><th class="small">Neto</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in filas %}
+                <tr>
+                    <td><strong>{{ f.fuente.codigo }}</strong> - {{ f.fuente.nombre|truncatechars:40 }}</td>
+                    {% for v in f.anios %}
+                    <td class="text-end">${{ v.bruto|floatformat:0|intcomma }}</td>
+                    <td class="text-end fw-bold text-success">${{ v.neto|floatformat:0|intcomma }}</td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot class="table-dark">
+                <tr>
+                    <td>TOTAL</td>
+                    {% for par in pares_totales %}
+                    <td class="text-end">${{ par.bruto|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ par.neto|floatformat:0|intcomma }}</td>
+                    {% endfor %}
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+{% endblock %}

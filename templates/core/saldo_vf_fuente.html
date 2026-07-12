@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Saldo VF por Fuente{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'mfmp_menu' %}">MFMP</a></li>
+<li class="breadcrumb-item active">Saldo VF por Fuente</li>
+{% endblock %}
+{% block content %}
+<h4 class="mb-3"><i class="bi bi-piggy-bank"></i> Saldo de Vigencias Futuras por Fuente</h4>
+<div class="alert alert-info py-2 small">
+    <strong>Saldo Disponible</strong> = Apropiación Definitiva − CDP Vigentes − VF Aprobadas − VF en Trámite
+</div>
+<div class="card">
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-sm table-bordered mb-0" style="font-size:.75rem;">
+            <thead class="table-dark text-center sticky-top">
+                <tr>
+                    <th style="min-width:200px;text-align:left;">Fuente</th>
+                    <th>Apropiación Def.</th>
+                    <th>CDP Vigentes</th>
+                    <th>VF Aprobadas</th>
+                    <th>VF Trámite</th>
+                    <th>Saldo Disponible</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in filas %}
+                <tr>
+                    <td><strong>{{ f.fuente.codigo }}</strong> - {{ f.fuente.nombre|truncatechars:32 }}</td>
+                    <td class="text-end">${{ f.apropiacion_definitiva|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.cdp_vigentes|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.vf_aprobadas|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.vf_en_tramite|floatformat:0|intcomma }}</td>
+                    <td class="text-end fw-bold {% if f.saldo_disponible > 0 %}text-success{% else %}text-danger{% endif %}">
+                        ${{ f.saldo_disponible|floatformat:0|intcomma }}
+                    </td>
+                    <td class="small">
+                        {% if f.saldo_disponible > 0 %}
+                            <span class="badge bg-success">DISPONIBLE</span>
+                        {% elif f.saldo_disponible == 0 %}
+                            <span class="badge bg-secondary">SIN SALDO</span>
+                        {% else %}
+                            <span class="badge bg-danger">EXCEDIDO</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot class="table-dark">
+                <tr>
+                    <td>TOTAL</td>
+                    <td class="text-end">${{ total.ap|floatformat:0|intcomma }}</td>
+                    <td></td>
+                    <td class="text-end">${{ total.va|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ total.vt|floatformat:0|intcomma }}</td>
+                    <td colspan="2"></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+{% endblock %}

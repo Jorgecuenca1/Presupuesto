@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Ley 617 Proyectado{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'mfmp_menu' %}">MFMP</a></li>
+<li class="breadcrumb-item active">Ley 617</li>
+{% endblock %}
+{% block content %}
+<h4 class="mb-3"><i class="bi bi-shield-check"></i> Ley 617/2000 · Cumplimiento Proyectado 2026-2036</h4>
+
+<div class="alert alert-warning py-2 small mb-3">
+    <strong>Ley 617/2000 art. 6:</strong> los gastos de funcionamiento no pueden superar
+    el % límite del ICLD Neto (municipios cat 4-6 = 80%).
+</div>
+
+<div class="card">
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-sm table-bordered mb-0" style="font-size:.85rem;">
+            <thead class="table-dark text-center sticky-top">
+                <tr>
+                    <th>Año</th>
+                    <th>Gastos Funcionamiento</th>
+                    <th>ICLD Neto</th>
+                    <th>% Cumplido</th>
+                    <th>Límite</th>
+                    <th>Semáforo</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in filas %}
+                <tr>
+                    <td class="text-center fw-bold">{{ f.anio }}</td>
+                    <td class="text-end">${{ f.gastos_funcionamiento|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.icld_neto|floatformat:0|intcomma }}</td>
+                    <td class="text-center fw-bold {% if f.cumple %}text-success{% else %}text-danger{% endif %}">
+                        {{ f.pct_cumplido|floatformat:2 }}%
+                    </td>
+                    <td class="text-center">{{ f.pct_limite|floatformat:0 }}%</td>
+                    <td class="text-center">
+                        {% if f.cumple %}
+                            <span class="badge bg-success">✓ CUMPLE</span>
+                        {% else %}
+                            <span class="badge bg-danger">✗ EXCEDE</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

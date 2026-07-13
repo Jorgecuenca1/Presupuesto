@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Parámetros Anuales{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'mfmp_menu' %}">MFMP</a></li>
+<li class="breadcrumb-item active">Parámetros Anuales</li>
+{% endblock %}
+{% block content %}
+<h4 class="mb-3"><i class="bi bi-sliders"></i> Parámetros Anuales · Predial · Planta · Estampillas</h4>
+
+<div class="card mb-3">
+    <div class="card-header bg-primary text-white"><i class="bi bi-house"></i> Predial · Parámetros por Año</div>
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-sm table-bordered mb-0" style="font-size:.82rem;">
+            <thead class="table-light text-center">
+                <tr>
+                    <th>Año</th>
+                    <th>% Eficiencia Urbano</th>
+                    <th>% Eficiencia Rural</th>
+                    <th>% Ajuste Avalúo</th>
+                    <th>% Base Cartera</th>
+                    <th>% Cartera Urbano</th>
+                    <th>% Cartera Rural</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in predial %}
+                <tr>
+                    <td class="text-center fw-bold">{{ p.anio }}</td>
+                    <td class="text-center">{{ p.pct_eficiencia_urbano|floatformat:4 }}</td>
+                    <td class="text-center">{{ p.pct_eficiencia_rural|floatformat:4 }}</td>
+                    <td class="text-center">{{ p.pct_ajuste_avaluo|floatformat:4 }}</td>
+                    <td class="text-center">{{ p.pct_base_cartera|floatformat:4 }}</td>
+                    <td class="text-center">{{ p.pct_cartera_urbano|floatformat:4 }}</td>
+                    <td class="text-center">{{ p.pct_cartera_rural|floatformat:4 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header bg-success text-white"><i class="bi bi-people"></i> Planta de Personal · Supuestos por Año</div>
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-sm table-bordered mb-0" style="font-size:.82rem;">
+            <thead class="table-light text-center">
+                <tr>
+                    <th>Año</th>
+                    <th>IPC Esperado (política)</th>
+                    <th>IPC Ref MFMP</th>
+                    <th>Índice Productividad</th>
+                    <th>Puntos Salariales Sindicales</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in planta %}
+                <tr>
+                    <td class="text-center fw-bold">{{ p.anio }}</td>
+                    <td class="text-center">{{ p.ipc_esperado|floatformat:4 }}</td>
+                    <td class="text-center text-muted">{{ p.ipc_ref_mfmp|floatformat:4 }}</td>
+                    <td class="text-center">{{ p.indice_productividad|floatformat:4 }}</td>
+                    <td class="text-center">{{ p.puntos_salariales_sindicales|floatformat:4 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header bg-warning text-dark"><i class="bi bi-cash-coin"></i> Base Estampillas por Año</div>
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-sm table-bordered mb-0" style="font-size:.75rem;">
+            <thead class="table-light text-center">
+                <tr>
+                    <th>Año</th>
+                    <th>1) Valor Total POAI</th>
+                    <th>2) Gasto SEV Ppto</th>
+                    <th>3) Saldo Neto Ppto</th>
+                    <th>4) Ppto SGR</th>
+                    <th>5) Gasto SEV SGR</th>
+                    <th>6) Saldo Neto SGR</th>
+                    <th>9) Reservas NC</th>
+                    <th>10) CxP NC</th>
+                    <th>11) Superávit Fiscal</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in estampillas %}
+                <tr>
+                    <td class="text-center fw-bold">{{ p.anio }}</td>
+                    <td class="text-end">${{ p.valor_total_poai|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ p.gasto_apropiado_sev_ppto|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ p.saldo_neto_ppto|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ p.presupuesto_sgr|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ p.gasto_apropiado_sev_sgr|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ p.saldo_neto_sgr|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ p.reservas_ppto_nc|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ p.cuentas_por_pagar_nc|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ p.superavit_fiscal|floatformat:0|intcomma }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

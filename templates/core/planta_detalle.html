@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Planta Detalle{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'mfmp_menu' %}">MFMP</a></li>
+<li class="breadcrumb-item active">Planta Detalle</li>
+{% endblock %}
+{% block content %}
+<h4 class="mb-3"><i class="bi bi-person-badge"></i> Planta de Personal por Cargo · Proyección 10 años</h4>
+<div class="alert alert-info py-2 small">
+    Total: <strong>{{ total.cargos }}</strong> cargos · Costo anual 2026: <strong>${{ total.c26|floatformat:0|intcomma }}</strong>
+    · 2027: <strong>${{ total.c27|floatformat:0|intcomma }}</strong>
+</div>
+<div class="card">
+    <div class="card-body p-0 table-responsive" style="max-height:75vh;">
+        <table class="table table-sm table-bordered table-hover mb-0" style="font-size:.7rem;">
+            <thead class="table-dark text-center sticky-top">
+                <tr>
+                    <th style="text-align:left;">Sección</th>
+                    <th>Nivel</th>
+                    <th style="text-align:left;">Denominación</th>
+                    <th>Cód.</th>
+                    <th>Gdo</th>
+                    <th>Cant.</th>
+                    <th>Crece por</th>
+                    <th>Asig. Mens. 2026</th>
+                    <th>Costo 2026</th>
+                    <th>2027</th><th>2028</th><th>2029</th><th>2030</th>
+                    <th>2031</th><th>2032</th><th>2033</th><th>2034</th><th>2035</th><th>2036</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in filas %}
+                <tr>
+                    <td class="small">{{ f.seccion|truncatechars:25 }}</td>
+                    <td class="text-center small">{{ f.nivel }}</td>
+                    <td class="small">{{ f.denominacion|truncatechars:35 }}</td>
+                    <td class="text-center">{{ f.codigo_cargo }}</td>
+                    <td class="text-center">{{ f.grado }}</td>
+                    <td class="text-center">{{ f.cantidad }}</td>
+                    <td class="small">{{ f.crece_por }}</td>
+                    <td class="text-end">${{ f.asig_mensual_2026|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.costo_anual_2026|floatformat:0|intcomma }}</td>
+                    <td class="text-end table-warning">${{ f.costo_2027|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.costo_2028|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.costo_2029|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.costo_2030|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.costo_2031|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.costo_2032|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.costo_2033|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.costo_2034|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.costo_2035|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.costo_2036|floatformat:0|intcomma }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot class="table-dark">
+                <tr>
+                    <td colspan="5">TOTAL</td>
+                    <td class="text-center">{{ total.cargos }}</td>
+                    <td colspan="2"></td>
+                    <td class="text-end">${{ total.c26|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ total.c27|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ total.c28|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ total.c29|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ total.c30|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ total.c31|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ total.c32|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ total.c33|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ total.c34|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ total.c35|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ total.c36|floatformat:0|intcomma }}</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+{% endblock %}

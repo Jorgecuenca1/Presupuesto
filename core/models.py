@@ -758,3 +758,209 @@ class CCPETGasto(models.Model):
     @property
     def nivel(self):
         return self.rubro_presupuestal.count('.')
+
+
+# ═══ FASE 7-9: MFMP proyecciones y detalles v75 ═══════════════════════════
+
+class ProyeccionRubroIngreso(models.Model):
+    """Proyección 10 años por rubro CCPET de la hoja 'Ingresos' del v75.
+
+    Incluye: código CCPET, fuente, nombre, descripción, ejecutados históricos,
+    aforo, recaudo YTD, % promedio histórico, proyección Dic, método y
+    proyecciones 2027-2036.
+    """
+    codigo_ccpet = models.CharField(max_length=40, verbose_name='Código CCPET')
+    codigo_fuente = models.CharField(max_length=10, blank=True)
+    nombre_fuente = models.CharField(max_length=200, blank=True)
+    descripcion = models.CharField(max_length=400, blank=True)
+    ejec_2024 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    ejec_2025 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    aforo_2026 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    recaudo_ytd_2026 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    pct_prom_historico = models.DecimalField(max_digits=8, decimal_places=6, default=0)
+    proyeccion_dic_2026 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    metodo = models.CharField(max_length=100, blank=True)
+    proy_2027 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    proy_2028 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    proy_2029 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    proy_2030 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    proy_2031 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    proy_2032 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    proy_2033 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    proy_2034 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    proy_2035 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    proy_2036 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+
+    class Meta:
+        verbose_name = 'Proyección Rubro Ingreso 10y'
+        verbose_name_plural = 'Proyecciones Rubros Ingreso 10y'
+        unique_together = ['codigo_ccpet', 'codigo_fuente']
+        ordering = ['codigo_ccpet']
+
+    def valores_por_anio(self):
+        return {
+            2027: self.proy_2027, 2028: self.proy_2028, 2029: self.proy_2029,
+            2030: self.proy_2030, 2031: self.proy_2031, 2032: self.proy_2032,
+            2033: self.proy_2033, 2034: self.proy_2034, 2035: self.proy_2035,
+            2036: self.proy_2036,
+        }
+
+
+class ProyeccionRubroGasto(models.Model):
+    """Proyección 10 años por rubro CCPET de la hoja 'Gastos' del v75."""
+    codigo_ccpet = models.CharField(max_length=40, verbose_name='Código CCPET')
+    codigo_fuente = models.CharField(max_length=10, blank=True)
+    nombre_fuente = models.CharField(max_length=200, blank=True)
+    descripcion = models.CharField(max_length=400, blank=True)
+    categoria = models.CharField(max_length=100, blank=True, verbose_name='Categoría (Personal/BS/Otros)')
+    apropiacion_2026 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    compromiso_mayo_2026 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    proyeccion_dic_2026 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    metodo = models.CharField(max_length=100, blank=True)
+    proy_2027 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    proy_2028 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    proy_2029 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    proy_2030 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    proy_2031 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    proy_2032 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    proy_2033 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    proy_2034 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    proy_2035 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    proy_2036 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+
+    class Meta:
+        verbose_name = 'Proyección Rubro Gasto 10y'
+        verbose_name_plural = 'Proyecciones Rubros Gasto 10y'
+        unique_together = ['codigo_ccpet', 'codigo_fuente']
+        ordering = ['codigo_ccpet']
+
+
+class CargaPOAIProyecto(models.Model):
+    """Carga POAI por proyecto/BPIN (hoja 'Carga POAI' del v75).
+    265 proyectos de inversión 2027 con codigo rubro + BPIN + valor.
+    """
+    numero = models.IntegerField(unique=True)
+    codigo_rubro = models.CharField(max_length=50, verbose_name='Código Rubro Presupuestal')
+    codigo_fuente = models.CharField(max_length=10, blank=True)
+    nombre_fuente = models.CharField(max_length=200, blank=True)
+    proyecto_bpin = models.TextField(verbose_name='Proyecto / BPIN')
+    valor_poai_2027 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+
+    class Meta:
+        verbose_name = 'Carga POAI (Proyecto)'
+        verbose_name_plural = 'Carga POAI (Proyectos)'
+        ordering = ['numero']
+
+
+class ICOProyeccion(models.Model):
+    """Proyección ICO por actividad CIIU (hoja 'ICO' del v75).
+    20 actividades con proyección 2026-2036.
+    """
+    codigo_ciiu = models.CharField(max_length=10, unique=True, verbose_name='Código CIIU')
+    descripcion = models.CharField(max_length=400)
+    contribuyentes_2024 = models.IntegerField(default=0)
+    ico_liquidado_2024 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    proy_2026 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    proy_2027 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    proy_2028 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    proy_2029 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    proy_2030 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    proy_2031 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    proy_2032 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    proy_2033 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    proy_2034 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    proy_2035 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    proy_2036 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+
+    class Meta:
+        verbose_name = 'Proyección ICO'
+        verbose_name_plural = 'Proyecciones ICO'
+        ordering = ['codigo_ciiu']
+
+
+class PlantaDetalleCargo(models.Model):
+    """Detalle de planta de personal por cargo con proyección 10 años.
+    (hoja 'Planta Detalle' del v75, 52 cargos).
+    """
+    seccion = models.CharField(max_length=200, verbose_name='Sección')
+    nivel = models.CharField(max_length=50, verbose_name='Nivel')  # Directivo, Asesor, etc
+    denominacion = models.CharField(max_length=200, verbose_name='Denominación del Cargo')
+    codigo_cargo = models.CharField(max_length=20, blank=True)
+    grado = models.CharField(max_length=10, blank=True)
+    cantidad = models.IntegerField(default=1)
+    nombre_fuente = models.CharField(max_length=100, blank=True)
+    crece_por = models.CharField(max_length=50, blank=True,
+                                   help_text='Política (usa IPC+prod+puntos) o SMLV (usa % del SMLV)')
+    asig_mensual_2026 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    costo_anual_2026 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    costo_2027 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    costo_2028 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    costo_2029 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    costo_2030 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    costo_2031 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    costo_2032 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    costo_2033 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    costo_2034 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    costo_2035 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    costo_2036 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+
+    class Meta:
+        verbose_name = 'Planta Detalle Cargo'
+        verbose_name_plural = 'Planta Detalle Cargos'
+        ordering = ['seccion', 'nivel', 'denominacion']
+
+
+class ParametroAnualPredial(models.Model):
+    """Parámetros Predial año a año (hoja 'Predial' del v75, F4-F14).
+    % Eficiencia recaudo urbano/rural, % ajuste avalúo, % base cartera, etc.
+    """
+    anio = models.IntegerField(unique=True)
+    pct_eficiencia_urbano = models.DecimalField(max_digits=8, decimal_places=6, default=Decimal('0.6499'))
+    pct_eficiencia_rural = models.DecimalField(max_digits=8, decimal_places=6, default=Decimal('0.6499'))
+    pct_ajuste_avaluo = models.DecimalField(max_digits=8, decimal_places=6, default=Decimal('0.03'))
+    pct_base_cartera = models.DecimalField(max_digits=8, decimal_places=6, default=Decimal('0.50'))
+    pct_cartera_urbano = models.DecimalField(max_digits=8, decimal_places=6, default=Decimal('0.20'))
+    pct_cartera_rural = models.DecimalField(max_digits=8, decimal_places=6, default=Decimal('0.80'))
+
+    class Meta:
+        verbose_name = 'Parámetro Anual Predial'
+        verbose_name_plural = 'Parámetros Anuales Predial'
+        ordering = ['anio']
+
+
+class ParametroAnualPlanta(models.Model):
+    """Supuestos anuales de la Planta de Personal (hoja 'Costo Planta Personal').
+    IPC esperado, índice productividad, puntos salariales sindicales, etc.
+    """
+    anio = models.IntegerField(unique=True)
+    ipc_esperado = models.DecimalField(max_digits=8, decimal_places=6, default=Decimal('0.06'))
+    ipc_ref_mfmp = models.DecimalField(max_digits=8, decimal_places=6, default=Decimal('0.03'),
+                                        help_text='Referencia MFMP')
+    indice_productividad = models.DecimalField(max_digits=8, decimal_places=6, default=Decimal('0.015'))
+    puntos_salariales_sindicales = models.DecimalField(max_digits=8, decimal_places=6, default=Decimal('0.015'))
+
+    class Meta:
+        verbose_name = 'Parámetro Anual Planta'
+        verbose_name_plural = 'Parámetros Anuales Planta'
+        ordering = ['anio']
+
+
+class BaseEstampillasAnual(models.Model):
+    """Base cálculo estampillas por año (hoja 'Estampillas' del v75, F5-F13).
+    Valor POAI, gasto apropiado SEV, saldo neto base ppto, presupuesto SGR, etc.
+    """
+    anio = models.IntegerField(unique=True)
+    valor_total_poai = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    gasto_apropiado_sev_ppto = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    saldo_neto_ppto = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    presupuesto_sgr = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    gasto_apropiado_sev_sgr = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    saldo_neto_sgr = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    reservas_ppto_nc = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    cuentas_por_pagar_nc = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    superavit_fiscal = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+
+    class Meta:
+        verbose_name = 'Base Estampillas Anual'
+        verbose_name_plural = 'Base Estampillas Anual'
+        ordering = ['anio']

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Carga POAI Proyectos{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'mfmp_menu' %}">MFMP</a></li>
+<li class="breadcrumb-item active">Carga POAI</li>
+{% endblock %}
+{% block content %}
+<h4 class="mb-3"><i class="bi bi-file-earmark-plus"></i> Carga POAI 2027 · {{ filas|length }} proyectos con BPIN</h4>
+<div class="alert alert-info py-2 small">Total POAI 2027: <strong>${{ total|floatformat:0|intcomma }}</strong></div>
+<div class="card">
+    <div class="card-body p-0 table-responsive" style="max-height:75vh;">
+        <table class="table table-sm table-bordered table-hover mb-0" style="font-size:.72rem;">
+            <thead class="table-dark text-center sticky-top">
+                <tr><th>N°</th><th style="text-align:left;">Código Rubro</th><th>Fte</th><th style="text-align:left;">Fuente</th><th style="text-align:left;">Proyecto / BPIN</th><th>Valor 2027</th></tr>
+            </thead>
+            <tbody>
+                {% for f in filas %}
+                <tr>
+                    <td class="text-center">{{ f.numero }}</td>
+                    <td><code>{{ f.codigo_rubro }}</code></td>
+                    <td class="text-center">{{ f.codigo_fuente }}</td>
+                    <td class="small">{{ f.nombre_fuente|truncatechars:35 }}</td>
+                    <td class="small">{{ f.proyecto_bpin|truncatechars:80 }}</td>
+                    <td class="text-end">${{ f.valor_poai_2027|floatformat:0|intcomma }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

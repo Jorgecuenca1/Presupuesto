@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Proyección Ingresos 10y{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'mfmp_menu' %}">MFMP</a></li>
+<li class="breadcrumb-item active">Proyección Ingresos 10 años</li>
+{% endblock %}
+{% block content %}
+<h4 class="mb-3"><i class="bi bi-graph-up-arrow"></i> Proyección Ingresos 2027-2036 · {{ filas|length }} rubros CCPET</h4>
+<div class="card">
+    <div class="card-body p-0 table-responsive" style="max-height:75vh;">
+        <table class="table table-sm table-bordered table-hover mb-0" style="font-size:.68rem;">
+            <thead class="table-dark text-center sticky-top">
+                <tr>
+                    <th style="text-align:left;">Código CCPET</th>
+                    <th>Fte</th>
+                    <th style="text-align:left;">Descripción</th>
+                    <th>Ejec 2024</th>
+                    <th>Ejec 2025</th>
+                    <th>Aforo 2026</th>
+                    <th>%Prom.Hist</th>
+                    <th>Método</th>
+                    <th>2027</th><th>2028</th><th>2029</th><th>2030</th>
+                    <th>2031</th><th>2032</th><th>2033</th><th>2034</th>
+                    <th>2035</th><th>2036</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in filas %}
+                <tr>
+                    <td><code>{{ f.codigo_ccpet }}</code></td>
+                    <td class="text-center">{{ f.codigo_fuente }}</td>
+                    <td>{{ f.descripcion|truncatechars:45 }}</td>
+                    <td class="text-end">${{ f.ejec_2024|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.ejec_2025|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.aforo_2026|floatformat:0|intcomma }}</td>
+                    <td class="text-center">{{ f.pct_prom_historico|floatformat:4 }}</td>
+                    <td class="small">{{ f.metodo|truncatechars:20 }}</td>
+                    <td class="text-end">${{ f.proy_2027|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.proy_2028|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.proy_2029|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.proy_2030|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.proy_2031|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.proy_2032|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.proy_2033|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.proy_2034|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.proy_2035|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.proy_2036|floatformat:0|intcomma }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot class="table-dark">
+                <tr>
+                    <td colspan="8">TOTAL</td>
+                    <td class="text-end">${{ totales.p27|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ totales.p28|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ totales.p29|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ totales.p30|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ totales.p31|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ totales.p32|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ totales.p33|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ totales.p34|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ totales.p35|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ totales.p36|floatformat:0|intcomma }}</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+{% endblock %}

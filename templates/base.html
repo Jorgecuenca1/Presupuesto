@@ -125,6 +125,24 @@
         <a href="{% url 'ccpet_gastos' %}" class="nav-link {% if request.resolver_match.url_name == 'ccpet_gastos' %}active{% endif %}">
             <i class="bi bi-tag-fill"></i> CCPET Gastos
         </a>
+        <a href="{% url 'proyeccion_ingresos_10y' %}" class="nav-link {% if request.resolver_match.url_name == 'proyeccion_ingresos_10y' %}active{% endif %}">
+            <i class="bi bi-graph-up-arrow"></i> Proyección Ingresos 10y
+        </a>
+        <a href="{% url 'proyeccion_gastos_10y' %}" class="nav-link {% if request.resolver_match.url_name == 'proyeccion_gastos_10y' %}active{% endif %}">
+            <i class="bi bi-graph-down-arrow"></i> Proyección Gastos 10y
+        </a>
+        <a href="{% url 'carga_poai' %}" class="nav-link {% if request.resolver_match.url_name == 'carga_poai' %}active{% endif %}">
+            <i class="bi bi-file-earmark-plus"></i> Carga POAI (Proyectos)
+        </a>
+        <a href="{% url 'ico_proyeccion' %}" class="nav-link {% if request.resolver_match.url_name == 'ico_proyeccion' %}active{% endif %}">
+            <i class="bi bi-briefcase"></i> ICO Proyección CIIU
+        </a>
+        <a href="{% url 'planta_detalle' %}" class="nav-link {% if request.resolver_match.url_name == 'planta_detalle' %}active{% endif %}">
+            <i class="bi bi-person-badge"></i> Planta Detalle Cargos
+        </a>
+        <a href="{% url 'parametros_anuales' %}" class="nav-link {% if request.resolver_match.url_name == 'parametros_anuales' %}active{% endif %}">
+            <i class="bi bi-sliders"></i> Parámetros Anuales
+        </a>
         <a href="{% url 'panel_control' %}" class="nav-link {% if request.resolver_match.url_name == 'panel_control' %}active{% endif %}">
             <i class="bi bi-speedometer2"></i> Panel de Control
         </a>

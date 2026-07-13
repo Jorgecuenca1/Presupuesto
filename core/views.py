@@ -1487,3 +1487,99 @@ def panel_control_view(request):
     return render(request, 'core/panel_control.html', {
         'items': items, 'resumen': resumen, 'vigencia': V,
     })
+
+
+# ═══ FASES 7-9: Vistas proyecciones 10 años + POAI proyectos + ICO + Planta ═══
+
+@never_cache
+@login_required
+def proyeccion_ingresos_view(request):
+    """Proyección rubros ingreso 10 años (hoja 'Ingresos' del v75)."""
+    from .models import ProyeccionRubroIngreso
+    from django.db.models import Sum
+    filas = list(ProyeccionRubroIngreso.objects.all().order_by('codigo_ccpet', 'codigo_fuente'))
+    # Totales por año
+    totales = ProyeccionRubroIngreso.objects.aggregate(
+        p27=Sum('proy_2027'), p28=Sum('proy_2028'), p29=Sum('proy_2029'),
+        p30=Sum('proy_2030'), p31=Sum('proy_2031'), p32=Sum('proy_2032'),
+        p33=Sum('proy_2033'), p34=Sum('proy_2034'), p35=Sum('proy_2035'),
+        p36=Sum('proy_2036'),
+    )
+    return render(request, 'core/proyeccion_ingresos.html', {
+        'filas': filas, 'totales': totales,
+    })
+
+
+@never_cache
+@login_required
+def proyeccion_gastos_view(request):
+    """Proyección rubros gasto 10 años (hoja 'Gastos' del v75)."""
+    from .models import ProyeccionRubroGasto
+    from django.db.models import Sum
+    filas = list(ProyeccionRubroGasto.objects.all().order_by('codigo_ccpet', 'codigo_fuente'))
+    totales = ProyeccionRubroGasto.objects.aggregate(
+        p27=Sum('proy_2027'), p28=Sum('proy_2028'), p29=Sum('proy_2029'),
+        p30=Sum('proy_2030'), p31=Sum('proy_2031'), p32=Sum('proy_2032'),
+        p33=Sum('proy_2033'), p34=Sum('proy_2034'), p35=Sum('proy_2035'),
+        p36=Sum('proy_2036'),
+    )
+    return render(request, 'core/proyeccion_gastos.html', {
+        'filas': filas, 'totales': totales,
+    })
+
+
+@never_cache
+@login_required
+def carga_poai_view(request):
+    """Carga POAI 2027 por proyecto/BPIN (265 proyectos)."""
+    from .models import CargaPOAIProyecto
+    from django.db.models import Sum
+    filas = list(CargaPOAIProyecto.objects.all().order_by('numero'))
+    total = CargaPOAIProyecto.objects.aggregate(t=Sum('valor_poai_2027'))['t'] or 0
+    return render(request, 'core/carga_poai.html', {'filas': filas, 'total': total})
+
+
+@never_cache
+@login_required
+def ico_proyeccion_view(request):
+    """ICO proyección por actividad CIIU (20 actividades × 11 años)."""
+    from .models import ICOProyeccion
+    from django.db.models import Sum
+    filas = list(ICOProyeccion.objects.all().order_by('-ico_liquidado_2024'))
+    tot = ICOProyeccion.objects.aggregate(
+        p26=Sum('proy_2026'), p27=Sum('proy_2027'), p28=Sum('proy_2028'),
+        p29=Sum('proy_2029'), p30=Sum('proy_2030'), p31=Sum('proy_2031'),
+        p32=Sum('proy_2032'), p33=Sum('proy_2033'), p34=Sum('proy_2034'),
+        p35=Sum('proy_2035'), p36=Sum('proy_2036'), lic=Sum('ico_liquidado_2024'),
+        contr=Sum('contribuyentes_2024'),
+    )
+    return render(request, 'core/ico_proyeccion.html', {'filas': filas, 'total': tot})
+
+
+@never_cache
+@login_required
+def planta_detalle_view(request):
+    """Planta detalle por cargo (52 cargos × 10 años)."""
+    from .models import PlantaDetalleCargo
+    from django.db.models import Sum
+    filas = list(PlantaDetalleCargo.objects.all().order_by('seccion', 'nivel', 'denominacion'))
+    tot = PlantaDetalleCargo.objects.aggregate(
+        cargos=Sum('cantidad'),
+        c26=Sum('costo_anual_2026'), c27=Sum('costo_2027'), c28=Sum('costo_2028'),
+        c29=Sum('costo_2029'), c30=Sum('costo_2030'), c31=Sum('costo_2031'),
+        c32=Sum('costo_2032'), c33=Sum('costo_2033'), c34=Sum('costo_2034'),
+        c35=Sum('costo_2035'), c36=Sum('costo_2036'),
+    )
+    return render(request, 'core/planta_detalle.html', {'filas': filas, 'total': tot})
+
+
+@never_cache
+@login_required
+def parametros_anuales_view(request):
+    """Parámetros anuales (Predial + Planta + Estampillas) por año."""
+    from .models import ParametroAnualPredial, ParametroAnualPlanta, BaseEstampillasAnual
+    return render(request, 'core/parametros_anuales.html', {
+        'predial': ParametroAnualPredial.objects.all().order_by('anio'),
+        'planta': ParametroAnualPlanta.objects.all().order_by('anio'),
+        'estampillas': BaseEstampillasAnual.objects.all().order_by('anio'),
+    })

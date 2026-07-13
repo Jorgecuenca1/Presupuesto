@@ -29,5 +29,12 @@ urlpatterns = [
     path('mfmp/refinanciacion/', views.refinanciacion_view, name='refinanciacion'),
     path('mfmp/ccpet-ingresos/', views.ccpet_ingresos_view, name='ccpet_ingresos'),
     path('mfmp/ccpet-gastos/', views.ccpet_gastos_view, name='ccpet_gastos'),
+
+    path('mfmp/proyeccion-ingresos/', views.proyeccion_ingresos_view, name='proyeccion_ingresos_10y'),
+    path('mfmp/proyeccion-gastos/', views.proyeccion_gastos_view, name='proyeccion_gastos_10y'),
+    path('mfmp/carga-poai/', views.carga_poai_view, name='carga_poai'),
+    path('mfmp/ico-proyeccion/', views.ico_proyeccion_view, name='ico_proyeccion'),
+    path('mfmp/planta-detalle/', views.planta_detalle_view, name='planta_detalle'),
+    path('mfmp/parametros-anuales/', views.parametros_anuales_view, name='parametros_anuales'),
     path('panel-control/', views.panel_control_view, name='panel_control'),
 ]

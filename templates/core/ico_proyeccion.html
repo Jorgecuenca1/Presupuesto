@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}ICO Proyección{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'mfmp_menu' %}">MFMP</a></li>
+<li class="breadcrumb-item active">ICO por Actividad</li>
+{% endblock %}
+{% block content %}
+<h4 class="mb-3"><i class="bi bi-briefcase"></i> ICO por Actividad CIIU · Proyección 2026-2036</h4>
+<div class="alert alert-info py-2 small">
+    Total ICO liquidado 2024: <strong>${{ total.lic|floatformat:0|intcomma }}</strong> · {{ total.contr|floatformat:0 }} contribuyentes en {{ filas|length }} actividades
+</div>
+<div class="card">
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-sm table-bordered table-hover mb-0" style="font-size:.72rem;">
+            <thead class="table-dark text-center sticky-top">
+                <tr>
+                    <th>CIIU</th>
+                    <th style="text-align:left;">Descripción</th>
+                    <th>Contrib. 2024</th>
+                    <th>ICO 2024</th>
+                    <th>2026</th><th>2027</th><th>2028</th><th>2029</th><th>2030</th>
+                    <th>2031</th><th>2032</th><th>2033</th><th>2034</th><th>2035</th><th>2036</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in filas %}
+                <tr>
+                    <td class="text-center"><code>{{ f.codigo_ciiu }}</code></td>
+                    <td>{{ f.descripcion|truncatechars:50 }}</td>
+                    <td class="text-center">{{ f.contribuyentes_2024 }}</td>
+                    <td class="text-end fw-bold">${{ f.ico_liquidado_2024|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.proy_2026|floatformat:0|intcomma }}</td>
+                    <td class="text-end table-warning">${{ f.proy_2027|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.proy_2028|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.proy_2029|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.proy_2030|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.proy_2031|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.proy_2032|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.proy_2033|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.proy_2034|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.proy_2035|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.proy_2036|floatformat:0|intcomma }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot class="table-dark">
+                <tr>
+                    <td colspan="3">TOTAL</td>
+                    <td class="text-end">${{ total.lic|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ total.p26|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ total.p27|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ total.p28|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ total.p29|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ total.p30|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ total.p31|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ total.p32|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ total.p33|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ total.p34|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ total.p35|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ total.p36|floatformat:0|intcomma }}</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+{% endblock %}

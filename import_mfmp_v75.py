@@ -26,6 +26,9 @@ from core.models import (
     CuadrePorFuente, SaldoVFPorFuente, IngresoCorrienteLey358,
     Refinanciacion, RefinanciacionProyeccion,
     CCPETIngreso, CCPETGasto, ParametrosSistema,
+    ProyeccionRubroIngreso, ProyeccionRubroGasto,
+    CargaPOAIProyecto, ICOProyeccion, PlantaDetalleCargo,
+    ParametroAnualPredial, ParametroAnualPlanta, BaseEstampillasAnual,
 )
 
 
@@ -338,6 +341,240 @@ def importar(xlsx_path):
         )
         n += 1
     print(f'✓ CCPET Gastos 2027:             {n:>5}')
+
+    # ═══ 13) PROYECCIÓN RUBROS INGRESO 10 años (hoja 'Ingresos') ═══════
+    ws = wb['Ingresos']
+    n = 0
+    # Headers en F1. Datos desde F2. 40 columnas.
+    # cols: 1=Cod, 2=Fte, 3=NomFuente, 4=Desc, 5=Ej2024, 6=Ej2025, 7=Aforo2026,
+    # 8=RecaudoYTD, 9=%PromHist, 10=ProyDic, 11=Metodo, 12-21=2027-2036
+    for r in range(2, ws.max_row + 1):
+        cod = ws.cell(row=r, column=1).value
+        if not cod: continue
+        fte = str(ws.cell(row=r, column=2).value or '').strip()
+        ProyeccionRubroIngreso.objects.update_or_create(
+            codigo_ccpet=str(cod).strip(), codigo_fuente=fte,
+            defaults={
+                'nombre_fuente': str(ws.cell(row=r, column=3).value or '')[:200],
+                'descripcion': str(ws.cell(row=r, column=4).value or '')[:400],
+                'ejec_2024': D(ws.cell(row=r, column=5).value),
+                'ejec_2025': D(ws.cell(row=r, column=6).value),
+                'aforo_2026': D(ws.cell(row=r, column=7).value),
+                'recaudo_ytd_2026': D(ws.cell(row=r, column=8).value),
+                'pct_prom_historico': D(ws.cell(row=r, column=9).value),
+                'proyeccion_dic_2026': D(ws.cell(row=r, column=10).value),
+                'metodo': str(ws.cell(row=r, column=11).value or '')[:100],
+                'proy_2027': D(ws.cell(row=r, column=12).value),
+                'proy_2028': D(ws.cell(row=r, column=13).value),
+                'proy_2029': D(ws.cell(row=r, column=14).value),
+                'proy_2030': D(ws.cell(row=r, column=15).value),
+                'proy_2031': D(ws.cell(row=r, column=16).value),
+                'proy_2032': D(ws.cell(row=r, column=17).value),
+                'proy_2033': D(ws.cell(row=r, column=18).value),
+                'proy_2034': D(ws.cell(row=r, column=19).value),
+                'proy_2035': D(ws.cell(row=r, column=20).value),
+                'proy_2036': D(ws.cell(row=r, column=21).value),
+            },
+        )
+        n += 1
+    print(f'✓ Proyección Rubros Ingreso:     {n:>5}')
+
+    # ═══ 14) PROYECCIÓN RUBROS GASTO 10 años (hoja 'Gastos') ═══════════
+    ws = wb['Gastos']
+    n = 0
+    # cols: 1=Cod, 2=Fte, 3=NomFuente, 4=Desc, 5=Categoria,
+    # 6=Aprop2026, 7=CompMayo, 8=ProyDic, 9=Metodo, 10-19=2027-2036
+    for r in range(2, ws.max_row + 1):
+        cod = ws.cell(row=r, column=1).value
+        if not cod: continue
+        fte = str(ws.cell(row=r, column=2).value or '').strip()
+        ProyeccionRubroGasto.objects.update_or_create(
+            codigo_ccpet=str(cod).strip(), codigo_fuente=fte,
+            defaults={
+                'nombre_fuente': str(ws.cell(row=r, column=3).value or '')[:200],
+                'descripcion': str(ws.cell(row=r, column=4).value or '')[:400],
+                'categoria': str(ws.cell(row=r, column=5).value or '')[:100],
+                'apropiacion_2026': D(ws.cell(row=r, column=6).value),
+                'compromiso_mayo_2026': D(ws.cell(row=r, column=7).value),
+                'proyeccion_dic_2026': D(ws.cell(row=r, column=8).value),
+                'metodo': str(ws.cell(row=r, column=9).value or '')[:100],
+                'proy_2027': D(ws.cell(row=r, column=10).value),
+                'proy_2028': D(ws.cell(row=r, column=11).value),
+                'proy_2029': D(ws.cell(row=r, column=12).value),
+                'proy_2030': D(ws.cell(row=r, column=13).value),
+                'proy_2031': D(ws.cell(row=r, column=14).value),
+                'proy_2032': D(ws.cell(row=r, column=15).value),
+                'proy_2033': D(ws.cell(row=r, column=16).value),
+                'proy_2034': D(ws.cell(row=r, column=17).value),
+                'proy_2035': D(ws.cell(row=r, column=18).value),
+                'proy_2036': D(ws.cell(row=r, column=19).value),
+            },
+        )
+        n += 1
+    print(f'✓ Proyección Rubros Gasto:       {n:>5}')
+
+    # ═══ 15) CARGA POAI PROYECTOS (BPIN) ═══════════════════════════════
+    ws = wb['Carga POAI']
+    n = 0
+    for r in range(5, ws.max_row + 1):
+        numero = ws.cell(row=r, column=1).value
+        if numero is None: continue
+        try: numero = int(numero)
+        except: continue
+        CargaPOAIProyecto.objects.update_or_create(
+            numero=numero,
+            defaults={
+                'codigo_rubro': str(ws.cell(row=r, column=2).value or '')[:50],
+                'codigo_fuente': str(ws.cell(row=r, column=3).value or '')[:10],
+                'nombre_fuente': str(ws.cell(row=r, column=4).value or '')[:200],
+                'proyecto_bpin': str(ws.cell(row=r, column=5).value or '')[:2000],
+                'valor_poai_2027': D(ws.cell(row=r, column=6).value),
+            },
+        )
+        n += 1
+    print(f'✓ Carga POAI Proyectos:          {n:>5}')
+
+    # ═══ 16) ICO PROYECCIÓN por actividad CIIU ═══════════════════════════
+    ws = wb['ICO']
+    n = 0
+    for r in range(5, ws.max_row + 1):
+        ciiu = ws.cell(row=r, column=1).value
+        if not ciiu: continue
+        ICOProyeccion.objects.update_or_create(
+            codigo_ciiu=str(ciiu).strip(),
+            defaults={
+                'descripcion': str(ws.cell(row=r, column=2).value or '')[:400],
+                'contribuyentes_2024': int(D(ws.cell(row=r, column=3).value)),
+                'ico_liquidado_2024': D(ws.cell(row=r, column=4).value),
+                'proy_2026': D(ws.cell(row=r, column=5).value),
+                'proy_2027': D(ws.cell(row=r, column=6).value),
+                'proy_2028': D(ws.cell(row=r, column=7).value),
+                'proy_2029': D(ws.cell(row=r, column=8).value),
+                'proy_2030': D(ws.cell(row=r, column=9).value),
+                'proy_2031': D(ws.cell(row=r, column=10).value),
+                'proy_2032': D(ws.cell(row=r, column=11).value),
+                'proy_2033': D(ws.cell(row=r, column=12).value),
+                'proy_2034': D(ws.cell(row=r, column=13).value),
+                'proy_2035': D(ws.cell(row=r, column=14).value),
+                'proy_2036': D(ws.cell(row=r, column=15).value),
+            },
+        )
+        n += 1
+    print(f'✓ ICO Proyección CIIU:           {n:>5}')
+
+    # ═══ 17) PLANTA DETALLE por cargo (52 filas) ═══════════════════════
+    ws = wb['Planta Detalle']
+    n = 0
+    for r in range(5, ws.max_row + 1):
+        sec = ws.cell(row=r, column=1).value
+        denom = ws.cell(row=r, column=3).value
+        if not sec or not denom: continue
+        PlantaDetalleCargo.objects.update_or_create(
+            seccion=str(sec).strip()[:200],
+            nivel=str(ws.cell(row=r, column=2).value or '')[:50],
+            denominacion=str(denom).strip()[:200],
+            codigo_cargo=str(ws.cell(row=r, column=4).value or '')[:20],
+            defaults={
+                'grado': str(ws.cell(row=r, column=5).value or '')[:10],
+                'cantidad': int(D(ws.cell(row=r, column=6).value) or 1),
+                'nombre_fuente': str(ws.cell(row=r, column=7).value or '')[:100],
+                'crece_por': str(ws.cell(row=r, column=8).value or '')[:50],
+                'asig_mensual_2026': D(ws.cell(row=r, column=9).value),
+                'costo_anual_2026': D(ws.cell(row=r, column=10).value),
+                'costo_2027': D(ws.cell(row=r, column=11).value),
+                'costo_2028': D(ws.cell(row=r, column=12).value),
+                'costo_2029': D(ws.cell(row=r, column=13).value),
+                'costo_2030': D(ws.cell(row=r, column=14).value),
+                'costo_2031': D(ws.cell(row=r, column=15).value),
+                'costo_2032': D(ws.cell(row=r, column=16).value),
+                'costo_2033': D(ws.cell(row=r, column=17).value),
+                'costo_2034': D(ws.cell(row=r, column=18).value),
+                'costo_2035': D(ws.cell(row=r, column=19).value),
+                'costo_2036': D(ws.cell(row=r, column=20).value),
+            },
+        )
+        n += 1
+    print(f'✓ Planta Detalle Cargos:         {n:>5}')
+
+    # ═══ 18) PARÁMETROS ANUALES PREDIAL ══════════════════════════════════
+    ws = wb['Predial']
+    # F4: años cols 5..25 impares
+    anios_predial = []
+    for c in range(5, 26):
+        v = ws.cell(row=4, column=c).value
+        if v and isinstance(v, (int, float)) and 2020 <= int(v) <= 2050:
+            anios_predial.append((c, int(v)))
+    n = 0
+    for col, anio in anios_predial:
+        eff_urb = D(ws.cell(row=5, column=col).value)
+        eff_rur = D(ws.cell(row=6, column=col).value)
+        aju = D(ws.cell(row=7, column=col).value)
+        base_c = D(ws.cell(row=8, column=col).value)
+        cart_urb = D(ws.cell(row=9, column=col).value)
+        cart_rur = D(ws.cell(row=10, column=col).value) if ws.cell(row=10, column=col).value else Decimal('0.80')
+        ParametroAnualPredial.objects.update_or_create(
+            anio=anio, defaults={
+                'pct_eficiencia_urbano': eff_urb,
+                'pct_eficiencia_rural': eff_rur,
+                'pct_ajuste_avaluo': aju,
+                'pct_base_cartera': base_c,
+                'pct_cartera_urbano': cart_urb,
+                'pct_cartera_rural': cart_rur,
+            },
+        )
+        n += 1
+    print(f'✓ Parámetros Anuales Predial:    {n:>5}')
+
+    # ═══ 19) PARÁMETROS ANUALES PLANTA (Costo Planta Personal) ═══════════
+    ws = wb['Costo Planta Personal']
+    anios_planta = []
+    for c in range(3, 14):
+        v = ws.cell(row=5, column=c).value
+        if v and isinstance(v, (int, float)) and 2020 <= int(v) <= 2050:
+            anios_planta.append((c, int(v)))
+    n = 0
+    for col, anio in anios_planta:
+        ipc = D(ws.cell(row=6, column=col).value)
+        ipc_ref = D(ws.cell(row=7, column=col).value)
+        prod = D(ws.cell(row=8, column=col).value)
+        pts = D(ws.cell(row=9, column=col).value)
+        if ipc == 0 and ipc_ref == 0 and prod == 0:
+            continue
+        ParametroAnualPlanta.objects.update_or_create(
+            anio=anio, defaults={
+                'ipc_esperado': ipc,
+                'ipc_ref_mfmp': ipc_ref,
+                'indice_productividad': prod,
+                'puntos_salariales_sindicales': pts,
+            },
+        )
+        n += 1
+    print(f'✓ Parámetros Anuales Planta:     {n:>5}')
+
+    # ═══ 20) BASE ESTAMPILLAS por año ═════════════════════════════════════
+    ws = wb['Estampillas']
+    anios_est = []
+    for c in range(3, 14):
+        v = ws.cell(row=4, column=c).value
+        if v and isinstance(v, (int, float)) and 2020 <= int(v) <= 2050:
+            anios_est.append((c, int(v)))
+    n = 0
+    for col, anio in anios_est:
+        BaseEstampillasAnual.objects.update_or_create(
+            anio=anio, defaults={
+                'valor_total_poai': D(ws.cell(row=5, column=col).value),
+                'gasto_apropiado_sev_ppto': D(ws.cell(row=6, column=col).value),
+                'saldo_neto_ppto': D(ws.cell(row=7, column=col).value),
+                'presupuesto_sgr': D(ws.cell(row=8, column=col).value),
+                'gasto_apropiado_sev_sgr': D(ws.cell(row=9, column=col).value),
+                'saldo_neto_sgr': D(ws.cell(row=10, column=col).value),
+                'reservas_ppto_nc': D(ws.cell(row=11, column=col).value),
+                'cuentas_por_pagar_nc': D(ws.cell(row=12, column=col).value),
+                'superavit_fiscal': D(ws.cell(row=13, column=col).value),
+            },
+        )
+        n += 1
+    print(f'✓ Base Estampillas Anual:        {n:>5}')
 
     # ═══ Sincronizar ICLD calculado de ParametrosSistema desde Plan Financiero
     # (usuario pidió: ICLD 2027 debe venir del Plan Financiero proyectado 2027-2036)

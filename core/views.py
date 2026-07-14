@@ -6,6 +6,16 @@ from django.contrib import messages
 from django.db.models import Sum, Count
 from decimal import Decimal
 from .forms import LoginForm, RegistroForm, ParametrosForm, TablaConcejoPersoneriaForm
+from .mfmp_recalculo import recalcular_mfmp
+
+
+def _recalc_perezoso():
+    """Ejecuta recalculo MFMP idempotente antes de mostrar vistas. Idempotente y protegido."""
+    try:
+        recalcular_mfmp()
+    except Exception:
+        pass
+
 from .models import (
     ParametrosSistema, TablaConcejoPersoneria, PersoneriaSMLVProgresion,
     VariableMacro, TechoInversion,
@@ -997,6 +1007,7 @@ def _sincronizar_techos_desde_fuentes(vigencia):
 @never_cache
 @login_required
 def techos_inversion_view(request):
+    _recalc_perezoso()
     """Reporte Fuentes y Usos: por cada fuente muestra:
     Ingresos + Rendimientos = Total Ingresos
     - Funcionamiento - Deuda = Total Inversion
@@ -1068,6 +1079,7 @@ def techos_inversion_view(request):
 @never_cache
 @login_required
 def plan_financiero_view(request):
+    _recalc_perezoso()
     """Plan Financiero 10 años (A. Ingresos, B. Fto, C. Deuda, D. Inversión)."""
     from .models import PlanFinancieroLinea
     anios = sorted(set(PlanFinancieroLinea.objects.values_list('anio', flat=True)))
@@ -1090,6 +1102,7 @@ def plan_financiero_view(request):
 @never_cache
 @login_required
 def icld_proyectado_view(request):
+    _recalc_perezoso()
     """ICLD proyectado 10 años por fuente."""
     from .models import ICLDProyectado, FuenteFinanciacion
     from django.db.models import Sum
@@ -1122,6 +1135,7 @@ def icld_proyectado_view(request):
 @never_cache
 @login_required
 def ley_617_view(request):
+    _recalc_perezoso()
     """Ley 617/2000 proyectada: GF vs ICLD Neto + semáforo cumplimiento."""
     from .models import Ley617Proyectado
     filas = list(Ley617Proyectado.objects.all().order_by('anio'))
@@ -1131,6 +1145,7 @@ def ley_617_view(request):
 @never_cache
 @login_required
 def poai_proyectado_view(request):
+    _recalc_perezoso()
     """POAI 10 años por fuente + totales."""
     from .models import POAIProyectado, FuenteFinanciacion
     from django.db.models import Sum
@@ -1154,6 +1169,7 @@ def poai_proyectado_view(request):
 @never_cache
 @login_required
 def poai_dependencias_view(request):
+    _recalc_perezoso()
     """POAI por dependencia con % participación."""
     from .models import POAIPorDependencia
     from django.db.models import Sum
@@ -1182,6 +1198,7 @@ def poai_dependencias_view(request):
 @never_cache
 @login_required
 def cuadre_fuente_view(request):
+    _recalc_perezoso()
     """Cuadre Ingreso vs Gasto por fuente (validador)."""
     from .models import CuadrePorFuente, FuenteFinanciacion
     anios = sorted(set(CuadrePorFuente.objects.values_list('anio', flat=True)), reverse=True)
@@ -1494,6 +1511,7 @@ def panel_control_view(request):
 @never_cache
 @login_required
 def proyeccion_ingresos_view(request):
+    _recalc_perezoso()
     """Proyección rubros ingreso 10 años (hoja 'Ingresos' del v75)."""
     from .models import ProyeccionRubroIngreso
     from django.db.models import Sum
@@ -1513,6 +1531,7 @@ def proyeccion_ingresos_view(request):
 @never_cache
 @login_required
 def proyeccion_gastos_view(request):
+    _recalc_perezoso()
     """Proyección rubros gasto 10 años (hoja 'Gastos' del v75)."""
     from .models import ProyeccionRubroGasto
     from django.db.models import Sum

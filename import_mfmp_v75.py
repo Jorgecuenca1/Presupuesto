@@ -345,12 +345,20 @@ def importar(xlsx_path):
     # ═══ 13) PROYECCIÓN RUBROS INGRESO 10 años (hoja 'Ingresos') ═══════
     ws = wb['Ingresos']
     n = 0
-    # Headers en F1. Datos desde F2. 40 columnas.
-    # cols: 1=Cod, 2=Fte, 3=NomFuente, 4=Desc, 5=Ej2024, 6=Ej2025, 7=Aforo2026,
-    # 8=RecaudoYTD, 9=%PromHist, 10=ProyDic, 11=Metodo, 12-21=2027-2036
-    for r in range(2, ws.max_row + 1):
+    # Limpiar los importados previos que sean rubros zombi (todo en 0) para
+    # no arrastrar registros que el Excel v75 no tiene activos.
+    ProyeccionRubroIngreso.objects.filter(
+        ejec_2024=0, aforo_2026=0, proyeccion_dic_2026=0, proy_2027=0
+    ).delete()
+    # Headers en F1. Datos desde F2. Excel SUM(L2:L125) → solo hasta fila 125
+    # (aunque max_row llegue a 137, las últimas filas son notas o vacías).
+    for r in range(2, min(ws.max_row + 1, 126)):
         cod = ws.cell(row=r, column=1).value
         if not cod: continue
+        # Excluir rubros muertos: sin valores en ninguna columna monetaria
+        vals_check = [ws.cell(row=r, column=c).value for c in (5, 7, 10, 12)]
+        if not any(v for v in vals_check if isinstance(v, (int, float)) and v):
+            continue
         fte = str(ws.cell(row=r, column=2).value or '').strip()
         ProyeccionRubroIngreso.objects.update_or_create(
             codigo_ccpet=str(cod).strip(), codigo_fuente=fte,
@@ -382,11 +390,16 @@ def importar(xlsx_path):
     # ═══ 14) PROYECCIÓN RUBROS GASTO 10 años (hoja 'Gastos') ═══════════
     ws = wb['Gastos']
     n = 0
-    # cols: 1=Cod, 2=Fte, 3=NomFuente, 4=Desc, 5=Categoria,
-    # 6=Aprop2026, 7=CompMayo, 8=ProyDic, 9=Metodo, 10-19=2027-2036
-    for r in range(2, ws.max_row + 1):
+    ProyeccionRubroGasto.objects.filter(
+        apropiacion_2026=0, proyeccion_dic_2026=0, proy_2027=0
+    ).delete()
+    # Excel Gastos SUM va hasta fila 335. Excluir zombis.
+    for r in range(2, min(ws.max_row + 1, 336)):
         cod = ws.cell(row=r, column=1).value
         if not cod: continue
+        vals_check = [ws.cell(row=r, column=c).value for c in (6, 8, 10)]
+        if not any(v for v in vals_check if isinstance(v, (int, float)) and v):
+            continue
         fte = str(ws.cell(row=r, column=2).value or '').strip()
         ProyeccionRubroGasto.objects.update_or_create(
             codigo_ccpet=str(cod).strip(), codigo_fuente=fte,

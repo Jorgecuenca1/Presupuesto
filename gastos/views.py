@@ -22,6 +22,16 @@ from .utils import recalcular_rubros_metodo
 from django.views.decorators.cache import never_cache
 
 
+def _recalc_perezoso():
+    """Recalculo MFMP idempotente al abrir vista (garantiza consistencia)."""
+    try:
+        from core.mfmp_recalculo import recalcular_mfmp
+        recalcular_mfmp()
+    except Exception:
+        pass
+
+
+
 def _vigencia():
     p = ParametrosSistema.objects.filter(activo=True).first()
     return p.vigencia if p else 2026
@@ -700,6 +710,7 @@ def plantas_personal_recalcular(request):
 @never_cache
 @login_required
 def reporte_gastos(request):
+    _recalc_perezoso()
     """Reporte estilo Anexo 2: agrupado por SECCION (Unidad Ejecutora).
 
     Cada sección muestra su árbol CUIPO (rubros con código que empieza con '2.')

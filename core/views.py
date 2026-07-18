@@ -59,6 +59,7 @@ def logout_view(request):
 
 @login_required
 def dashboard(request):
+    _recalc_perezoso()
     from ingresos.models import ContribuyentePredial, ContribuyenteICA, RubroIngreso, ResumenCalculo
     from gastos.models import RubroGasto
     params = ParametrosSistema.objects.filter(activo=True).first()

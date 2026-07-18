@@ -25,6 +25,15 @@ from .utils import (
 )
 
 
+def _recalc_perezoso():
+    """Recalculo MFMP idempotente al abrir vista (garantiza consistencia)."""
+    try:
+        from core.mfmp_recalculo import recalcular_mfmp
+        recalcular_mfmp()
+    except Exception:
+        pass
+
+
 def _vigencia():
     p = ParametrosSistema.objects.filter(activo=True).first()
     return p.vigencia if p else 2026
@@ -332,6 +341,7 @@ def importar_predial(request):
 # ─── CÁLCULO PREDIAL ──────────────────────────────────────────────
 @login_required
 def calculo_predial(request):
+    _recalc_perezoso()
     vigencia = _vigencia()
     params = ParametrosSistema.objects.filter(vigencia=vigencia).first()
     if request.method == 'POST':
@@ -514,6 +524,7 @@ def importar_ica(request):
 # ─── CÁLCULO ICA ──────────────────────────────────────────────────
 @login_required
 def calculo_ica(request):
+    _recalc_perezoso()
     vigencia = _vigencia()
     params = ParametrosSistema.objects.filter(vigencia=vigencia).first()
     if request.method == 'POST':
@@ -808,6 +819,7 @@ def calcular_todos(request):
 # ─── REPORTE ──────────────────────────────────────────────────────
 @login_required
 def reporte_ingresos(request):
+    _recalc_perezoso()
     vigencia = _vigencia()
     params = ParametrosSistema.objects.filter(vigencia=vigencia).first()
     # Recalcula automáticamente en cada visita para que el Anexo 1 refleje los

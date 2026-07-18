@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Vigencias Futuras{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Vigencias Futuras</li>{% endblock %}
+{% block content %}
+<h4 class="mb-3"><i class="bi bi-file-earmark-check"></i> Cuadro de Vigencias Futuras Aprobadas</h4>
+<div class="alert alert-info py-2 small">
+    Vigencias futuras aprobadas por acuerdo del Concejo u ordenanza, con el objeto,
+    fuente de financiación y los valores comprometidos por año. Total general:
+    <strong>${{ total_general|floatformat:0|intcomma }}</strong>
+</div>
+
+<div class="card">
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-sm table-bordered table-hover mb-0 align-middle" style="font-size:.78rem;">
+            <thead class="table-dark text-center sticky-top">
+                <tr>
+                    <th>N°</th>
+                    <th style="min-width:180px;text-align:left;">Acto de Aprobación</th>
+                    <th style="min-width:220px;text-align:left;">Objeto / Proyecto</th>
+                    <th style="min-width:150px;text-align:left;">Fuente</th>
+                    <th>Cód</th>
+                    {% for a in anios %}<th>{{ a }}</th>{% endfor %}
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in filas %}
+                <tr>
+                    <td class="text-center fw-bold">{{ f.numero }}</td>
+                    <td class="small">{{ f.acto_aprobacion }}</td>
+                    <td class="small">{{ f.objeto_proyecto|truncatechars:80 }}</td>
+                    <td class="small">{{ f.nombre_fuente }}</td>
+                    <td class="text-center">{{ f.codigo_fuente }}</td>
+                    <td class="text-end">${{ f.val_2026|floatformat:0|intcomma }}</td>
+                    <td class="text-end table-warning">${{ f.val_2027|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.val_2028|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.val_2029|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.val_2030|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.val_2031|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.val_2032|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.val_2033|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.val_2034|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.val_2035|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.val_2036|floatformat:0|intcomma }}</td>
+                    <td class="text-end fw-bold table-info">${{ f.total|floatformat:0|intcomma }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="17" class="text-center text-muted py-4">No hay vigencias futuras aprobadas cargadas.</td></tr>
+                {% endfor %}
+            </tbody>
+            <tfoot class="table-dark">
+                <tr>
+                    <td colspan="5">TOTAL</td>
+                    {% for t in totales %}<td class="text-end">${{ t|floatformat:0|intcomma }}</td>{% endfor %}
+                    <td class="text-end">${{ total_general|floatformat:0|intcomma }}</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+{% endblock %}

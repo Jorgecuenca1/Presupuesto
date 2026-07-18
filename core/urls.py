@@ -36,5 +36,6 @@ urlpatterns = [
     path('mfmp/ico-proyeccion/', views.ico_proyeccion_view, name='ico_proyeccion'),
     path('mfmp/planta-detalle/', views.planta_detalle_view, name='planta_detalle'),
     path('mfmp/parametros-anuales/', views.parametros_anuales_view, name='parametros_anuales'),
+    path('mfmp/vigencias-futuras/', views.vigencias_futuras_view, name='vigencias_futuras_cuadro'),
     path('panel-control/', views.panel_control_view, name='panel_control'),
 ]

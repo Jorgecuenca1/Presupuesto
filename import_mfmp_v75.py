@@ -29,6 +29,7 @@ from core.models import (
     ProyeccionRubroIngreso, ProyeccionRubroGasto,
     CargaPOAIProyecto, ICOProyeccion, PlantaDetalleCargo,
     ParametroAnualPredial, ParametroAnualPlanta, BaseEstampillasAnual,
+    VigenciaFuturaAprobada,
 )
 
 
@@ -588,6 +589,47 @@ def importar(xlsx_path):
         )
         n += 1
     print(f'✓ Base Estampillas Anual:        {n:>5}')
+
+    # ═══ 21) VIGENCIAS FUTURAS APROBADAS (hoja 'Vigencias Futuras') ═════
+    ws = wb['Vigencias Futuras']
+    # F3: headers (N°, Acto, Objeto, Fuente, 2026-2036, Total, Cód Fuente)
+    n = 0
+    for r in range(4, ws.max_row + 1):
+        numero = ws.cell(row=r, column=1).value
+        if numero is None:
+            continue
+        try:
+            numero = int(numero)
+        except (TypeError, ValueError):
+            continue
+        acto = ws.cell(row=r, column=2).value
+        objeto = ws.cell(row=r, column=3).value
+        fuente = ws.cell(row=r, column=4).value
+        # Sin acto ni objeto: saltar filas plantilla vacías
+        if not acto and not objeto:
+            continue
+        cod_fte = ws.cell(row=r, column=17).value  # col Q
+        VigenciaFuturaAprobada.objects.update_or_create(
+            numero=numero, defaults={
+                'acto_aprobacion': str(acto or '')[:200],
+                'objeto_proyecto': str(objeto or ''),
+                'nombre_fuente': str(fuente or '')[:200],
+                'codigo_fuente': str(cod_fte or '')[:20],
+                'val_2026': D(ws.cell(row=r, column=5).value),
+                'val_2027': D(ws.cell(row=r, column=6).value),
+                'val_2028': D(ws.cell(row=r, column=7).value),
+                'val_2029': D(ws.cell(row=r, column=8).value),
+                'val_2030': D(ws.cell(row=r, column=9).value),
+                'val_2031': D(ws.cell(row=r, column=10).value),
+                'val_2032': D(ws.cell(row=r, column=11).value),
+                'val_2033': D(ws.cell(row=r, column=12).value),
+                'val_2034': D(ws.cell(row=r, column=13).value),
+                'val_2035': D(ws.cell(row=r, column=14).value),
+                'val_2036': D(ws.cell(row=r, column=15).value),
+            }
+        )
+        n += 1
+    print(f'✓ Vigencias Futuras Aprobadas:   {n:>5}')
 
     # ═══ Sincronizar ICLD calculado de ParametrosSistema desde Plan Financiero
     # (usuario pidió: ICLD 2027 debe venir del Plan Financiero proyectado 2027-2036)

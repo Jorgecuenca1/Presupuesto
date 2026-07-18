@@ -964,3 +964,44 @@ class BaseEstampillasAnual(models.Model):
         verbose_name = 'Base Estampillas Anual'
         verbose_name_plural = 'Base Estampillas Anual'
         ordering = ['anio']
+
+
+class VigenciaFuturaAprobada(models.Model):
+    """Vigencias futuras aprobadas por acuerdo (hoja 'Vigencias Futuras' v75).
+    Cada fila = un acuerdo/ordenanza con objeto, fuente y valores por año.
+    """
+    numero = models.IntegerField(unique=True)
+    acto_aprobacion = models.CharField(max_length=200, verbose_name='Acto de Aprobación (Acuerdo/Ordenanza)')
+    objeto_proyecto = models.TextField(verbose_name='Objeto / Proyecto')
+    nombre_fuente = models.CharField(max_length=200, verbose_name='Fuente de Financiación')
+    codigo_fuente = models.CharField(max_length=20, blank=True)
+    val_2026 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    val_2027 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    val_2028 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    val_2029 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    val_2030 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    val_2031 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    val_2032 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    val_2033 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    val_2034 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    val_2035 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    val_2036 = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+
+    class Meta:
+        verbose_name = 'Vigencia Futura Aprobada'
+        verbose_name_plural = 'Vigencias Futuras Aprobadas'
+        ordering = ['numero']
+
+    @property
+    def total(self):
+        return (self.val_2026 + self.val_2027 + self.val_2028 + self.val_2029 +
+                self.val_2030 + self.val_2031 + self.val_2032 + self.val_2033 +
+                self.val_2034 + self.val_2035 + self.val_2036)
+
+    def valores_por_anio(self):
+        return {
+            2026: self.val_2026, 2027: self.val_2027, 2028: self.val_2028,
+            2029: self.val_2029, 2030: self.val_2030, 2031: self.val_2031,
+            2032: self.val_2032, 2033: self.val_2033, 2034: self.val_2034,
+            2035: self.val_2035, 2036: self.val_2036,
+        }

@@ -1612,3 +1612,26 @@ def parametros_anuales_view(request):
         'planta': ParametroAnualPlanta.objects.all().order_by('anio'),
         'estampillas': BaseEstampillasAnual.objects.all().order_by('anio'),
     })
+
+
+@never_cache
+@login_required
+def vigencias_futuras_view(request):
+    """Cuadro de Vigencias Futuras aprobadas por acuerdo/ordenanza."""
+    from .models import VigenciaFuturaAprobada
+    from django.db.models import Sum
+    _recalc_perezoso()
+    filas = list(VigenciaFuturaAprobada.objects.all().order_by('numero'))
+    anios = list(range(2026, 2037))
+    tot = VigenciaFuturaAprobada.objects.aggregate(
+        t26=Sum('val_2026'), t27=Sum('val_2027'), t28=Sum('val_2028'),
+        t29=Sum('val_2029'), t30=Sum('val_2030'), t31=Sum('val_2031'),
+        t32=Sum('val_2032'), t33=Sum('val_2033'), t34=Sum('val_2034'),
+        t35=Sum('val_2035'), t36=Sum('val_2036'),
+    )
+    totales_por_anio = [tot.get(f't{a-2000}', 0) or 0 for a in anios]
+    total_general = sum(totales_por_anio, Decimal('0'))
+    return render(request, 'core/vigencias_futuras_cuadro.html', {
+        'filas': filas, 'anios': anios,
+        'totales': totales_por_anio, 'total_general': total_general,
+    })

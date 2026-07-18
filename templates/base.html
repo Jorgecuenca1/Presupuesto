@@ -104,52 +104,17 @@
             <i class="bi bi-diagram-3"></i> Techos de Inversión
         </a>
 
-        <div class="nav-section">MFMP · Marco Fiscal Mediano Plazo</div>
-        <a href="{% url 'mfmp_menu' %}" class="nav-link {% if request.resolver_match.url_name == 'mfmp_menu' %}active{% endif %}">
-            <i class="bi bi-house-door"></i> MFMP · Menú Principal
-        </a>
-        <a href="{% url 'plan_financiero' %}" class="nav-link {% if request.resolver_match.url_name == 'plan_financiero' %}active{% endif %}">
-            <i class="bi bi-graph-up"></i> Plan Financiero 10 años
-        </a>
-        <a href="{% url 'icld_proyectado' %}" class="nav-link {% if request.resolver_match.url_name == 'icld_proyectado' %}active{% endif %}">
-            <i class="bi bi-cash-stack"></i> ICLD Proyectado
-        </a>
-        <a href="{% url 'ley_617' %}" class="nav-link {% if request.resolver_match.url_name == 'ley_617' %}active{% endif %}">
-            <i class="bi bi-shield-check"></i> Ley 617 · Cumplimiento
-        </a>
-        <a href="{% url 'cuadre_fuente' %}" class="nav-link {% if request.resolver_match.url_name == 'cuadre_fuente' %}active{% endif %}">
-            <i class="bi bi-check2-square"></i> Cuadre por Fuente
-        </a>
-        <a href="{% url 'saldo_vf_fuente' %}" class="nav-link {% if request.resolver_match.url_name == 'saldo_vf_fuente' %}active{% endif %}">
-            <i class="bi bi-piggy-bank"></i> Saldo VF por Fuente
-        </a>
-        <a href="{% url 'refinanciacion' %}" class="nav-link {% if request.resolver_match.url_name == 'refinanciacion' %}active{% endif %}">
-            <i class="bi bi-arrow-repeat"></i> Refinanciación
-        </a>
-        <a href="{% url 'ccpet_ingresos' %}" class="nav-link {% if request.resolver_match.url_name == 'ccpet_ingresos' %}active{% endif %}">
-            <i class="bi bi-tag"></i> CCPET Ingresos
-        </a>
-        <a href="{% url 'ccpet_gastos' %}" class="nav-link {% if request.resolver_match.url_name == 'ccpet_gastos' %}active{% endif %}">
-            <i class="bi bi-tag-fill"></i> CCPET Gastos
-        </a>
+        <div class="nav-section">MFMP · Proyecciones</div>
         <a href="{% url 'proyeccion_ingresos_10y' %}" class="nav-link {% if request.resolver_match.url_name == 'proyeccion_ingresos_10y' %}active{% endif %}">
             <i class="bi bi-graph-up-arrow"></i> Proyección Ingresos 10y
         </a>
         <a href="{% url 'proyeccion_gastos_10y' %}" class="nav-link {% if request.resolver_match.url_name == 'proyeccion_gastos_10y' %}active{% endif %}">
             <i class="bi bi-graph-down-arrow"></i> Proyección Gastos 10y
         </a>
-        <a href="{% url 'ico_proyeccion' %}" class="nav-link {% if request.resolver_match.url_name == 'ico_proyeccion' %}active{% endif %}">
-            <i class="bi bi-briefcase"></i> ICO Proyección CIIU
-        </a>
-        <a href="{% url 'planta_detalle' %}" class="nav-link {% if request.resolver_match.url_name == 'planta_detalle' %}active{% endif %}">
-            <i class="bi bi-person-badge"></i> Planta Detalle Cargos
-        </a>
-        <a href="{% url 'parametros_anuales' %}" class="nav-link {% if request.resolver_match.url_name == 'parametros_anuales' %}active{% endif %}">
-            <i class="bi bi-sliders"></i> Parámetros Anuales
-        </a>
-        <a href="{% url 'panel_control' %}" class="nav-link {% if request.resolver_match.url_name == 'panel_control' %}active{% endif %}">
-            <i class="bi bi-speedometer2"></i> Panel de Control
-        </a>
+        {# Otros módulos MFMP ocultos temporalmente (mantener URLs y datos):
+           mfmp_menu, plan_financiero, icld_proyectado, ley_617, cuadre_fuente,
+           saldo_vf_fuente, refinanciacion, ccpet_ingresos, ccpet_gastos,
+           ico_proyeccion, planta_detalle, parametros_anuales, panel_control #}
 
         <div class="nav-section">Ingresos - Cifras Históricas</div>
         <a href="{% url 'cifras_historicas_ingresos' %}" class="nav-link {% if request.resolver_match.url_name == 'cifras_historicas_ingresos' %}active{% endif %}">

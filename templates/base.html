@@ -114,10 +114,6 @@
         <a href="{% url 'saldo_vf_fuente' %}" class="nav-link {% if request.resolver_match.url_name == 'saldo_vf_fuente' %}active{% endif %}">
             <i class="bi bi-piggy-bank"></i> Vigencias Futuras · Saldo por Fuente
         </a>
-        {# Otros módulos MFMP ocultos temporalmente (mantener URLs y datos):
-           mfmp_menu, plan_financiero, icld_proyectado, ley_617, cuadre_fuente,
-           saldo_vf_fuente, refinanciacion, ccpet_ingresos, ccpet_gastos,
-           ico_proyeccion, planta_detalle, parametros_anuales, panel_control #}
 
         <div class="nav-section">Ingresos - Cifras Históricas</div>
         <a href="{% url 'cifras_historicas_ingresos' %}" class="nav-link {% if request.resolver_match.url_name == 'cifras_historicas_ingresos' %}active{% endif %}">

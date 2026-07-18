@@ -111,6 +111,9 @@
         <a href="{% url 'proyeccion_gastos_10y' %}" class="nav-link {% if request.resolver_match.url_name == 'proyeccion_gastos_10y' %}active{% endif %}">
             <i class="bi bi-graph-down-arrow"></i> Proyección Gastos 10y
         </a>
+        <a href="{% url 'ejecucion_mensual' %}" class="nav-link {% if request.resolver_match.url_name == 'ejecucion_mensual' %}active{% endif %}">
+            <i class="bi bi-calendar-week"></i> Ejecución Mensualizada 2024-2025
+        </a>
         <a href="{% url 'vigencias_futuras_cuadro' %}" class="nav-link {% if request.resolver_match.url_name == 'vigencias_futuras_cuadro' %}active{% endif %}">
             <i class="bi bi-file-earmark-check"></i> Vigencias Futuras (Acuerdos)
         </a>

@@ -1635,3 +1635,17 @@ def vigencias_futuras_view(request):
         'filas': filas, 'anios': anios,
         'totales': totales_por_anio, 'total_general': total_general,
     })
+
+
+@never_cache
+@login_required
+def ejecucion_mensual_view(request):
+    """Tabla de ejecución mensualizada de ingresos por año + % promedio historico."""
+    from .models import EjecucionMensualIngreso, ParametrosSistema
+    _recalc_perezoso()
+    anio = int(request.GET.get('anio', 2025))
+    filas = list(EjecucionMensualIngreso.objects.filter(anio=anio).order_by('codigo_ccpet', 'codigo_fuente'))
+    anios_disponibles = list(EjecucionMensualIngreso.objects.values_list('anio', flat=True).distinct().order_by('anio'))
+    return render(request, 'core/ejecucion_mensual.html', {
+        'filas': filas, 'anio': anio, 'anios': anios_disponibles,
+    })

@@ -487,6 +487,53 @@ def recalcular_cuadre_por_fuente():
     return cambios
 
 
+def recalcular_pct_prom_y_dic_desde_ejecucion(mes_corte=6):
+    """Actualiza pct_prom_historico y proyeccion_dic_2026 usando la ejecución
+    mensualizada 2024+2025 cargada.
+
+    Se ejecuta antes de proyectar 10 años, para que el motor use como base
+    la proyección corregida por % histórico y no el aforo estático.
+    """
+    from .models import EjecucionMensualIngreso, ProyeccionRubroIngreso
+    PREFIJOS_EXCLUIDOS = (
+        '03.1.1.01.01.200',  # Predial
+        '03.1.1.01.02.200',  # ICA
+        '03.1.1.01.02.300',  # Estampillas
+        '03.1.1.01.02.214',  # ITO
+    )
+    campos = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
+    cambios = 0
+    for pri in ProyeccionRubroIngreso.objects.all():
+        if any(pri.codigo_ccpet.startswith(p) for p in PREFIJOS_EXCLUIDOS):
+            continue
+        pcts = []
+        for a in (2024, 2025):
+            eje = EjecucionMensualIngreso.objects.filter(
+                anio=a, codigo_ccpet=pri.codigo_ccpet, codigo_fuente=pri.codigo_fuente
+            ).first()
+            if not eje: continue
+            tot = eje.total
+            if tot <= 0: continue
+            acum = sum(getattr(eje, campos[i]) for i in range(mes_corte))
+            pcts.append(acum / tot)
+        if not pcts: continue
+        pct_prom = sum(pcts) / Decimal(str(len(pcts)))
+        if pct_prom <= 0: continue
+        if abs((pri.pct_prom_historico or 0) - pct_prom) > Decimal('0.001'):
+            pri.pct_prom_historico = pct_prom
+            cambios += 1
+        if pri.recaudo_ytd_2026 and pri.recaudo_ytd_2026 > 0:
+            proy = pri.recaudo_ytd_2026 / pct_prom
+            aforo = pri.aforo_2026 or Decimal('0')
+            if aforo > 0 and proy > aforo * 5:
+                proy = aforo
+            if abs(pri.proyeccion_dic_2026 - proy) > Decimal('1'):
+                pri.proyeccion_dic_2026 = proy
+                cambios += 1
+        pri.save(update_fields=['pct_prom_historico', 'proyeccion_dic_2026'])
+    return cambios
+
+
 @transaction.atomic
 def recalcular_mfmp(vigencia=2027):
     """Función maestra: recalcula toda la cascada MFMP como en Excel.
@@ -505,6 +552,8 @@ def recalcular_mfmp(vigencia=2027):
     """
     resumen = {}
     resumen['1_variables_macro'] = recalcular_variables_macro_pct_anual()
+    # Nuevo paso: actualizar proyección Dic 2026 con datos reales de ejecución mensual
+    resumen['1b_dic_2026'] = recalcular_pct_prom_y_dic_desde_ejecucion(mes_corte=6)
     resumen['2_proy_ingresos'] = recalcular_proyeccion_ingresos_desde_ipc()
     resumen['3_planta_detalle'] = recalcular_planta_detalle()
     resumen['4_ico'] = recalcular_ico_desde_pib()

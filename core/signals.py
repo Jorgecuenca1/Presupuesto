@@ -133,7 +133,8 @@ def _instalar_signals():
         TechoInversion, PlanFinancieroLinea, ICLDProyectado,
         Ley617Proyectado, POAIProyectado, POAIPorDependencia,
         CuadrePorFuente, SaldoVFPorFuente, Refinanciacion,
-        FuenteFinanciacion, VigenciaFutura,
+        FuenteFinanciacion, VigenciaFutura, EjecucionMensualIngreso,
+        VigenciaFuturaAprobada,
     )
     from ingresos.models import (
         RubroIngreso, ContribuyenteICA, ContribuyentePredial,
@@ -153,6 +154,7 @@ def _instalar_signals():
         # MFMP - datos base
         PlantaDetalleCargo, ICOProyeccion, ProyeccionRubroIngreso,
         ProyeccionRubroGasto, FuenteFinanciacion, Refinanciacion,
+        EjecucionMensualIngreso, VigenciaFuturaAprobada,
         # Ingresos - reglas de calculo
         TarifaICA, Estampilla,
         # Ingresos - contribuyentes (afecta ICA/Predial)

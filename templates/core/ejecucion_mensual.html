@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Ejecución Mensualizada{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Ejecución Mensualizada</li>{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="bi bi-calendar-week"></i> Ejecución Mensualizada de Ingresos {{ anio }}</h4>
+    <div>
+        <form method="get" class="d-inline-block">
+            <label class="me-2 small">Año:</label>
+            <select name="anio" class="form-select form-select-sm d-inline-block w-auto" onchange="this.form.submit()">
+                {% for a in anios %}<option value="{{ a }}" {% if a == anio %}selected{% endif %}>{{ a }}</option>{% endfor %}
+            </select>
+        </form>
+    </div>
+</div>
+
+<div class="alert alert-info py-2 small">
+    Datos de recaudo mensual por rubro CCPET + fuente. Sirven para calcular
+    el <strong>% promedio histórico</strong> de recaudo (ej: 60% a junio, 40% jul-dic)
+    que luego se aplica al recaudo YTD del año en curso para proyectar
+    la <strong>proyección a diciembre</strong>. Con esta base se proyectan los 10 años (2027-2036) aplicando IPC.
+</div>
+
+<div class="card">
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-sm table-bordered table-hover mb-0" style="font-size:.72rem;">
+            <thead class="table-dark text-center sticky-top">
+                <tr>
+                    <th style="min-width:200px;text-align:left;">Rubro CCPET</th>
+                    <th>Fte</th>
+                    <th style="min-width:200px;text-align:left;">Descripción</th>
+                    <th>Aprop. Def.</th>
+                    <th>Ene</th><th>Feb</th><th>Mar</th><th>Abr</th><th>May</th><th>Jun</th>
+                    <th>Jul</th><th>Ago</th><th>Sep</th><th>Oct</th><th>Nov</th><th>Dic</th>
+                    <th>Total</th>
+                    <th>%Jun</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in filas %}
+                <tr>
+                    <td><code>{{ f.codigo_ccpet }}</code></td>
+                    <td class="text-center">{{ f.codigo_fuente }}</td>
+                    <td class="small">{{ f.descripcion|truncatechars:40 }}</td>
+                    <td class="text-end">${{ f.apropiacion_definitiva|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.ene|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.feb|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.mar|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.abr|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.may|floatformat:0|intcomma }}</td>
+                    <td class="text-end table-warning">${{ f.jun|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.jul|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.ago|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.sep|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.oct|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.nov|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ f.dic|floatformat:0|intcomma }}</td>
+                    <td class="text-end fw-bold table-info">${{ f.total|floatformat:0|intcomma }}</td>
+                    <td class="text-center small">
+                        {% if f.total > 0 %}
+                            {% widthratio f.ene 1 1 %}
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="18" class="text-center text-muted py-4">No hay ejecución mensualizada cargada para {{ anio }}.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

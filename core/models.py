@@ -1005,3 +1005,43 @@ class VigenciaFuturaAprobada(models.Model):
             2032: self.val_2032, 2033: self.val_2033, 2034: self.val_2034,
             2035: self.val_2035, 2036: self.val_2036,
         }
+
+
+class EjecucionMensualIngreso(models.Model):
+    """Ejecución mensualizada de ingresos por año (2024, 2025, 2026...).
+    Datos crudos: recaudo mensual por rubro CCPET + fuente.
+    Sirve para calcular % promedio histórico y proyectar diciembre.
+    """
+    anio = models.IntegerField(verbose_name='Año')
+    codigo_ccpet = models.CharField(max_length=40, verbose_name='Código CCPET')
+    codigo_fuente = models.CharField(max_length=20, blank=True)
+    descripcion = models.CharField(max_length=400, blank=True)
+    apropiacion_definitiva = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    ene = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    feb = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    mar = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    abr = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    may = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    jun = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    jul = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    ago = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    sep = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    oct = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    nov = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+    dic = models.DecimalField(max_digits=22, decimal_places=2, default=0)
+
+    class Meta:
+        verbose_name = 'Ejecución Mensual Ingreso'
+        verbose_name_plural = 'Ejecución Mensual Ingresos'
+        unique_together = ['anio', 'codigo_ccpet', 'codigo_fuente']
+        ordering = ['anio', 'codigo_ccpet']
+
+    @property
+    def total(self):
+        return (self.ene + self.feb + self.mar + self.abr + self.may + self.jun +
+                self.jul + self.ago + self.sep + self.oct + self.nov + self.dic)
+
+    def acumulado_hasta_mes(self, mes):
+        """mes: 1-12. Retorna suma ene..mes."""
+        campos = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
+        return sum(getattr(self, c) for c in campos[:mes])

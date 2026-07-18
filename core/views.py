@@ -10,9 +10,18 @@ from .mfmp_recalculo import recalcular_mfmp
 
 
 def _recalc_perezoso():
-    """Ejecuta recalculo MFMP idempotente antes de mostrar vistas. Idempotente y protegido."""
+    """Recálculo con caché: solo se ejecuta si pasaron >30s del último.
+
+    Optimización: sin este caché, cada vista MFMP hacia un recálculo
+    completo (~1s por página). Con caché: reutiliza resultados hasta que
+    el usuario cambie algo.
+    """
+    from django.core.cache import cache
+    if cache.get('_mfmp_recalc_reciente'):
+        return
     try:
         recalcular_mfmp()
+        cache.set('_mfmp_recalc_reciente', True, 30)
     except Exception:
         pass
 

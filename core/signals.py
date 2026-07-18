@@ -25,15 +25,24 @@ def _dentro_de_recalculo():
 
 
 def _recalcular_todo():
-    """Ejecuta la cascada completa (MFMP + Ingresos + Techos) evitando recursión.
+    """Marca la request como "sucia" para que el middleware ejecute UN solo
+    recálculo al final. Optimización clave: 1774 saves durante un import
+    → 1 recálculo (no 1774).
 
-    Se ejecuta AL FINAL de la transacción actual (transaction.on_commit) para
-    que todos los cambios pendientes ya estén persistidos cuando el motor lee
-    la BD.
+    Si no hay middleware activo (script suelto, shell), ejecuta inmediato.
     """
     if _dentro_de_recalculo():
         return
 
+    # Modo optimizado: solo marcar dirty. El middleware recalcula al final.
+    try:
+        from . import middleware
+        middleware.marcar_sucio()
+        return
+    except Exception:
+        pass
+
+    # Fallback: ejecutar inmediato (shell, tests, scripts)
     def _run():
         if _dentro_de_recalculo():
             return

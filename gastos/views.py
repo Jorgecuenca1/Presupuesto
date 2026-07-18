@@ -23,10 +23,14 @@ from django.views.decorators.cache import never_cache
 
 
 def _recalc_perezoso():
-    """Recalculo MFMP idempotente al abrir vista (garantiza consistencia)."""
+    """Recálculo con caché 30s para evitar recomputo en cada request."""
+    from django.core.cache import cache
+    if cache.get('_mfmp_recalc_reciente'):
+        return
     try:
         from core.mfmp_recalculo import recalcular_mfmp
         recalcular_mfmp()
+        cache.set('_mfmp_recalc_reciente', True, 30)
     except Exception:
         pass
 

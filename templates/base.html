@@ -111,6 +111,9 @@
         <a href="{% url 'proyeccion_gastos_10y' %}" class="nav-link {% if request.resolver_match.url_name == 'proyeccion_gastos_10y' %}active{% endif %}">
             <i class="bi bi-graph-down-arrow"></i> Proyección Gastos 10y
         </a>
+        <a href="{% url 'saldo_vf_fuente' %}" class="nav-link {% if request.resolver_match.url_name == 'saldo_vf_fuente' %}active{% endif %}">
+            <i class="bi bi-piggy-bank"></i> Vigencias Futuras · Saldo por Fuente
+        </a>
         {# Otros módulos MFMP ocultos temporalmente (mantener URLs y datos):
            mfmp_menu, plan_financiero, icld_proyectado, ley_617, cuadre_fuente,
            saldo_vf_fuente, refinanciacion, ccpet_ingresos, ccpet_gastos,

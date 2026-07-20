@@ -34,15 +34,17 @@ def _recalcular_todo():
     if _dentro_de_recalculo():
         return
 
-    # Modo optimizado: solo marcar dirty. El middleware recalcula al final.
+    # Modo optimizado: SI hay una request web activa, solo marcar dirty
+    # para que el middleware recalcule 1 vez al final.
     try:
         from . import middleware
-        middleware.marcar_sucio()
-        return
+        if middleware.dentro_de_request():
+            middleware.marcar_sucio()
+            return
     except Exception:
         pass
 
-    # Fallback: ejecutar inmediato (shell, tests, scripts)
+    # Fuera de request (shell, tests, scripts, import CLI): ejecutar inmediato
     def _run():
         if _dentro_de_recalculo():
             return

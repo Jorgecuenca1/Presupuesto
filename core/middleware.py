@@ -3,14 +3,22 @@
 Agrupa múltiples signals dentro de una request en un solo recálculo al
 final. Sin este middleware, un import de 1774 contribuyentes dispararía
 1774 recálculos completos. Con este middleware: 1 recálculo total.
+
+Fuera de request (script, shell, tests): los signals ejecutan inmediato.
+Se detecta con la flag `_local.dentro_request` que solo el middleware setea.
 """
 import threading
 
 _local = threading.local()
 
 
+def dentro_de_request():
+    """True solo mientras el middleware está procesando una request web."""
+    return getattr(_local, 'dentro_request', False)
+
+
 def marcar_sucio():
-    """Los signals llaman esto en vez de recalcular inmediatamente."""
+    """Los signals llaman esto para agrupar dentro de una request."""
     _local.sucio = True
 
 
@@ -20,6 +28,7 @@ def esta_sucio():
 
 def limpiar():
     _local.sucio = False
+    _local.dentro_request = False
 
 
 class RecalculoAgrupadoMiddleware:
@@ -29,7 +38,8 @@ class RecalculoAgrupadoMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        limpiar()
+        _local.dentro_request = True
+        _local.sucio = False
         response = self.get_response(request)
         # Si algún signal marcó cambios, recalcular al final e invalidar caché
         if esta_sucio():

@@ -87,73 +87,59 @@
             <h4><i class="bi bi-bank2"></i> SIPRE</h4>
             <p>Puerto López - Meta</p>
         </div>
-        <div class="nav-section">General</div>
+        {# ═══════════════════════════════════════════════════════════════
+           SIDEBAR REORGANIZADO POR FLUJO SECUENCIAL DEL PRESUPUESTO
+           1. Configuración → 2. Ingresos → 3. Gastos → 4. Proyecciones → 5. Reportes
+           ═══════════════════════════════════════════════════════════════ #}
+
         <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
             <i class="bi bi-speedometer2"></i> Dashboard
         </a>
+
+        {# ═══ 1. CONFIGURACIÓN ══════════════════════════════════════════ #}
+        <div class="nav-section">1 · Configuración</div>
         <a href="{% url 'parametros' %}" class="nav-link {% if request.resolver_match.url_name == 'parametros' %}active{% endif %}">
             <i class="bi bi-gear"></i> Parámetros del Sistema
-        </a>
-        <a href="{% url 'tabla_concejo_personeria' %}" class="nav-link {% if request.resolver_match.url_name == 'tabla_concejo_personeria' %}active{% endif %}">
-            <i class="bi bi-building"></i> Tabla Concejo/Personería
         </a>
         <a href="{% url 'variables_macro' %}" class="nav-link {% if request.resolver_match.url_name == 'variables_macro' %}active{% endif %}">
             <i class="bi bi-graph-up-arrow"></i> Variables Macroeconómicas
         </a>
-        <a href="{% url 'techos_inversion' %}" class="nav-link {% if request.resolver_match.url_name == 'techos_inversion' %}active{% endif %}">
-            <i class="bi bi-diagram-3"></i> Techos de Inversión
+        <a href="{% url 'gastos_fuentes' %}" class="nav-link {% if request.resolver_match.url_name == 'gastos_fuentes' %}active{% endif %}">
+            <i class="bi bi-wallet2"></i> Fuentes de Financiación
+        </a>
+        <a href="{% url 'tabla_concejo_personeria' %}" class="nav-link {% if request.resolver_match.url_name == 'tabla_concejo_personeria' %}active{% endif %}">
+            <i class="bi bi-building"></i> Tabla Concejo/Personería
         </a>
 
-        <div class="nav-section">MFMP · Proyecciones</div>
-        <a href="{% url 'proyeccion_ingresos_10y' %}" class="nav-link {% if request.resolver_match.url_name == 'proyeccion_ingresos_10y' %}active{% endif %}">
-            <i class="bi bi-graph-up-arrow"></i> Proyección Ingresos 10y
-        </a>
-        <a href="{% url 'proyeccion_gastos_10y' %}" class="nav-link {% if request.resolver_match.url_name == 'proyeccion_gastos_10y' %}active{% endif %}">
-            <i class="bi bi-graph-down-arrow"></i> Proyección Gastos 10y
-        </a>
-        <a href="{% url 'ejecucion_mensual' %}" class="nav-link {% if request.resolver_match.url_name == 'ejecucion_mensual' %}active{% endif %}">
-            <i class="bi bi-calendar-week"></i> Ejecución Mensualizada 2024-2025
-        </a>
-        <a href="{% url 'vigencias_futuras_cuadro' %}" class="nav-link {% if request.resolver_match.url_name == 'vigencias_futuras_cuadro' %}active{% endif %}">
-            <i class="bi bi-file-earmark-check"></i> Vigencias Futuras (Acuerdos)
-        </a>
-        <a href="{% url 'saldo_vf_fuente' %}" class="nav-link {% if request.resolver_match.url_name == 'saldo_vf_fuente' %}active{% endif %}">
-            <i class="bi bi-piggy-bank"></i> Saldo VF por Fuente
-        </a>
-
-        <div class="nav-section">Ingresos - Cifras Históricas</div>
+        {# ═══ 2. INGRESOS ═══════════════════════════════════════════════ #}
+        <div class="nav-section">2 · Ingresos</div>
         <a href="{% url 'cifras_historicas_ingresos' %}" class="nav-link {% if request.resolver_match.url_name == 'cifras_historicas_ingresos' %}active{% endif %}">
             <i class="bi bi-clock-history"></i> Cifras Históricas
         </a>
-
-        <div class="nav-section">Ingresos - Predial</div>
+        <a href="{% url 'ejecucion_mensual' %}" class="nav-link {% if request.resolver_match.url_name == 'ejecucion_mensual' %}active{% endif %}">
+            <i class="bi bi-calendar-week"></i> Ejecución Mensualizada
+        </a>
         <a href="{% url 'tarifas_predial' %}" class="nav-link {% if request.resolver_match.url_name == 'tarifas_predial' %}active{% endif %}">
-            <i class="bi bi-table"></i> Tarifas Predial
+            <i class="bi bi-house"></i> Predial · Tarifas
         </a>
         <a href="{% url 'contribuyentes_predial' %}" class="nav-link {% if request.resolver_match.url_name == 'contribuyentes_predial' %}active{% endif %}">
-            <i class="bi bi-people"></i> Contribuyentes
+            <i class="bi bi-people"></i> Predial · Contribuyentes
         </a>
         <a href="{% url 'calculo_predial' %}" class="nav-link {% if request.resolver_match.url_name == 'calculo_predial' %}active{% endif %}">
-            <i class="bi bi-calculator"></i> Cálculo Predial
+            <i class="bi bi-calculator"></i> Predial · Cálculo
         </a>
-
-        <div class="nav-section">Ingresos - ICA</div>
         <a href="{% url 'tarifas_ica' %}" class="nav-link {% if request.resolver_match.url_name == 'tarifas_ica' %}active{% endif %}">
-            <i class="bi bi-table"></i> Tarifas ICA
+            <i class="bi bi-shop"></i> ICA · Tarifas
         </a>
         <a href="{% url 'contribuyentes_ica' %}" class="nav-link {% if request.resolver_match.url_name == 'contribuyentes_ica' %}active{% endif %}">
-            <i class="bi bi-shop"></i> Contribuyentes
+            <i class="bi bi-people-fill"></i> ICA · Contribuyentes
         </a>
         <a href="{% url 'calculo_ica' %}" class="nav-link {% if request.resolver_match.url_name == 'calculo_ica' %}active{% endif %}">
-            <i class="bi bi-calculator"></i> Cálculo ICA
+            <i class="bi bi-calculator"></i> ICA · Cálculo
         </a>
-
-        <div class="nav-section">Ingresos - Estampillas</div>
         <a href="{% url 'calculo_estampillas' %}" class="nav-link {% if request.resolver_match.url_name == 'calculo_estampillas' %}active{% endif %}">
-            <i class="bi bi-ticket-perforated"></i> Cálculo Estampillas
+            <i class="bi bi-ticket-perforated"></i> Estampillas · Cálculo
         </a>
-
-        <div class="nav-section">Presupuesto Ingresos</div>
         <a href="{% url 'rubros_list' %}" class="nav-link {% if request.resolver_match.url_name == 'rubros_list' %}active{% endif %}">
             <i class="bi bi-list-nested"></i> Rubros de Ingreso
         </a>
@@ -161,43 +147,32 @@
             <i class="bi bi-file-earmark-text"></i> Reporte Anexo 1
         </a>
 
-        <div class="nav-section">Gastos - Cifras Históricas</div>
+        {# ═══ 3. GASTOS ═════════════════════════════════════════════════ #}
+        <div class="nav-section">3 · Gastos</div>
         <a href="{% url 'cifras_historicas_gastos' %}" class="nav-link {% if request.resolver_match.url_name == 'cifras_historicas_gastos' %}active{% endif %}">
             <i class="bi bi-clock-history"></i> Cifras Históricas
         </a>
-
-        <div class="nav-section">Gastos - Estructura</div>
-        <a href="{% url 'gastos_secciones' %}" class="nav-link {% if request.resolver_match.url_name == 'gastos_secciones' %}active{% endif %}">
-            <i class="bi bi-diagram-3"></i> Secciones
-        </a>
-        <a href="{% url 'gastos_fuentes' %}" class="nav-link {% if request.resolver_match.url_name == 'gastos_fuentes' %}active{% endif %}">
-            <i class="bi bi-wallet2"></i> Fuentes
-        </a>
-        <a href="{% url 'rubros_gasto_list' %}" class="nav-link {% if request.resolver_match.url_name == 'rubros_gasto_list' %}active{% endif %}">
-            <i class="bi bi-list-nested"></i> Rubros de Gasto
-        </a>
-
-        <div class="nav-section">Gastos - Cálculos</div>
         <a href="{% url 'plantas_personal' %}" class="nav-link {% if request.resolver_match.url_name == 'plantas_personal' %}active{% endif %}">
             <i class="bi bi-people-fill"></i> Plantas de Personal
         </a>
         <a href="{% url 'costo_personal_list' %}" class="nav-link {% if request.resolver_match.url_name == 'costo_personal_list' %}active{% endif %}">
-            <i class="bi bi-people"></i> Costo de Personal (legacy)
+            <i class="bi bi-person-vcard"></i> Costo de Personal
         </a>
         <a href="{% url 'deuda_publica_v2' %}" class="nav-link {% if request.resolver_match.url_name == 'deuda_publica_v2' %}active{% endif %}">
             <i class="bi bi-bank"></i> Deuda Pública
         </a>
-        <a href="{% url 'deuda_contratos_list' %}" class="nav-link {% if request.resolver_match.url_name == 'deuda_contratos_list' %}active{% endif %}">
-            <i class="bi bi-clipboard"></i> Deuda: Contratos (legacy)
-        </a>
-        <a href="{% url 'deuda_resumen' %}" class="nav-link {% if request.resolver_match.url_name == 'deuda_resumen' %}active{% endif %}">
-            <i class="bi bi-file-earmark-bar-graph"></i> Resumen Deuda
-        </a>
         <a href="{% url 'vigencias_futuras_list' %}" class="nav-link {% if request.resolver_match.url_name == 'vigencias_futuras_list' %}active{% endif %}">
-            <i class="bi bi-calendar-range"></i> Vigencias Futuras
+            <i class="bi bi-calendar-range"></i> Vigencias Futuras · Registro
         </a>
-
-        <div class="nav-section">Gastos - Importar</div>
+        <a href="{% url 'vigencias_futuras_cuadro' %}" class="nav-link {% if request.resolver_match.url_name == 'vigencias_futuras_cuadro' %}active{% endif %}">
+            <i class="bi bi-file-earmark-check"></i> Vigencias Futuras · Acuerdos
+        </a>
+        <a href="{% url 'gastos_secciones' %}" class="nav-link {% if request.resolver_match.url_name == 'gastos_secciones' %}active{% endif %}">
+            <i class="bi bi-diagram-3"></i> Secciones
+        </a>
+        <a href="{% url 'rubros_gasto_list' %}" class="nav-link {% if request.resolver_match.url_name == 'rubros_gasto_list' %}active{% endif %}">
+            <i class="bi bi-list-nested"></i> Rubros de Gasto
+        </a>
         <a href="{% url 'importar_anexo2' %}" class="nav-link {% if request.resolver_match.url_name == 'importar_anexo2' %}active{% endif %}">
             <i class="bi bi-upload"></i> Importar Anexo 2
         </a>
@@ -207,12 +182,30 @@
         <a href="{% url 'ejecucion_gastos' %}" class="nav-link {% if request.resolver_match.url_name == 'ejecucion_gastos' %}active{% endif %}">
             <i class="bi bi-bar-chart-line"></i> Ejecución Gastos
         </a>
-
-        <div class="nav-section">Reportes</div>
         <a href="{% url 'reporte_gastos' %}" class="nav-link {% if request.resolver_match.url_name == 'reporte_gastos' %}active{% endif %}">
             <i class="bi bi-file-earmark-text"></i> Reporte Anexo 2
         </a>
-        {# Techos Inversión / FAEP ocultado (duplicado con "Techos de Inversión" en sección General) #}
+
+        {# ═══ 4. MFMP · PROYECCIONES 10 AÑOS ════════════════════════════ #}
+        <div class="nav-section">4 · MFMP · Proyecciones 10 años</div>
+        <a href="{% url 'proyeccion_ingresos_10y' %}" class="nav-link {% if request.resolver_match.url_name == 'proyeccion_ingresos_10y' %}active{% endif %}">
+            <i class="bi bi-graph-up-arrow"></i> Proyección Ingresos 10y
+        </a>
+        <a href="{% url 'proyeccion_gastos_10y' %}" class="nav-link {% if request.resolver_match.url_name == 'proyeccion_gastos_10y' %}active{% endif %}">
+            <i class="bi bi-graph-down-arrow"></i> Proyección Gastos 10y
+        </a>
+        <a href="{% url 'techos_inversion' %}" class="nav-link {% if request.resolver_match.url_name == 'techos_inversion' %}active{% endif %}">
+            <i class="bi bi-diagram-3"></i> Techos de Inversión
+        </a>
+        <a href="{% url 'saldo_vf_fuente' %}" class="nav-link {% if request.resolver_match.url_name == 'saldo_vf_fuente' %}active{% endif %}">
+            <i class="bi bi-piggy-bank"></i> Saldo VF por Fuente
+        </a>
+
+        {# ═══ 5. REPORTES ══════════════════════════════════════════════ #}
+        <div class="nav-section">5 · Reportes</div>
+        <a href="{% url 'deuda_resumen' %}" class="nav-link {% if request.resolver_match.url_name == 'deuda_resumen' %}active{% endif %}">
+            <i class="bi bi-file-earmark-bar-graph"></i> Resumen de Deuda
+        </a>
         <a href="{% url 'limpiar_gastos' %}" class="nav-link {% if request.resolver_match.url_name == 'limpiar_gastos' %}active{% endif %}">
             <i class="bi bi-trash3"></i> Limpiar Datos
         </a>

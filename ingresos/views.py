@@ -937,6 +937,13 @@ def cifras_historicas_ingresos(request):
 
     form = CifraHistoricaIngresoForm(initial={'vigencia_calculo': vigencia})
 
+    # Ejecución mensualizada (integrada aquí, viene de EjecucionMensualIngreso)
+    from core.models import EjecucionMensualIngreso
+    anio_ejec = int(request.GET.get('anio_ejec', 2025))
+    ejecucion_mensual = list(EjecucionMensualIngreso.objects.filter(anio=anio_ejec)
+                              .order_by('codigo_ccpet', 'codigo_fuente'))
+    anios_ejec = list(EjecucionMensualIngreso.objects.values_list('anio', flat=True).distinct().order_by('anio'))
+
     return render(request, 'ingresos/cifras_historicas.html', {
         'cifras': cifras,
         'anios': anios,
@@ -948,6 +955,9 @@ def cifras_historicas_ingresos(request):
         'tcpa': tcpa,
         'tcpa_icld': tcpa_icld,
         'icld_netos_sin_sgp': icld_netos_sin_sgp,
+        'ejecucion_mensual': ejecucion_mensual,
+        'anio_ejec': anio_ejec,
+        'anios_ejec': anios_ejec,
         'valor_medio_ambiente': valor_medio_ambiente,
         'icld_totales': icld_totales,
         'vigencia': vigencia,
@@ -1071,3 +1081,42 @@ def calcular_tcpa_ingresos(request):
     else:
         messages.error(request, 'No hay parámetros configurados para la vigencia')
     return redirect('cifras_historicas_ingresos')
+
+
+@login_required
+def descargar_ejecucion_mensual(request):
+    """Descarga en Excel la ejecución mensualizada del año solicitado."""
+    from core.models import EjecucionMensualIngreso
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment
+    from django.http import HttpResponse
+    anio = int(request.GET.get('anio', 2025))
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = f'Ejecución {anio}'
+    headers = ['Rubro CCPET', 'Fuente', 'Descripción', 'Aprop. Definitiva',
+               'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+               'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic', 'Total']
+    ws.append(headers)
+    hdr_font = Font(bold=True, color='FFFFFF')
+    hdr_fill = PatternFill('solid', fgColor='212529')
+    for c in ws[1]:
+        c.font = hdr_font; c.fill = hdr_fill; c.alignment = Alignment(horizontal='center')
+
+    for e in EjecucionMensualIngreso.objects.filter(anio=anio).order_by('codigo_ccpet', 'codigo_fuente'):
+        ws.append([
+            e.codigo_ccpet, e.codigo_fuente, e.descripcion,
+            float(e.apropiacion_definitiva),
+            float(e.ene), float(e.feb), float(e.mar), float(e.abr),
+            float(e.may), float(e.jun), float(e.jul), float(e.ago),
+            float(e.sep), float(e.oct), float(e.nov), float(e.dic),
+            float(e.total),
+        ])
+    # Anchos
+    for col_idx, w in enumerate([22, 8, 40, 18, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 18], 1):
+        ws.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = w
+
+    resp = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    resp['Content-Disposition'] = f'attachment; filename="Ejecucion_Mensualizada_{anio}.xlsx"'
+    wb.save(resp)
+    return resp

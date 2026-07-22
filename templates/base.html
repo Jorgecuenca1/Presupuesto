@@ -113,9 +113,6 @@
         <a href="{% url 'cifras_historicas_ingresos' %}" class="nav-link {% if request.resolver_match.url_name == 'cifras_historicas_ingresos' %}active{% endif %}">
             <i class="bi bi-clock-history"></i> Cifras Históricas
         </a>
-        <a href="{% url 'ejecucion_mensual' %}" class="nav-link {% if request.resolver_match.url_name == 'ejecucion_mensual' %}active{% endif %}">
-            <i class="bi bi-calendar-week"></i> Ejecución Mensualizada
-        </a>
         <a href="{% url 'tarifas_predial' %}" class="nav-link {% if request.resolver_match.url_name == 'tarifas_predial' %}active{% endif %}">
             <i class="bi bi-house"></i> Predial · Tarifas
         </a>

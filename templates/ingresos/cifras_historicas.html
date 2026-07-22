@@ -152,4 +152,62 @@
         </form>
     </div>
 </div>
+
+{# ═══ Ejecución Mensualizada (integrada aquí) ═════════════════════════ #}
+<div class="card mt-4">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-calendar-week"></i> Ejecución Mensualizada de Ingresos</span>
+        <div>
+            <form method="get" class="d-inline">
+                <label class="me-2 small text-white">Año:</label>
+                <select name="anio_ejec" class="form-select form-select-sm d-inline-block w-auto" onchange="this.form.submit()">
+                    {% for a in anios_ejec %}<option value="{{ a }}" {% if a == anio_ejec %}selected{% endif %}>{{ a }}</option>{% endfor %}
+                </select>
+            </form>
+            <a href="{% url 'descargar_ejecucion_mensual' %}?anio={{ anio_ejec }}" class="btn btn-success btn-sm ms-2">
+                <i class="bi bi-download"></i> Descargar Excel {{ anio_ejec }}
+            </a>
+        </div>
+    </div>
+    <div class="card-body p-0 table-responsive" style="max-height:60vh;">
+        <table class="table table-sm table-bordered table-hover mb-0" style="font-size:.7rem;">
+            <thead class="table-dark text-center sticky-top">
+                <tr>
+                    <th style="min-width:200px;text-align:left;">Rubro CCPET</th>
+                    <th>Fte</th>
+                    <th style="min-width:200px;text-align:left;">Descripción</th>
+                    <th>Aprop. Def.</th>
+                    <th>Ene</th><th>Feb</th><th>Mar</th><th>Abr</th><th>May</th><th>Jun</th>
+                    <th>Jul</th><th>Ago</th><th>Sep</th><th>Oct</th><th>Nov</th><th>Dic</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in ejecucion_mensual %}
+                <tr>
+                    <td><code>{{ e.codigo_ccpet }}</code></td>
+                    <td class="text-center">{{ e.codigo_fuente }}</td>
+                    <td class="small">{{ e.descripcion|truncatechars:40 }}</td>
+                    <td class="text-end">${{ e.apropiacion_definitiva|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ e.ene|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ e.feb|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ e.mar|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ e.abr|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ e.may|floatformat:0|intcomma }}</td>
+                    <td class="text-end table-warning">${{ e.jun|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ e.jul|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ e.ago|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ e.sep|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ e.oct|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ e.nov|floatformat:0|intcomma }}</td>
+                    <td class="text-end">${{ e.dic|floatformat:0|intcomma }}</td>
+                    <td class="text-end fw-bold table-info">${{ e.total|floatformat:0|intcomma }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="17" class="text-center text-muted py-4">No hay ejecución mensualizada cargada para {{ anio_ejec }}.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 {% endblock %}

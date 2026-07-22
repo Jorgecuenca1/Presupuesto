@@ -487,6 +487,48 @@ def recalcular_cuadre_por_fuente():
     return cambios
 
 
+def sincronizar_anexo1_desde_proyecciones(vigencia=2027):
+    """Actualiza RubroIngreso.valor_apropiacion (Anexo 1) usando las
+    proyecciones dinámicas de ProyeccionRubroIngreso.proy_YYYY para
+    los rubros NO calculados por otro método (predial, ICA, ITO,
+    estampillas, SGP).
+
+    Los rubros excluidos mantienen sus valores calculados por su motor
+    específico (calcular_predial, calcular_ica, etc.).
+    """
+    from ingresos.models import RubroIngreso
+    from .models import ProyeccionRubroIngreso
+    PREFIJOS_EXCLUIDOS = (
+        '1.1.01.01.200',  # Predial
+        '1.1.01.02.200',  # ICA
+        '1.1.01.02.300',  # Estampillas
+        '1.1.01.02.214',  # ITO / Oleoductos
+        '1.1.02.06',      # SGP
+    )
+    campo_proy = f'proy_{vigencia}'
+    cambios = 0
+    for pri in ProyeccionRubroIngreso.objects.all():
+        # No aplicar a rubros con métodos especiales
+        if any(pri.codigo_ccpet.startswith('03.' + p) or pri.codigo_ccpet.startswith(p)
+               for p in PREFIJOS_EXCLUIDOS):
+            continue
+        valor = getattr(pri, campo_proy, None)
+        if valor is None or valor <= 0:
+            continue
+        # Buscar rubro correspondiente en RubroIngreso (usa código sin prefijo 03.)
+        codigo_local = pri.codigo_ccpet[3:] if pri.codigo_ccpet.startswith('03.') else pri.codigo_ccpet
+        r = RubroIngreso.objects.filter(
+            vigencia=vigencia, codigo=codigo_local, es_titulo=False
+        ).first()
+        if not r:
+            continue
+        if abs(r.valor_apropiacion - valor) > Decimal('1'):
+            r.valor_apropiacion = valor
+            r.save(update_fields=['valor_apropiacion'])
+            cambios += 1
+    return cambios
+
+
 def recalcular_pct_prom_y_dic_desde_ejecucion(mes_corte=6):
     """Actualiza pct_prom_historico y proyeccion_dic_2026 usando la ejecución
     mensualizada 2024+2025 cargada.
@@ -564,4 +606,7 @@ def recalcular_mfmp(vigencia=2027):
     resumen['9_poai_dependencias'] = recalcular_poai_dependencias_dinamico()
     resumen['10_techos'] = recalcular_techos_inversion_dinamico(vigencia)
     resumen['11_cuadre'] = recalcular_cuadre_por_fuente()
+    # NUEVO paso 12: sincronizar Anexo 1 (RubroIngreso) con proyecciones
+    # para rubros NO especiales (Predial/ICA/ITO/Estampillas/SGP se calculan solos)
+    resumen['12_anexo1'] = sincronizar_anexo1_desde_proyecciones(vigencia)
     return resumen

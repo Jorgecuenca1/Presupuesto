@@ -23,6 +23,8 @@ class ParametrosSistema(models.Model):
     # Parámetros de gastos
     categoria_municipio = models.IntegerField(default=6, verbose_name='Categoría del Municipio',
                                               help_text='1-6 o 0 para Especial')
+    poblacion_dane = models.IntegerField(default=0, verbose_name='Población DANE',
+                                          help_text='Población proyectada DANE para la vigencia')
     valor_smlmv = models.DecimalField(max_digits=12, decimal_places=2, default=0,
                                        verbose_name='Valor SMLMV ($)')
     pct_promedio_pagos = models.DecimalField(max_digits=6, decimal_places=2, default=0,

@@ -103,12 +103,19 @@ def dashboard(request):
         total_predial = total_predial_va + (total_urb_ant or Decimal('0')) + (total_rur_ant or Decimal('0'))
     except Exception:
         total_predial = total_predial_va
-    total_ica_calc = ResumenCalculo.objects.filter(
-        vigencia=vigencia, tipo='ica'
-    ).aggregate(t=Sum('proyeccion'))['t'] or Decimal('0')
-    total_estampillas_calc = ResumenCalculo.objects.filter(
-        vigencia=vigencia, tipo='estampilla'
-    ).aggregate(t=Sum('proyeccion'))['t'] or Decimal('0')
+    # ICA: sumar directo desde RubroIngreso para que COINCIDA con Anexo 1
+    # Códigos CCPET del Industria y Comercio: 1.1.01.02.200.*
+    total_ica_calc = RubroIngreso.objects.filter(
+        vigencia=vigencia, es_titulo=False, codigo__contains='1.01.02.200'
+    ).aggregate(t=Sum('valor_apropiacion'))['t'] or Decimal('0')
+    # Estampillas: código 1.1.01.02.300.* y 1.2.10.02.*
+    total_estampillas_calc = RubroIngreso.objects.filter(
+        vigencia=vigencia, es_titulo=False,
+    ).filter(codigo__contains='1.01.02.300').aggregate(t=Sum('valor_apropiacion'))['t'] or Decimal('0')
+
+    # Otros ingresos = Total - Predial - ICA - Estampillas (los principales calculados)
+    total_otros_ingresos = (Decimal(str(total_ingresos)) - Decimal(str(total_predial))
+                            - Decimal(str(total_ica_calc)) - Decimal(str(total_estampillas_calc)))
 
     # Gastos por tipo
     total_funcionamiento = RubroGasto.objects.filter(
@@ -185,6 +192,7 @@ def dashboard(request):
         'total_predial': total_predial,
         'total_ica_calc': total_ica_calc,
         'total_estampillas_calc': total_estampillas_calc,
+        'total_otros_ingresos': total_otros_ingresos,
         'total_funcionamiento': total_funcionamiento,
         'total_inversion': total_inversion,
         'total_deuda': total_deuda,

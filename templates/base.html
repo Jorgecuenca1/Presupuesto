@@ -107,9 +107,6 @@
         <a href="{% url 'gastos_fuentes' %}" class="nav-link {% if request.resolver_match.url_name == 'gastos_fuentes' %}active{% endif %}">
             <i class="bi bi-wallet2"></i> Fuentes de Financiación
         </a>
-        <a href="{% url 'tabla_concejo_personeria' %}" class="nav-link {% if request.resolver_match.url_name == 'tabla_concejo_personeria' %}active{% endif %}">
-            <i class="bi bi-building"></i> Tabla Concejo/Personería
-        </a>
 
         {# ═══ 2. INGRESOS ═══════════════════════════════════════════════ #}
         <div class="nav-section">2 · Ingresos</div>
@@ -157,6 +154,9 @@
         </a>
         <a href="{% url 'costo_personal_list' %}" class="nav-link {% if request.resolver_match.url_name == 'costo_personal_list' %}active{% endif %}">
             <i class="bi bi-person-vcard"></i> Costo de Personal
+        </a>
+        <a href="{% url 'tabla_concejo_personeria' %}" class="nav-link {% if request.resolver_match.url_name == 'tabla_concejo_personeria' %}active{% endif %}">
+            <i class="bi bi-building"></i> Tabla Concejo/Personería
         </a>
         <a href="{% url 'deuda_publica_v2' %}" class="nav-link {% if request.resolver_match.url_name == 'deuda_publica_v2' %}active{% endif %}">
             <i class="bi bi-bank"></i> Deuda Pública

@@ -84,10 +84,15 @@ def seccion_eliminar(request, pk):
 @login_required
 def fuentes_list(request):
     vigencia = _vigencia()
+    # Catálogo maestro MFMP v75 (102 fuentes) - fuente principal
+    from core.models import FuenteFinanciacion as CoreFuente
+    catalogo = CoreFuente.objects.filter(activo=True).order_by('codigo')
+    # Fuentes locales legacy por vigencia (por retro-compatibilidad, si existen)
     fuentes = FuenteFinanciacion.objects.filter(vigencia=vigencia)
     form = FuenteFinanciacionForm(initial={'vigencia': vigencia})
     return render(request, 'gastos/fuentes_list.html', {
-        'fuentes': fuentes, 'form': form, 'vigencia': vigencia,
+        'catalogo': catalogo, 'fuentes': fuentes,
+        'form': form, 'vigencia': vigencia,
     })
 
 

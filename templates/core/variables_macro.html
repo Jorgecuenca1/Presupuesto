@@ -36,7 +36,7 @@
             <small class="float-end">{{ grupo.variables|length }} años</small>
         </div>
         <div class="card-body p-0 table-responsive" style="max-height:520px;overflow-y:auto;">
-            <table class="table table-sm align-middle mb-0" style="font-size:.76rem;">
+            <table class="table align-middle mb-0" style="font-size:.9rem;">
                 <thead class="table-light sticky-top">
                     <tr>
                         <th style="width:70px">Año</th>
@@ -54,24 +54,24 @@
                             {% if grupo.tipo == 'SMLV' or grupo.tipo == 'PIB' %}
                                 <input type="text" inputmode="numeric" name="var_{{ v.pk }}_valor"
                                        value="{{ v.valor|unlocalize }}"
-                                       class="form-control form-control-sm text-end cop-format" data-monetary="1" style="font-size:.75rem;">
+                                       class="form-control form-control-sm text-end cop-format" data-monetary="1" style="font-size:.9rem;">
                             {% elif grupo.tipo == 'TRM' or grupo.tipo == 'PETROLEO' %}
                                 <input type="number" step="0.01" min="0" name="var_{{ v.pk }}_valor"
                                        value="{{ v.valor|unlocalize }}"
-                                       class="form-control form-control-sm text-end" style="font-size:.75rem;">
+                                       class="form-control form-control-sm text-end" style="font-size:.9rem;">
                             {% else %}
                                 <input type="number" step="0.0001" name="var_{{ v.pk }}_valor"
                                        value="{{ v.valor|unlocalize }}"
-                                       class="form-control form-control-sm text-end" style="font-size:.75rem;">
+                                       class="form-control form-control-sm text-end" style="font-size:.9rem;">
                             {% endif %}
                         </td>
                         <td>
                             <input type="number" step="0.0001" name="var_{{ v.pk }}_pct"
                                    value="{{ v.pct_anual|unlocalize }}"
-                                   class="form-control form-control-sm text-end" style="font-size:.75rem;">
+                                   class="form-control form-control-sm text-end" style="font-size:.9rem;">
                         </td>
                         <td>
-                            {% if v.es_proyectado %}<span class="badge bg-warning text-dark" style="font-size:.65rem;">Proy.</span>{% else %}<span class="badge bg-success" style="font-size:.65rem;">Hist.</span>{% endif %}
+                            {% if v.es_proyectado %}<span class="badge bg-warning text-dark" style="font-size:.75rem;">Proy.</span>{% else %}<span class="badge bg-success" style="font-size:.75rem;">Hist.</span>{% endif %}
                         </td>
                         <td>
                             <a href="{% url 'variable_macro_eliminar' v.pk %}" class="btn btn-sm btn-outline-danger py-0 px-1"

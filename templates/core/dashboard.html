@@ -61,8 +61,40 @@
     <div class="col-md-3">
         <div class="card stat-card purple p-3">
             <div class="stat-label">Otros ingresos</div>
-            <div class="stat-value">${{ total_ingresos|floatformat:0|intcomma }}</div>
-            <small class="text-muted">total Anexo 1 (rubros hoja)</small>
+            <div class="stat-value">${{ total_otros_ingresos|floatformat:0|intcomma }}</div>
+            <small class="text-muted">Total − (Predial + ICA + Estampillas)</small>
+        </div>
+    </div>
+</div>
+
+<!-- Datos del Municipio + Indicador Ley 617 -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card purple p-3">
+            <div class="stat-label">Categoría Municipio</div>
+            <div class="stat-value">{{ params.categoria_municipio|default:"—" }}</div>
+            <small class="text-muted">Ley 617/2000</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card blue p-3">
+            <div class="stat-label">Población DANE</div>
+            <div class="stat-value">{{ params.poblacion_dane|default:0|intcomma }}</div>
+            <small class="text-muted">Proyectada {{ params.vigencia }}</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card green p-3">
+            <div class="stat-label">IPC {{ params.vigencia }}</div>
+            <div class="stat-value">{% widthratio params.tasa_ipc 1 100 %}%</div>
+            <small class="text-muted">MFMP Nación</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card {% if indicador_617 <= 80 %}green{% else %}orange{% endif %} p-3">
+            <div class="stat-label">Ley 617 · Cumplimiento</div>
+            <div class="stat-value">{{ indicador_617|floatformat:0 }}%</div>
+            <small class="text-muted">Límite: 80% ICLD</small>
         </div>
     </div>
 </div>
@@ -88,10 +120,10 @@
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card stat-card {% if indicador_617 <= 80 %}green{% else %}orange{% endif %} p-3">
-            <div class="stat-label">Indicador Ley 617</div>
-            <div class="stat-value">{{ indicador_617|floatformat:0 }}%</div>
-            <small class="text-muted">GF/ICLD Totales</small>
+        <div class="card stat-card blue p-3">
+            <div class="stat-label">SMLMV {{ params.vigencia }}</div>
+            <div class="stat-value">${{ params.valor_smlmv|floatformat:0|intcomma }}</div>
+            <small class="text-muted">Ministerio del Trabajo</small>
         </div>
     </div>
 </div>

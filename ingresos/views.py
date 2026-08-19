@@ -1120,3 +1120,58 @@ def descargar_ejecucion_mensual(request):
     resp['Content-Disposition'] = f'attachment; filename="Ejecucion_Mensualizada_{anio}.xlsx"'
     wb.save(resp)
     return resp
+
+
+@login_required
+def calculo_oleoducto(request):
+    """Cálculo del Impuesto de Transporte por Oleoductos/Gasoductos (Ley 141/1994).
+
+    Metodología: la proyección para la vigencia es el promedio simple del
+    recaudo real de los últimos 3 años.
+    """
+    _recalc_perezoso()
+    vigencia = _vigencia()
+    params = ParametrosSistema.objects.filter(activo=True).first()
+    if not params:
+        messages.error(request, 'No hay parámetros del sistema configurados.')
+        return redirect('dashboard')
+
+    def _limpiar_cop(v):
+        if v is None or v == '':
+            return Decimal('0')
+        s = str(v).replace('.', '').replace(',', '.').replace('$', '').strip()
+        try:
+            return Decimal(s)
+        except Exception:
+            return Decimal('0')
+
+    if request.method == 'POST':
+        params.recaudo_oleoductos_anio_n3 = _limpiar_cop(request.POST.get('recaudo_n3'))
+        params.recaudo_oleoductos_anio_n2 = _limpiar_cop(request.POST.get('recaudo_n2'))
+        params.recaudo_oleoductos_anio_n1 = _limpiar_cop(request.POST.get('recaudo_n1'))
+        params.save(update_fields=['recaudo_oleoductos_anio_n3',
+                                    'recaudo_oleoductos_anio_n2',
+                                    'recaudo_oleoductos_anio_n1'])
+        # Sincronizar el rubro CCPET 1.1.01.02.214 (ITO) con la proyección
+        from ingresos.models import RubroIngreso
+        promedio = ((params.recaudo_oleoductos_anio_n3 +
+                     params.recaudo_oleoductos_anio_n2 +
+                     params.recaudo_oleoductos_anio_n1) / Decimal('3'))
+        RubroIngreso.objects.filter(
+            vigencia=vigencia, codigo__contains='1.01.02.214'
+        ).update(valor_apropiacion=promedio, metodo_calculo='OLEO')
+        messages.success(request, f'Cálculo de Oleoducto actualizado. Proyección {vigencia}: ${promedio:,.0f}')
+        return redirect('calculo_oleoducto')
+
+    anio_n3 = vigencia - 3
+    anio_n2 = vigencia - 2
+    anio_n1 = vigencia - 1
+    promedio = ((params.recaudo_oleoductos_anio_n3 +
+                 params.recaudo_oleoductos_anio_n2 +
+                 params.recaudo_oleoductos_anio_n1) / Decimal('3'))
+    return render(request, 'ingresos/calculo_oleoducto.html', {
+        'params': params,
+        'vigencia': vigencia,
+        'anio_n3': anio_n3, 'anio_n2': anio_n2, 'anio_n1': anio_n1,
+        'promedio': promedio,
+    })

@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% load humanize l10n %}
+
+{% block title %}Cálculo Oleoducto{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item">Ingresos</li>
+<li class="breadcrumb-item active">Cálculo Oleoducto</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="bi bi-fuel-pump"></i> Impuesto de Transporte por Oleoductos / Gasoductos</h4>
+    <span class="badge bg-primary fs-6">Vigencia {{ vigencia }}</span>
+</div>
+
+<div class="alert alert-info py-2 small">
+    <i class="bi bi-info-circle"></i>
+    <strong>Ley 141/1994</strong> — Método: <strong>Promedio simple de los últimos 3 años</strong> de recaudo real.
+    La proyección para {{ vigencia }} = (Recaudo {{ anio_n3 }} + Recaudo {{ anio_n2 }} + Recaudo {{ anio_n1 }}) ÷ 3.
+    Al guardar, el rubro CCPET <code>1.1.01.02.214</code> se actualiza automáticamente en el Anexo 1.
+</div>
+
+<form method="post" id="form-oleoducto">
+{% csrf_token %}
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <i class="bi bi-clock-history"></i> Recaudo Histórico (últimos 3 años)
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Recaudo {{ anio_n3 }} ($)</label>
+                        <input type="text" name="recaudo_n3" class="form-control form-control-lg cop-format text-end"
+                               data-monetary="1"
+                               value="{{ params.recaudo_oleoductos_anio_n3|floatformat:0|unlocalize }}">
+                        <small class="text-muted">Recaudo real hace 3 años</small>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Recaudo {{ anio_n2 }} ($)</label>
+                        <input type="text" name="recaudo_n2" class="form-control form-control-lg cop-format text-end"
+                               data-monetary="1"
+                               value="{{ params.recaudo_oleoductos_anio_n2|floatformat:0|unlocalize }}">
+                        <small class="text-muted">Recaudo real hace 2 años</small>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Recaudo {{ anio_n1 }} ($)</label>
+                        <input type="text" name="recaudo_n1" class="form-control form-control-lg cop-format text-end"
+                               data-monetary="1"
+                               value="{{ params.recaudo_oleoductos_anio_n1|floatformat:0|unlocalize }}">
+                        <small class="text-muted">Recaudo real del año anterior</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3 border-success">
+            <div class="card-header bg-success text-white">
+                <i class="bi bi-calculator"></i> Resultado del Cálculo
+            </div>
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <p class="mb-1 text-muted">Fórmula (Ley 141/1994):</p>
+                        <p class="mb-0"><code>Proyección = (R{{ anio_n3 }} + R{{ anio_n2 }} + R{{ anio_n1 }}) ÷ 3</code></p>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <p class="mb-1 text-muted small">Proyección Oleoducto {{ vigencia }}</p>
+                        <h3 class="text-success fw-bold mb-0">${{ promedio|floatformat:0|intcomma }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 mt-3">
+            <button type="submit" class="btn btn-success btn-lg">
+                <i class="bi bi-save"></i> Guardar y recalcular Anexo 1
+            </button>
+            <a href="{% url 'reporte_ingresos' %}" class="btn btn-outline-dark btn-lg">
+                <i class="bi bi-file-earmark-text"></i> Ir al Reporte Anexo 1
+            </a>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <i class="bi bi-book"></i> Marco Legal
+            </div>
+            <div class="card-body">
+                <p class="small mb-2"><strong>Ley 141 de 1994</strong> — Art. 26: Impuesto de Transporte por Oleoductos y Gasoductos.</p>
+                <p class="small mb-2"><strong>Beneficiario:</strong> Municipios por cuyo territorio pasan los oleoductos/gasoductos.</p>
+                <p class="small mb-2"><strong>Tarifa:</strong> Se liquida sobre el volumen transportado (barriles/m³).</p>
+                <p class="small mb-0"><strong>Método de proyección:</strong> Promedio simple de los últimos 3 años de recaudo real, ajustado por producción esperada.</p>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header bg-info text-white">
+                <i class="bi bi-lightbulb"></i> Notas
+            </div>
+            <div class="card-body">
+                <ul class="small mb-0">
+                    <li>Los valores se ingresan en pesos corrientes.</li>
+                    <li>El promedio se aplica al rubro CCPET <code>1.1.01.02.214</code>.</li>
+                    <li>El Anexo 1 se recalcula automáticamente al guardar.</li>
+                    <li>Si un año no tuvo recaudo, ingrese <code>0</code>.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+</form>
+{% endblock %}

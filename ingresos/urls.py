@@ -60,5 +60,5 @@ urlpatterns = [
     path('cifras-historicas/importar/', views.importar_cifras_historicas_ingresos, name='importar_cifras_historicas_ingresos'),
     path('cifras-historicas/calcular-tcpa/', views.calcular_tcpa_ingresos, name='calcular_tcpa_ingresos'),
     path('cifras-historicas/descargar-ejecucion/', views.descargar_ejecucion_mensual, name='descargar_ejecucion_mensual'),
-    path('calculo-oleoducto/', views.calculo_oleoducto, name='calculo_oleoducto'),
+    path('calculo-ito/', views.calculo_ito, name='calculo_ito'),
 ]

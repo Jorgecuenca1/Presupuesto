@@ -1123,8 +1123,8 @@ def descargar_ejecucion_mensual(request):
 
 
 @login_required
-def calculo_oleoducto(request):
-    """Cálculo del Impuesto de Transporte por Oleoductos/Gasoductos (Ley 141/1994).
+def calculo_ito(request):
+    """Cálculo del Impuesto de Transporte por Oleoductos - ITO (Ley 141/1994).
 
     Metodología: la proyección para la vigencia es el promedio simple del
     recaudo real de los últimos 3 años.
@@ -1160,8 +1160,8 @@ def calculo_oleoducto(request):
         RubroIngreso.objects.filter(
             vigencia=vigencia, codigo__contains='1.01.02.214'
         ).update(valor_apropiacion=promedio, metodo_calculo='OLEO')
-        messages.success(request, f'Cálculo de Oleoducto actualizado. Proyección {vigencia}: ${promedio:,.0f}')
-        return redirect('calculo_oleoducto')
+        messages.success(request, f'ITO actualizado. Proyección {vigencia}: ${promedio:,.0f}')
+        return redirect('calculo_ito')
 
     anio_n3 = vigencia - 3
     anio_n2 = vigencia - 2
@@ -1169,7 +1169,7 @@ def calculo_oleoducto(request):
     promedio = ((params.recaudo_oleoductos_anio_n3 +
                  params.recaudo_oleoductos_anio_n2 +
                  params.recaudo_oleoductos_anio_n1) / Decimal('3'))
-    return render(request, 'ingresos/calculo_oleoducto.html', {
+    return render(request, 'ingresos/calculo_ito.html', {
         'params': params,
         'vigencia': vigencia,
         'anio_n3': anio_n3, 'anio_n2': anio_n2, 'anio_n1': anio_n1,

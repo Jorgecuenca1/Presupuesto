@@ -87,16 +87,10 @@
             <h4><i class="bi bi-bank2"></i> SIPRE</h4>
             <p>Puerto López - Meta</p>
         </div>
-        {# ═══════════════════════════════════════════════════════════════
-           SIDEBAR REORGANIZADO POR FLUJO SECUENCIAL DEL PRESUPUESTO
-           1. Configuración → 2. Ingresos → 3. Gastos → 4. Proyecciones → 5. Reportes
-           ═══════════════════════════════════════════════════════════════ #}
-
         <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
             <i class="bi bi-speedometer2"></i> Dashboard
         </a>
 
-        {# ═══ 1. CONFIGURACIÓN ══════════════════════════════════════════ #}
         <div class="nav-section">1 · Configuración</div>
         <a href="{% url 'parametros' %}" class="nav-link {% if request.resolver_match.url_name == 'parametros' %}active{% endif %}">
             <i class="bi bi-gear"></i> Parámetros del Sistema
@@ -107,9 +101,7 @@
         <a href="{% url 'gastos_fuentes' %}" class="nav-link {% if request.resolver_match.url_name == 'gastos_fuentes' %}active{% endif %}">
             <i class="bi bi-wallet2"></i> Fuentes de Financiación
         </a>
-
-        {# ═══ 2. INGRESOS ═══════════════════════════════════════════════ #}
-        <div class="nav-section">2 · Ingresos</div>
+<div class="nav-section">2 · Ingresos</div>
         <a href="{% url 'cifras_historicas_ingresos' %}" class="nav-link {% if request.resolver_match.url_name == 'cifras_historicas_ingresos' %}active{% endif %}">
             <i class="bi bi-clock-history"></i> Cifras Históricas
         </a>
@@ -140,9 +132,7 @@
         <a href="{% url 'reporte_ingresos' %}" class="nav-link {% if request.resolver_match.url_name == 'reporte_ingresos' %}active{% endif %}">
             <i class="bi bi-file-earmark-text"></i> Reporte Anexo 1
         </a>
-
-        {# ═══ 3. GASTOS ═════════════════════════════════════════════════ #}
-        <div class="nav-section">3 · Gastos</div>
+<div class="nav-section">3 · Gastos</div>
         <a href="{% url 'cifras_historicas_gastos' %}" class="nav-link {% if request.resolver_match.url_name == 'cifras_historicas_gastos' %}active{% endif %}">
             <i class="bi bi-clock-history"></i> Cifras Históricas
         </a>
@@ -182,9 +172,7 @@
         <a href="{% url 'reporte_gastos' %}" class="nav-link {% if request.resolver_match.url_name == 'reporte_gastos' %}active{% endif %}">
             <i class="bi bi-file-earmark-text"></i> Reporte Anexo 2
         </a>
-
-        {# ═══ 4. MFMP · PROYECCIONES 10 AÑOS ════════════════════════════ #}
-        <div class="nav-section">4 · MFMP · Proyecciones 10 años</div>
+<div class="nav-section">4 · MFMP · Proyecciones 10 años</div>
         <a href="{% url 'proyeccion_ingresos_10y' %}" class="nav-link {% if request.resolver_match.url_name == 'proyeccion_ingresos_10y' %}active{% endif %}">
             <i class="bi bi-graph-up-arrow"></i> Proyección Ingresos 10y
         </a>
@@ -197,9 +185,7 @@
         <a href="{% url 'saldo_vf_fuente' %}" class="nav-link {% if request.resolver_match.url_name == 'saldo_vf_fuente' %}active{% endif %}">
             <i class="bi bi-piggy-bank"></i> Saldo VF por Fuente
         </a>
-
-        {# ═══ 5. REPORTES ══════════════════════════════════════════════ #}
-        <div class="nav-section">5 · Reportes</div>
+<div class="nav-section">5 · Reportes</div>
         <a href="{% url 'deuda_resumen' %}" class="nav-link {% if request.resolver_match.url_name == 'deuda_resumen' %}active{% endif %}">
             <i class="bi bi-file-earmark-bar-graph"></i> Resumen de Deuda
         </a>

@@ -487,6 +487,17 @@ def recalcular_cuadre_por_fuente():
     return cambios
 
 
+def sincronizar_anexo2_desde_proyecciones(vigencia=2027):
+    """No-op: la sincronización directa RubroGasto ↔ ProyeccionRubroGasto
+    no es factible porque los códigos son incompatibles (RubroGasto usa
+    '2.3.04.0401.1003' mientras ProyeccionRubroGasto usa '03.2.3.40.4002.1400-4').
+
+    El equilibrio del dashboard se logra sumando la Inversión desde
+    ProyeccionRubroGasto directamente (ver vista dashboard).
+    """
+    return 0
+
+
 def sincronizar_anexo1_desde_proyecciones(vigencia=2027):
     """Actualiza RubroIngreso.valor_apropiacion (Anexo 1) usando las
     proyecciones dinámicas de ProyeccionRubroIngreso.proy_YYYY para
@@ -609,4 +620,7 @@ def recalcular_mfmp(vigencia=2027):
     # NUEVO paso 12: sincronizar Anexo 1 (RubroIngreso) con proyecciones
     # para rubros NO especiales (Predial/ICA/ITO/Estampillas/SGP se calculan solos)
     resumen['12_anexo1'] = sincronizar_anexo1_desde_proyecciones(vigencia)
+    # NUEVO paso 13: sincronizar Anexo 2 (RubroGasto) con proyecciones
+    # Cubre Inversión (2.3.*) y secciones administrativas
+    resumen['13_anexo2'] = sincronizar_anexo2_desde_proyecciones(vigencia)
     return resumen

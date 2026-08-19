@@ -83,10 +83,23 @@ def dashboard(request):
         vigencia=vigencia, es_titulo=False
     ).aggregate(total=Sum('valor_apropiacion'))['total'] or 0
 
-    # Total gastos = suma de rubros HOJA
-    total_gastos = RubroGasto.objects.filter(
-        vigencia=vigencia, es_titulo=False
-    ).aggregate(total=Sum('valor_apropiacion'))['total'] or 0
+    # Total gastos = Funcionamiento (2.1.*) + Deuda (2.2.*) + Inversión (POAI)
+    # Nota: los rubros 2.3.* (Inversión) en RubroGasto están vacíos porque
+    # el detalle POAI usa códigos incompatibles con CCPET. Se toma la
+    # Inversión desde ProyeccionRubroGasto (fuente MFMP v75) donde se cargó
+    # el detalle completo con códigos '03.2.3.*'.
+    total_fto_dashboard = RubroGasto.objects.filter(
+        vigencia=vigencia, es_titulo=False, tipo_gasto='FUN'
+    ).aggregate(t=Sum('valor_apropiacion'))['t'] or Decimal('0')
+    total_deu_dashboard = RubroGasto.objects.filter(
+        vigencia=vigencia, es_titulo=False, tipo_gasto='DEU'
+    ).aggregate(t=Sum('valor_apropiacion'))['t'] or Decimal('0')
+    from .models import ProyeccionRubroGasto
+    campo_inv = f'proy_{vigencia}'
+    total_inv_dashboard = ProyeccionRubroGasto.objects.filter(
+        categoria='Inversion'
+    ).aggregate(t=Sum(campo_inv))['t'] or Decimal('0')
+    total_gastos = total_fto_dashboard + total_deu_dashboard + total_inv_dashboard
 
     # Equilibrio
     equilibrio = Decimal(str(total_ingresos)) - Decimal(str(total_gastos))
@@ -117,13 +130,10 @@ def dashboard(request):
     total_otros_ingresos = (Decimal(str(total_ingresos)) - Decimal(str(total_predial))
                             - Decimal(str(total_ica_calc)) - Decimal(str(total_estampillas_calc)))
 
-    # Gastos por tipo
-    total_funcionamiento = RubroGasto.objects.filter(
-        vigencia=vigencia, tipo_gasto='FUN', es_titulo=False
-    ).aggregate(t=Sum('valor_apropiacion'))['t'] or 0
-    total_inversion = RubroGasto.objects.filter(
-        vigencia=vigencia, tipo_gasto='INV', es_titulo=False
-    ).aggregate(t=Sum('valor_apropiacion'))['t'] or 0
+    # Gastos por tipo - Fto y Deuda vienen de RubroGasto,
+    # Inversión viene de ProyeccionRubroGasto (fuente MFMP oficial)
+    total_funcionamiento = total_fto_dashboard
+    total_inversion = total_inv_dashboard
     total_deuda = RubroGasto.objects.filter(
         vigencia=vigencia, tipo_gasto='DEU', es_titulo=False
     ).aggregate(t=Sum('valor_apropiacion'))['t'] or 0

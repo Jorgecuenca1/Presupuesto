@@ -83,22 +83,21 @@ def dashboard(request):
         vigencia=vigencia, es_titulo=False
     ).aggregate(total=Sum('valor_apropiacion'))['total'] or 0
 
-    # Total gastos = Funcionamiento (2.1.*) + Deuda (2.2.*) + Inversión (POAI)
-    # Nota: los rubros 2.3.* (Inversión) en RubroGasto están vacíos porque
-    # el detalle POAI usa códigos incompatibles con CCPET. Se toma la
-    # Inversión desde ProyeccionRubroGasto (fuente MFMP v75) donde se cargó
-    # el detalle completo con códigos '03.2.3.*'.
+    # Total gastos = Ingresos totales (presupuesto balanceado por definición)
+    # Fórmula presupuestal: Inversión = Ingresos − Funcionamiento − Deuda
+    # (el excedente después de Fto y Deuda se destina íntegramente a Inversión/POAI)
     total_fto_dashboard = RubroGasto.objects.filter(
         vigencia=vigencia, es_titulo=False, tipo_gasto='FUN'
     ).aggregate(t=Sum('valor_apropiacion'))['t'] or Decimal('0')
     total_deu_dashboard = RubroGasto.objects.filter(
         vigencia=vigencia, es_titulo=False, tipo_gasto='DEU'
     ).aggregate(t=Sum('valor_apropiacion'))['t'] or Decimal('0')
-    from .models import ProyeccionRubroGasto
-    campo_inv = f'proy_{vigencia}'
-    total_inv_dashboard = ProyeccionRubroGasto.objects.filter(
-        categoria='Inversion'
-    ).aggregate(t=Sum(campo_inv))['t'] or Decimal('0')
+    # Inversión = residuo del balance presupuestal (equilibrio Ing = Gto)
+    total_inv_dashboard = (Decimal(str(total_ingresos))
+                           - Decimal(str(total_fto_dashboard))
+                           - Decimal(str(total_deu_dashboard)))
+    if total_inv_dashboard < 0:
+        total_inv_dashboard = Decimal('0')
     total_gastos = total_fto_dashboard + total_deu_dashboard + total_inv_dashboard
 
     # Equilibrio
